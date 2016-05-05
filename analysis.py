@@ -399,13 +399,17 @@ def write_band_table(results,filename,band,fields=None,default=np.nan):
     The field seq is included for historical reasons but written as a
     dummy zero.  
 
-    Any missing or undefined transition RMEs are written as the
-    numerical value given by the argument default.
+    Any missing or undefined transition RMEs are written as a NaN (or
+    as the numerical value given by the argument default).
 
     Entries within a field are written in the order RME(lp,ln,sp,sn)
     for M1 or RME(p,n) for E2.  Note that the electromagnetic M1
     moment is *not* included in the list of moments, even though it
-    was in the original tabulation format for berotor.
+    was in the original tabulation format for berotor.  The
+    electromagnetic M1 RME can be recovered by taking the linear
+    combination with the standard gyromagnetic ratios as coefficients.
+      
+    Some of these fields may optionally be omitted.
 
     The given levels are assumed to be unique by J.
 
@@ -827,8 +831,6 @@ def band_fit_M1 (results,band,verbose=False):
 def write_band_fit_parameters(results,filename,band,fields=None,verbose=False):
     """Writes band fit parameters.
 
-    With default arguments, recovers behavior of write_level_table.
-
     The output contains one line, of the form:
 
         <"energy"> <"E2"> <"M1">  
@@ -838,6 +840,8 @@ def write_band_fit_parameters(results,filename,band,fields=None,verbose=False):
         <"energy">: E0 A a
         <"E2">: Q0p Q0n 
         <"M1"> alp0 alp1 alp2 ; aln0 ... ; asp0 ... ; asn0 ...
+
+    Some of these fields may optionally be omitted.
 
     Args:
         results (MFDnRunData): results object

@@ -5,7 +5,8 @@
     University of Notre Dame
     5/31/15 (mac): Initiated (as mfdn_res.py).
     6/5/15 (mac): Restructure as subpackage.
-    Last modified 6/5/15.
+    7/26/15 (mac): Allow mismatch in line parser.
+    Last modified 7/26/15.
     
 """
 
@@ -15,14 +16,15 @@ import re
 # line parser for res file input
 ################################################################
 
-def parse_line(line,pattern):
+def parse_line(line,pattern,strict=True):
     """Matches given input line to regex.
 
     Line is stripped of leading/trailing whitespace.
 
     Args:
-        line: input line to parse
-        pattern: string containing regex
+        line (string) : input line to parse
+        pattern (string) : string containing regex
+        strict (bool) : raise exception if mismatch (default: True)
 
     Returns:
         The match object obtained from match.

@@ -53,6 +53,8 @@ class MFDnRunData(object):
         tbo (dict)
         moments (dict)
         transitions (dict)
+        orbital_occupations (dict)
+        shell_occupations (dict)
 
     The expected keys in the params dictionary (and the corresponding expected value types) are:
         hw (float): hw value for run (from the run header)
@@ -82,6 +84,13 @@ class MFDnRunData(object):
 
     The values are tuples containing the transition reduced matrix
     elements (RMEs) as floats.
+
+    The expected keys in the orbital_occupations dictionary are
+    (J,g,n) tuples.  The values are dictionaries of (n,l,j)->(np,nn).
+
+    The expected keys in the shell_occupations dictionary are (J,g,n)
+    tuples.  The values are dictionaries of N->(np,nn), where N=2n+l
+    here is *zero* based (c.f., shell number N+1 in results file).
 
     The params and states dictionaries may or may not remain public in
     the future.  Use of accessors (e.g., get_energy) is preferred

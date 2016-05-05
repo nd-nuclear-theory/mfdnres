@@ -13,6 +13,7 @@ import re
 
 # intra-package references
 if (__name__ == "__main__"):
+    # set up for unit test
     import sys
     import os
     sys.path.append(os.path.join(sys.path[0],"..",".."))
