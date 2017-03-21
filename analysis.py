@@ -7,7 +7,7 @@
     6/2/15 (mac): Initiated (as mfdn_analysis.py).
     6/5/15 (mac): Restructure as subpackage.
     Last modified 7/6/15.
-    
+
 """
 
 import os
@@ -37,7 +37,7 @@ def import_res_files(
         base_path=None,verbose=False
 ):
     """ Imports set of results files into given dictionary with customizable key tuple.
-    
+
     Args:
         data (dict) : container for resulting MFDnRunData objects
         filename_list (str, list of str) : names of files or directories to process
@@ -58,7 +58,7 @@ def import_res_files(
     # prepend path
     if (base_path is not None):
         qualified_filename_list = [
-            os.path.join(base_path,filename) 
+            os.path.join(base_path,filename)
             for filename in raw_filename_list
         ]
     else:
@@ -70,6 +70,9 @@ def import_res_files(
             # individual file
             filename_list.append(filename)
         else:
+            # file prefix
+            prefix_filename_list = glob.glob(filename + "*.res")
+            filename_list.extend(prefix_filename_list)
             # directory
             directory_filename_list = glob.glob(os.path.join(filename,"*.res"))
             filename_list.extend(directory_filename_list)
@@ -91,7 +94,7 @@ def import_res_files(
 
         # read data
         data[key].read_file(filename,res_format=res_format)
-    
+
 ################################################################
 # output tabulation: basic levels
 ################################################################
@@ -132,7 +135,52 @@ def write_level_table(results,filename,levels=None):
         lines.append(line)
 
     # write to file
-    with open(filename,"wt") as fout:    
+    with open(filename,"wt") as fout:
+        fout.writelines(lines)
+
+################################################################
+# output tabulation: radii
+################################################################
+
+def write_radii_table(results,filename,levels=None):
+    """Writes radius data.
+
+        seq J p n T rp rn r
+
+    The field seq is included for historical reasons but written as a
+    dummy zero.
+
+    Args:
+        results (MFDnRunData): results object containing the levels
+        filename (str): output filename
+        levels (list of tuples): levels to include or None for all (default: None)
+
+    """
+
+    # determine list of levels to use
+    if (levels is None):
+        levels = results.get_levels()
+
+    # assemble lines
+    lines = []
+    for qn in levels:
+        line = (
+            "{:1d} {:6.3f} {:1d} {:2d} {:6.3f} {:8.3f} {:8.3f} {:8.3f}"
+            "\n"
+        ).format(
+            0,
+            results.get_property(qn,"J"),
+            results.get_property(qn,"g"),
+            results.get_property(qn,"n"),
+            results.get_property(qn,"T"),
+            results.get_tbo(qn,"rp"),
+            results.get_tbo(qn,"rn"),
+            results.get_tbo(qn,"r")
+        )
+        lines.append(line)
+
+    # write to file
+    with open(filename,"wt") as fout:
         fout.writelines(lines)
 
 ################################################################
@@ -197,7 +245,7 @@ def write_level_am_table(results,filename,levels=None,default=np.nan):
         lines.append(line)
 
     # write to file
-    with open(filename,"wt") as fout:    
+    with open(filename,"wt") as fout:
         fout.writelines(lines)
 
 
@@ -285,7 +333,7 @@ class BandDefinition(object):
             filename (str): filename of band config file (default: None)
 
         """
-        
+
         # quit if no filename
         # it is up to user to initialize any necessary fields
         if (filename is None):
@@ -367,12 +415,12 @@ class BandDefinition(object):
     ################################################################
 
     def __iter__(self):
-        """Make band iterable, allowing iteration over full list of state quantum numbers.  
+        """Make band iterable, allowing iteration over full list of state quantum numbers.
 
         A BandDefinition object can therefore be used in many places
         where a list of levels may be used, e.g., as the levels
         argument to write_level_table.
-        
+
         Duplication of J values is allowed.
 
         Returns:
@@ -394,10 +442,10 @@ def write_band_table(results,filename,band,fields=None,default=np.nan):
 
     Each output line is written in the form
 
-        seq J p n T Eabs <"E2_moments"> <"M1_moments"> <"E2_transitions_dJ1"> <"E2_transitions_dJ2"> <"M1_transitions_dJ1"> 
-    
+        seq J p n T Eabs <"E2_moments"> <"M1_moments"> <"E2_transitions_dJ1"> <"E2_transitions_dJ2"> <"M1_transitions_dJ1">
+
     The field seq is included for historical reasons but written as a
-    dummy zero.  
+    dummy zero.
 
     Any missing or undefined transition RMEs are written as a NaN (or
     as the numerical value given by the argument default).
@@ -408,7 +456,7 @@ def write_band_table(results,filename,band,fields=None,default=np.nan):
     was in the original tabulation format for berotor.  The
     electromagnetic M1 RME can be recovered by taking the linear
     combination with the standard gyromagnetic ratios as coefficients.
-      
+
     Some of these fields may optionally be omitted.
 
     The given levels are assumed to be unique by J.
@@ -449,7 +497,7 @@ def write_band_table(results,filename,band,fields=None,default=np.nan):
             results.get_property(qn,"T"),
             results.get_energy(qn)
         )
-        
+
         # loop over moment fields
         #    (field,op,entries)
         field_definitions = [
@@ -492,7 +540,7 @@ def write_band_table(results,filename,band,fields=None,default=np.nan):
         lines.append(line)
 
     # write to file
-    with open(filename,"wt") as fout:    
+    with open(filename,"wt") as fout:
         fout.writelines(lines)
 
 ################################################################
@@ -560,18 +608,18 @@ def write_network_table(results,filename,band):
                 results.get_property(qn,"T"),
                 results.get_energy(qn)
             )
-            
+
             # value data
             values = np.abs(results.get_rme(qnf,qni,op,Mj))
             entries = 2
             line += (entries*value_format).format(*values)
-            
+
             # finalize line
             line += "\n"
             lines.append(line)
 
     # write to file
-    with open(filename,"wt") as fout:    
+    with open(filename,"wt") as fout:
         fout.writelines(lines)
 
 ################################################################
@@ -619,7 +667,7 @@ def extrapolate_energies_exp(Nmax_values,E_values,c2_guess=0.3,verbose=False):
     if (verbose):
         print("Linear fit assuming c2 = {}".format(c2_guess))
         print("(c0,c1):",(c0_guess,c1_guess))
-    
+
     # do nonlinear fit
     c_guess = np.array([c0_guess,c1_guess,c2_guess])
     fit = mfdnres.nonlinear.fit(mfdnres.nonlinear.model_exp,Nmax_values,E_values,c_guess)
@@ -640,7 +688,7 @@ def band_fit_energy (results,band,verbose=False):
     Args:
         results (MFDnRunData): results object
         band (BandDefinition): band definition
-        extrapolation (string, optional): keyword for stored energy extrapolation 
+        extrapolation (string, optional): keyword for stored energy extrapolation
             to retrieve (or None to use the unextrapolated energy)
 
     Returns:
@@ -707,7 +755,7 @@ def band_fit_E2 (results,band):
         raise ValueError("attempt to extract Q0 in case where Q(J) factor is 0")
     Q_values = np.array(results.moments.get((qn,"E2"),np.nan))
     Q0_values = Q_values/factor
-    
+
     return Q0_values
 
 def band_fit_M1 (results,band,verbose=False):
@@ -718,11 +766,11 @@ def band_fit_M1 (results,band,verbose=False):
         band (BandDefinition): band definition
 
     Returns:
-        (np.array 3x4): band M1 fit parameters, or all np.nan for blatantly undersized systems 
+        (np.array 3x4): band M1 fit parameters, or all np.nan for blatantly undersized systems
 
     This is the array of least squares solution vectors to the linear
     systems, arranged as
-    
+
        [[a0,a0,a0,a0],
         [a1,a1,a1,a1],
         [a2,a2,a2,a2]]
@@ -833,12 +881,12 @@ def write_band_fit_parameters(results,filename,band,fields=None,verbose=False):
 
     The output contains one line, of the form:
 
-        <"energy"> <"E2"> <"M1">  
-        
+        <"energy"> <"E2"> <"M1">
+
     where the fields are
 
         <"energy">: E0 A a
-        <"E2">: Q0p Q0n 
+        <"E2">: Q0p Q0n
         <"M1"> alp0 alp1 alp2 ; aln0 ... ; asp0 ... ; asn0 ...
 
     Some of these fields may optionally be omitted.
@@ -879,15 +927,15 @@ def write_band_fit_parameters(results,filename,band,fields=None,verbose=False):
         parameters = band_fit_M1(results,band,verbose)
         flat_parameters = parameters.T.flatten()
         line += (12*value_format).format(*flat_parameters)
-    
+
     # finalize line
     line += "\n"
 
     # write to file
-    with open(filename,"wt") as fout:    
+    with open(filename,"wt") as fout:
         fout.write(line)
-        
-    
+
+
 
 if (__name__ == "__main__"):
     pass

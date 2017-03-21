@@ -21,7 +21,7 @@ if (__name__ == "__main__"):
 import mfdnres.descriptor
 
 def parser(filename):
-    """ Parses results filename in format 5, restricted to the ho basis special case.
+    """ Parses results filename in format 7, restricted to the ho basis special case.
 
     Args:
         filename (string) : filename (as basename)
@@ -46,9 +46,8 @@ def parser(filename):
         r"\-lan(?P<lanczos>\d+)"
         r"\-tol(?P<tolerance>\d+\.\d+[eE][+-]\d+)"
         r"((?P<natural_orbital_flag>\-natorb)\-no(?P<natural_orbital_iteration>\d+))?"
-        # # epilog
-        # r").res"
-        r")"
+        # epilog
+        r").res"
     )
 
     conversions = {
@@ -78,7 +77,7 @@ def parser(filename):
 
     return info
 
-mfdnres.descriptor.register_filename_format("format_7",parser)
+mfdnres.descriptor.register_filename_format("format_7_ho",parser)
 
 if (__name__ == "__main__"):
 

@@ -2,7 +2,7 @@
 
     TODO: finish neatening transition phases
          -- check GT conjugation phase
-         -- define setter method for transitions, to only store in 
+         -- define setter method for transitions, to only store in
             canonically decreasing (f<i) order
 
     Language: Python 3
@@ -12,7 +12,7 @@
     6/5/15 (mac): Allow user-supplied res file parser.
     6/5/15 (mac): Restructure as subpackage.
     Last modified 6/18/15.
-    
+
 """
 
 import os
@@ -36,7 +36,7 @@ def register_res_format(format_name,parser):
     """
 
     res_format_parser[format_name] = parser
-    
+
 
 ################################################################
 # MFDnRunData storage object
@@ -114,7 +114,7 @@ class MFDnRunData(object):
     def __init__(self):
         """ Initialize MFDnRunData instance.
         """
-        
+
         # initialize data dictionaries
         self.params = {}
         self.states = {}
@@ -133,8 +133,8 @@ class MFDnRunData(object):
     def read_file(self,filename,res_format,verbose=False):
         """Read result file data into MFDnRunData object.  If any
         data is duplicative of the old, the new data will overwrite
-        the old. 
-        
+        the old.
+
         The parsing function should have the signature
         res_parser(self,fin,verbose).
 
@@ -204,10 +204,24 @@ class MFDnRunData(object):
         value = self.energies[qn]
         return value
 
+    def get_tbo(self,qn,op):
+        """Retrieves two-body operator expectation value by quantum numbers and
+        operator code.
+
+        Arguments:
+            qn (tuple): state (J,g,n) quantum numbers
+            op (str): operator code
+
+        Returns:
+            (float): two-body operator expectation value
+        """
+        value = self.tbo[qn][op]
+        return value
+
     def has_rme(self,qnf,qni,op,Mj):
         """Indicates whether or not reduced matrix element (RME) of
         transition operator is availble,
-        regardless of which direction it was calculated in the data set. 
+        regardless of which direction it was calculated in the data set.
 
         Args:
            qnf (tuple): final state (J,g,n) quantum numbers
@@ -225,19 +239,19 @@ class MFDnRunData(object):
             or
             ((qni,qnf,op,Mj) in self.transitions)
         )
- 
+
         return available
 
     def get_rme(self,qnf,qni,op,Mj,default=np.nan):
         """Retrieves reduced matrix element (RME) of transition operator,
-        regardless of which direction it was calculated in the data set. 
+        regardless of which direction it was calculated in the data set.
 
-        Obtains RME <Jf||op||Ji>, using relation 
+        Obtains RME <Jf||op||Ji>, using relation
             <Jf||op||Ji> = (-)^(Jf-Ji) <Ji||op||Jf>
-        which applies to both the M1 and E2 operators under Condon-Shortley phase 
+        which applies to both the M1 and E2 operators under Condon-Shortley phase
         conventions (Suhonen Ch. 6) for these operators.  Derived from
         W-E theorem, symmetry of CG coefficient, and conjugation
-        properties of these operators. 
+        properties of these operators.
 
         Note that for MFDn the reference state is the "final" state.
 
@@ -262,7 +276,7 @@ class MFDnRunData(object):
         if ((qnf,qni,op,Mj) in self.transitions):
             # available as direct entry
             values = np.array(self.transitions[(qnf,qni,op,Mj)])
-        elif ((qni,qnf,op,Mj) in self.transitions): 
+        elif ((qni,qnf,op,Mj) in self.transitions):
             # available as reversed entry
             values = np.array(self.transitions[(qni,qnf,op,Mj)])
             (Ji,_,_) = qni
@@ -310,7 +324,7 @@ class MFDnRunData(object):
         values = 1/(2*Ji+1)*self.get_rme(qnf,qni,op,Mj)**2
 
         return values
-        
+
 
 ################################################################
 # MFDnStateData storage object
@@ -334,10 +348,10 @@ class MFDnStateData(object):
 
         Args:
             qn (tuple): quantum numbers (J,g,n)
-            T (float): effective isospin 
+            T (float): effective isospin
             energy (float): energy eigenvalue
         """
-        
+
         # initialize data dictionaries
         self.qn = qn
         self.properties = {}
