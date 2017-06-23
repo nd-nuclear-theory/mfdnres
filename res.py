@@ -125,6 +125,7 @@ class MFDnRunData(object):
         self.tbo = {}
         self.moments = {}
         self.transitions = {}
+        self.orbital_occupations = {}
 
     ################################################################
     # res file input
