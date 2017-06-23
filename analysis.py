@@ -39,7 +39,8 @@ def import_res_files(
     """ Imports set of results files into given dictionary with customizable key tuple.
 
     Args:
-        data (dict) : container for resulting MFDnRunData objects
+        data (dict) : container for resulting MFDnRunData objects (key contents determined
+            by key_fields argument)
         filename_list (str, list of str) : names of files or directories to process
         key_fields (tuple of str) : tuple of run descriptor keys to use to generate key to results
         filename_format (str) : determines which parser to use to parse run descriptor from filename
@@ -84,7 +85,8 @@ def import_res_files(
         if (verbose):
             print("Reading:",filename)
         res_file_info = mfdnres.descriptor.parse_res_filename(filename,filename_format=filename_format)
-        key = tuple(map((lambda x : res_file_info[x]),key_fields))
+        ##key = tuple(map((lambda x : res_file_info[x]),key_fields))
+        key = tuple([res_file_info[key] for key in key_fields])
         if (verbose):
             print(res_file_info["descriptor"],key)
 
