@@ -33,17 +33,19 @@ def test_directory_slurp():
 
     # slurp directory
     data = {}
+    #         data,filename,key_fields,filename_format,res_format,
     mfdnres.analysis.import_res_files(
         data,
-        filename = r"c:\work\research\data\mfdn\run0352",
+        filename = r"c:/work/data/results/mfdn/run0352",
         key_fields = ("interaction","Nmax","hw"),
-        descriptor_format="format_5_ho",
+        filename_format="format_5_ho",
         res_format="v14b06",
-        verbose=False
+        verbose=True
     )
 
     # dump levels
-    results = data[("JISP16","10","20.000")]
+    print("Data:",data)
+    results = data[("JISP16",10,20.000)]
     mfdnres.analysis.write_level_table(
         results,
         "test-levels.dat"
@@ -150,8 +152,8 @@ def test_am_output():
 
 if (__name__ == "__main__"):
     ##test_basic_import()
-    ##test_directory_slurp()
+    test_directory_slurp()
     ##test_band_file()
-    test_band_output()
+    ##test_band_output()
     ##test_am_output()
 

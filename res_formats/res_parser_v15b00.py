@@ -21,7 +21,7 @@
 import mfdnres.res
 
 # The location of the parser
-from make_dict import make_dict_mfdn15
+from mfdnres.make_dict import make_dict_mfdn15
 
 
 def res_parser_v15b00(self, fin, verbose):
@@ -101,8 +101,10 @@ def res_parser_v15b00(self, fin, verbose):
             orb_occ = {}
             proton_index = 0
             neutron_index = int(len(occupation_probabilities)/2)
-            while proton_index < len(occupation_probabilities)/2 - 1 
-                and neutron_index < len(occupation_probabilities):
+            while (
+                    (proton_index < len(occupation_probabilities)/2 - 1)
+                    and (neutron_index < len(occupation_probabilities))
+            ):
                 key = (float(occupation_probabilities[proton_index][2]),
                     float(occupation_probabilities[proton_index][3]), 
                     float(occupation_probabilities[proton_index][4])/2)
@@ -263,7 +265,7 @@ def res_parser_v15b00(self, fin, verbose):
 
 
 # Registers the parse
-res.register_res_format('v15b00', res_parser_v15b00)
+mfdnres.res.register_res_format('v15b00', res_parser_v15b00)
 
 ################################################################
 # test code
