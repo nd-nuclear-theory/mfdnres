@@ -122,14 +122,32 @@ def make_dict_spncii(results):
             results.pop(i)
         else:
             i = i + 1
+
+    # This section of code creates a list of all of the headings under the first
+    # occurence of the super header '[RESULTS]'
+    headers_under_results = []
+    found = False
+    index = 0
+    while not found:
+        if results[index][0:9] == '[RESULTS]':
+            found = True
+        else:
+            index = index + 1
+    first_occurence_results = index
+    index = first_occurence_results + 1
+    while index < len(results) and (not results[index][0:9] == '[RESULTS]'):
+        if results[index][0] == '[':
+            headers_under_results.append(results[index])
+        index = index + 1
+
     # This is the main loop of the method.  It goes through the line section by section.
     while len(results) > 0:
         # Used to store each section of data as it is being parsed
         temp_array = []
         # These booleans could be set to true later if the section being analyzed is
         # determined to be the data tyoe indicated by the boolean name.
-        isVariable = False
-        isSpncciCalculation = False
+        is_variable = False
+        is_spncci_results = False
         # This section deals with the unlikely possibility that there is some data
         # at the beginning of the file that is not contained in a section header.
         # It deals with this by removing entries from results until it finds a
@@ -149,16 +167,15 @@ def make_dict_spncii(results):
                 temp_array.append(results[0])
                 results.pop(0)
 
-            # This if state if one of the differences between the mfdn15
-            # parser and the spncci parser.  This section check to see
-            # if the next heading is 'Energies', and it it is, it adds
-            # all the data under that section to temp_array.  This is done
-            # to keep the energy data together with its corresponding
-            # hw value, stored under the preceeding 'Calculations' label.
-            if results[0][1:9] == 'Energies':
+            # This is one of the differences between the mfdn15
+            # parser and the spncci parser.  This section checks to see
+            # if the next heading is one of the known headings under '[RESULTS]',
+            # and it it is, it adds all the data under that section to temp_array.
+            #  This is done to keep the data from each mesh point together.
+            if results[0] in headers_under_results and temp_array[0][0:9] == '[RESULTS]':
                 temp_array.append(results[0])
                 results.pop(0)
-                while len(results) > 0 and (not results[0][0] == '['):
+                while len(results) > 0 and (not results[0][0:9] == '[RESULTS]'):
                     temp_array.append(results[0])
                     results.pop(0)
 
@@ -193,13 +210,13 @@ def make_dict_spncii(results):
             # in value, so it is variable data.  But it also adds a check to
             # make sure that the section being anlyzed is not 'Calculations'
             # which is handled differently
-            elif '=' in value[0] and (not key == 'Calculation'):
+            elif '=' in value[0] and (not key == 'RESULTS'):
                 order.append((key, Data.variable))
-                isVariable = True
+                is_variable = True
             # This elif filters out the 'Calculations' sections.
-            elif value[0][0] == 'hw':
+            elif key == 'RESULTS':
                 order.append((key, Data.spncci_calculation))
-                isSpncciCalculation = True
+                is_spncci_results = True
             # The else case assumes that if the data does not fall into
             # one of the above categories, then it is row data.
             else:
@@ -209,7 +226,7 @@ def make_dict_spncii(results):
             # then values is converted from a lists of lists to a dictionary
             # with the variable name as the key and the value of the variable
             # as the value
-            if isVariable:
+            if is_variable:
                 temp = {}
                 for x in value:
                     if len(x) == 3:
@@ -225,21 +242,40 @@ def make_dict_spncii(results):
             # is the value of hw (as a float) and the value is a list of tuples.
             # Each tuple  correspnds to a line of data and has the form
             # ((J, gex, i), E)
-            if isSpncciCalculation:
-                key = float(value[0][2])
-                value.pop(0)
-                value.pop(0)
-                temp = []
-                for x in value:
-                    temp1 = (float(x[0]), float(x[1]), float(x[2]))
-                    temp2 = float(x[3])
-                    temp.append((temp1, temp2))
-                value = temp
+            if is_spncci_results:
+                key = float(value[1][2])
+                value.pop(0)    # Removes '[Calculation]' 
+                value.pop(0)    # Removes 'hw = x' (data stored as the key)
+                value = spncci_results_section (value)
 
             # Adds the formatted key and value to results_dict
             results_dict[key] = value
 
     return results_dict, order
+
+def spncci_results_section (results):
+    """
+        Arguments:
+            results: a list of list.
+        Returned:
+            results_dict: a dictionary.
+
+        ADD MORE EXPLANATION HERE LATER!!!!!!!!!!!!!!!
+        ADD VARIABLE DATA CHECK
+    """
+    for i in range(0,len(results)):
+        if results[i][0][0] == '[':
+            results[i] = ' '.join(results[i])
+    results_dict = {}
+    while len(results) > 0:
+        key = results[0][1:-1]
+        results.pop(0)
+        value = []
+        while len(results) > 0 and (not results[0][0] == '['):
+            value.append(results[0])
+            results.pop(0)
+        results_dict[key] = value
+    return results_dict
 
 
 def make_dict_mfdn15(results):
@@ -298,7 +334,7 @@ def make_dict_mfdn15(results):
         temp_array = []
         # This boolean could be set to true later if the section being analyzed is
         # determined to be variable data.
-        isVariable = False
+        is_variable = False
         # This section deals with the unlikely possibility that there is some data
         # at the beginning of the file that is not contained in a section header.
         # It deals with this by removing entries from results until it finds a
@@ -350,7 +386,7 @@ def make_dict_mfdn15(results):
             # in value, so it is variable data.
             elif '=' in value[0]:
                 order.append((key, Data.variable))
-                isVariable = True
+                is_variable = True
             # The else case assumes that if the data does not fall into
             # one of the above categories, then it is row data.
             else:
@@ -360,7 +396,7 @@ def make_dict_mfdn15(results):
             # then values is converted from a lists of lists to a dictionary
             # with the variable name as the key and the value of the variable
             # as the value
-            if isVariable:
+            if is_variable:
                 temp = {}
                 for x in value:
                     if len(x) == 3:
