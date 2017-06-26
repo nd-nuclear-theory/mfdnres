@@ -21,16 +21,18 @@
 # Imports the parser from the make_dict file
 from make_dict import make_dict_spncii
 
+# Move this too
+"""
 # Imported to allow for graphing
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+"""
 
-
-def spnciiParser(fileName):
+def spnciiParser(file_name):
     """
         Arguments:
-            fileName: a string.  The filename of the results
+            file_name: a string.  The filename of the results
             file that needs to be analyzed.
         Returned:
             results_dict: a dictionary.  What is returned
@@ -51,7 +53,7 @@ def spnciiParser(fileName):
 
     # Inputs the file passed as an argument and stores the
     # parsed file contents in results
-    with open(fileName, 'rt') as fin:
+    with open(file_name, 'rt') as fin:
         for row in fin:
             results.append(row)
 
@@ -59,11 +61,31 @@ def spnciiParser(fileName):
     # stores the returned dictionary and list
     results_dict, order = make_dict_spncii(results)
 
-    # Returns the dictionary
+    for key,value in results_dict.items():
+        print('###KEY###')
+        print(key, '\n')
+        print('#####VALUE#####')
+        if isinstance(value,dict):
+            for k,v in value.items():
+                print('    ###KEY###  ', k)
+                print('    #####VALUE####')
+                if isinstance(key,float) or key == 'BabySpNCCI (listing)':
+                    for x in v:
+                        print('    ',x)
+                else:
+                    print('    ', v)
+        else:
+            print(value)
+        print('\n\n') 
+
+    # Returns the dictionary (need to remoce this in final version)
     return results_dict
 
 
-res = spnciiParser('runmac0405-Z3-N3-Nsigmamax02-Nmax02-spncii.res')
+res = spnciiParser('type_specimens/runmac0405-Z3-N3-Nsigmamax02-Nmax02.res')
+
+# Move this to its own file with a class of spncci caculation methods
+"""
 # This section of code makes the graph of energy versus h bar omega.
 # It also makes a table of the form nsigmamax,nmax,hw,energy for each
 # hw value and writes those to a file
@@ -86,10 +108,10 @@ nsigmamax = res['Space']['Nsigmamax']
 
 # The names for the outputted graph and table
 graphName = 'spncciTest.png'
-outputFileName = 'spncciTest.txt'
+output_file_name = 'spncciTest.txt'
 
 # The lable for the graph
-legendLabel = 'Nsigmamax = ' + str(nsigmamax) + '; Nmax = ' + str(nmax)
+legend_label = 'Nsigmamax = ' + str(nsigmamax) + '; Nmax = ' + str(nmax)
 
 # This section creates the graph and table and saves them as the file names
 # specified above, if there are the same number of elements in hws and energies
@@ -97,21 +119,22 @@ if len(hws) == len(energies):
     # Formats the data to be written to the file and then writes the data to the
     # file with a lable, denoted by the hashtag.  This label can be removed if
     # needed.
-    tofile = []
+    to_file = []
     for i in range(len(hws)):
         temp = str(nsigmamax)  + ',' + str(nmax) + ',' + str(hws[i]) + ',' + str(energies[i]) + '\n'
-        tofile.append(temp)
-    with open(outputFileName, 'w') as fout:
+        to_file.append(temp)
+    with open(output_file_name, 'w') as fout:
         fout.write('#nsigmamax,nmax,hw,Energy\n')
-        for x in tofile:
+        for x in to_file:
             fout.write(x)
 
     # This section created the graph and saves it to the file name specified
     # above.  To display the graph instead of saving it, change the last line
     # to 'plt.plot()' (no quotes).
     plt.figure()
-    plt.plot (hws, energies, 'r-', label=legendLabel)
+    plt.plot (hws, energies, 'r-', label=legend_label)
     plt.xlabel('h-bar omega (MeV)')
     plt.ylabel('Ground State Energy (Mev)')
     plt.legend(bbox_to_anchor=(1, 1))
-    plt.savefig(graphName, bbox_inches='tight')
+    plt.savefig(graph_name, bbox_inches='tight')
+"""
