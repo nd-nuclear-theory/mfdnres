@@ -1,10 +1,3 @@
-# File needed from the mfdnres code (Will need to be redone with appropriate path at the end)
-import mfdnres.res
-
-# The location of the parser
-from make_dict import make_dict_mfdn15
-
-
 """
     MFDn Version 15 Parser Revision 13
     Julie Butler
@@ -22,6 +15,13 @@ from make_dict import make_dict_mfdn15
     This file is currently setup with test code at the bottom for debuggin
     purposes.
 """
+
+
+# File needed from the mfdnres code (Will need to be redone with appropriate path at the end)
+import mfdnres.res
+
+# The location of the parser
+from make_dict import make_dict_mfdn15
 
 
 def res_parser_v15b00(self, fin, verbose):
@@ -147,11 +147,11 @@ def res_parser_v15b00(self, fin, verbose):
     # TBME file names
     observables = results_dict['Observables']
     tbo_operators = []
-    TBME_filenames = []
+    tbme_filenames = []
     for key, value in observables.items():
         if key[0:5] == 'TBMEf':
-            TBME_filenames.append(value)
-    for operator_name in TBME_filenames:
+            tbme_filenames.append(value)
+    for operator_name in tbme_filenames:
         operator_name = operator_name[5:]
         operator_name = operator_name[:len(operator_name)-4]
         if not (operator_name == 'H' or operator_name == 'rrel2'):
