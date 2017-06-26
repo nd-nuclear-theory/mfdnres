@@ -1,7 +1,3 @@
-
-import enum
-
-
 """
     make_dict.py
     Julie Butler
@@ -24,6 +20,9 @@ import enum
     specify the data types of the various sections within the
     results files.
 """
+
+
+import enum
 
 
 @enum.unique
