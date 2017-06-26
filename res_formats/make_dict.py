@@ -89,12 +89,12 @@ def make_dict_spncii(results):
                 contains one line of data from the results file.  The string
                 as separated into elements of a list using white space.  The
                 final type of entry into results_dict is from the spncci_calculations
-                data type, designed to deal with the multiple 'Calculations' and
-                'Energies' section headings.  It does so by making the key the
-                 value of hw for that particular section.  The value is a list
-                 of tuples, with each tuple having the form ((J, gex, i,), E).
-                 There should be one type per line of data in the energies
-                 sections.
+                data type, designed to deal with the multiple 'RESULTS' sections
+                in the results file.  It deals it the Results sections by creating
+                nested dictionary entries in results_dict.  The main key is the 
+                value of hw for that Results section (as a floating point number).
+                The value is then a dictionary formatted with the keys being 
+                section headings and the values being the data in that section.
             order: a list of tuples.  This list contains typles of the type
                 (headerName, dataType) where headerName is the section
                 label and dataType is from the class Data. This list is used
@@ -124,7 +124,8 @@ def make_dict_spncii(results):
             i = i + 1
 
     # This section of code creates a list of all of the headings under the first
-    # occurence of the super header '[RESULTS]'
+    # occurence of the super header '[RESULTS]'.  The headings under all other
+    # occurences of '[RESULTS]' should be the same.
     headers_under_results = []
     found = False
     index = 0
@@ -239,9 +240,9 @@ def make_dict_spncii(results):
 
             # If the data in the section is determined to be spincci calculation
             # then the list of list is converted into a dictionary where the key
-            # is the value of hw (as a float) and the value is a list of tuples.
-            # Each tuple  correspnds to a line of data and has the form
-            # ((J, gex, i), E)
+            # is the value of hw (as a float) and the value is a dictionary where
+            # the keys are the section headings and the values are the data within 
+            # those sections.
             if is_spncci_results:
                 key = float(value[1][2])
                 value.pop(0)    # Removes '[Calculation]' 
@@ -260,8 +261,8 @@ def spncci_results_section (results):
         Returned:
             results_dict: a dictionary.
 
-        ADD MORE EXPLANATION HERE LATER!!!!!!!!!!!!!!!
-        ADD VARIABLE DATA CHECK
+        Reformats the value of results_dict for a
+        SpNCCI Results sections.
     """
     for i in range(0,len(results)):
         if results[i][0][0] == '[':
