@@ -72,7 +72,10 @@ def import_res_files(
             filename_list.append(filename)
         else:
             # file prefix
-            prefix_filename_list = glob.glob(filename + "*.res")
+            glob_expression = os.path.join(filename,"*.res")
+            if (verbose):
+                print("Searching for:",glob_expression)
+            prefix_filename_list = glob.glob(glob_expression)
             filename_list.extend(prefix_filename_list)
             # directory
             directory_filename_list = glob.glob(os.path.join(filename,"*.res"))
@@ -82,6 +85,8 @@ def import_res_files(
     for filename in filename_list:
 
         # determine key from filename
+        #
+        # TODO: consider importing object, then constructing key from object properties
         if (verbose):
             print("Reading:",filename)
         res_file_info = mfdnres.descriptor.parse_res_filename(filename,filename_format=filename_format)

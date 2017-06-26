@@ -1,5 +1,4 @@
-"""
-    spncii Parser Revision 1
+"""spncii Parser Revision 1
     Julie Butler
     June 21, 2017
     Python3
@@ -15,13 +14,51 @@
     Once the format of the results file is on a more
     finalized form, this should be rearranged into a
     class structure for ease of access to variables.
+
+TODO:
+
+   Needed fields:
+
+     need to count (J,g) ->  num e-states
+       can extract by tallying from [Energies]
+       but maybe SpNCCI should just output table of num actual eigenstates
+         by (J,g) as min::(dimension,num_eigenstates)
+
+
+
+     params: key-value pairs from -- Space, Interaction, Calculation
+     (i.e., hw) (if not counting run)
+
+     basis: SpJ listing, BabySpNCCI listing
+
+     For actual calculation runs:
+
+         energies
+
+         state.amplitudes [from Decompositions: Nex]
+           => state.decomposition_Nex
+
+         state.decompositin_baby_spncci  [from Decompositions: BabySpNCCI]
+
+         [rms radii] -- from diagonals of the r^2 observable
+            can store in tbo until split out to more appropriate name?
+            no, maybe treat as a transition observable from the get-go
+
+         [quadrupole transitions] -- actually, don't use the MFDn
+         transitions structure here, either...
+
+         observables matrices -- store as matrices between
+           (observable_filename,(J,g)_final,(J,g)_initial)  [from Observables::filenames]
+
+         Modify accessors accordingly for spncci!
+
 """
 
 
 import mfdnres.res
 
 # Imports the parser from the make_dict file
-from make_dict import make_dict_spncii
+from mfdnres.make_dict import make_dict_spncii
 
 
 def res_parser_spncci(file_name):
@@ -78,6 +115,65 @@ def res_parser_spncci(file_name):
     return results_dict
 
 
+<<<<<<< HEAD
 # Register the parser
 mfdnres.res_format('spncci', res_parser_spncci)
 res = spnciiParser('type_specimens/runmac0405-Z3-N3-Nsigmamax02-Nmax02.res')
+=======
+## res = spnciiParser('type_specimens/runmac0405-Z3-N3-Nsigmamax02-Nmax02.res')
+## 
+## # Move this to its own file with a class of spncci caculation methods
+## """
+## # This section of code makes the graph of energy versus h bar omega.
+## # It also makes a table of the form nsigmamax,nmax,hw,energy for each
+## # hw value and writes those to a file
+## # The list of hw values used in the file are contained in the hw
+## # variable of the Mesh section of the results file.  This line
+## # retrieves those values as a list
+## hws = res['Mesh']['hw']
+## hws = [float(i) for i in hws]
+## 
+## # Retrieves the energies based on the hw value (which is the key)
+## # and stores them in the list energies.
+## energies = []
+## for x in hws:
+##     energies.append(res[x][0][1])
+## 
+## # Retrieves the value of the variables nmax and nsigmamax, both contained
+## # in the section 'Space'
+## nmax =  res['Space']['Nmax']
+## nsigmamax = res['Space']['Nsigmamax']
+## 
+## # The names for the outputted graph and table
+## graphName = 'spncciTest.png'
+## output_file_name = 'spncciTest.txt'
+## 
+## # The lable for the graph
+## legend_label = 'Nsigmamax = ' + str(nsigmamax) + '; Nmax = ' + str(nmax)
+## 
+## # This section creates the graph and table and saves them as the file names
+## # specified above, if there are the same number of elements in hws and energies
+## if len(hws) == len(energies):
+##     # Formats the data to be written to the file and then writes the data to the
+##     # file with a lable, denoted by the hashtag.  This label can be removed if
+##     # needed.
+##     to_file = []
+##     for i in range(len(hws)):
+##         temp = str(nsigmamax)  + ',' + str(nmax) + ',' + str(hws[i]) + ',' + str(energies[i]) + '\n'
+##         to_file.append(temp)
+##     with open(output_file_name, 'w') as fout:
+##         fout.write('#nsigmamax,nmax,hw,Energy\n')
+##         for x in to_file:
+##             fout.write(x)
+## 
+##     # This section created the graph and saves it to the file name specified
+##     # above.  To display the graph instead of saving it, change the last line
+##     # to 'plt.plot()' (no quotes).
+##     plt.figure()
+##     plt.plot (hws, energies, 'r-', label=legend_label)
+##     plt.xlabel('h-bar omega (MeV)')
+##     plt.ylabel('Ground State Energy (Mev)')
+##     plt.legend(bbox_to_anchor=(1, 1))
+##     plt.savefig(graph_name, bbox_inches='tight')
+## """
+>>>>>>> e6573ebf45ecd2669fe0766ba1b97da9a35ab1d2
