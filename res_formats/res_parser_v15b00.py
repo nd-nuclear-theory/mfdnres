@@ -1,10 +1,3 @@
-# File needed from the mfdnres code (Will need to be redone with appropriate path at the end)
-import mfdnres.res
-
-# The location of the parser
-from make_dict import make_dict_mfdn15
-
-
 """
     MFDn Version 15 Parser Revision 13
     Julie Butler
@@ -22,6 +15,13 @@ from make_dict import make_dict_mfdn15
     This file is currently setup with test code at the bottom for debuggin
     purposes.
 """
+
+
+# File needed from the mfdnres code (Will need to be redone with appropriate path at the end)
+import mfdnres.res
+
+# The location of the parser
+from make_dict import make_dict_mfdn15
 
 
 def res_parser_v15b00(self, fin, verbose):
