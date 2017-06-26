@@ -18,18 +18,13 @@
 """
 
 
+import mfdnres.res
+
 # Imports the parser from the make_dict file
 from make_dict import make_dict_spncii
 
-# Move this too
-"""
-# Imported to allow for graphing
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-"""
 
-def spnciiParser(file_name):
+def res_parser_spncci(file_name):
     """
         Arguments:
             file_name: a string.  The filename of the results
@@ -61,6 +56,7 @@ def spnciiParser(file_name):
     # stores the returned dictionary and list
     results_dict, order = make_dict_spncii(results)
 
+    # Prints the returned dictionary.  For debugging purposes
     for key,value in results_dict.items():
         print('###KEY###')
         print(key, '\n')
@@ -82,59 +78,6 @@ def spnciiParser(file_name):
     return results_dict
 
 
+# Register the parser
+mfdnres.res_format('spncci', res_parser_spncci)
 res = spnciiParser('type_specimens/runmac0405-Z3-N3-Nsigmamax02-Nmax02.res')
-
-# Move this to its own file with a class of spncci caculation methods
-"""
-# This section of code makes the graph of energy versus h bar omega.
-# It also makes a table of the form nsigmamax,nmax,hw,energy for each
-# hw value and writes those to a file
-# The list of hw values used in the file are contained in the hw
-# variable of the Mesh section of the results file.  This line
-# retrieves those values as a list
-hws = res['Mesh']['hw']
-hws = [float(i) for i in hws]
-
-# Retrieves the energies based on the hw value (which is the key)
-# and stores them in the list energies.
-energies = []
-for x in hws:
-    energies.append(res[x][0][1])
-
-# Retrieves the value of the variables nmax and nsigmamax, both contained
-# in the section 'Space'
-nmax =  res['Space']['Nmax']
-nsigmamax = res['Space']['Nsigmamax']
-
-# The names for the outputted graph and table
-graphName = 'spncciTest.png'
-output_file_name = 'spncciTest.txt'
-
-# The lable for the graph
-legend_label = 'Nsigmamax = ' + str(nsigmamax) + '; Nmax = ' + str(nmax)
-
-# This section creates the graph and table and saves them as the file names
-# specified above, if there are the same number of elements in hws and energies
-if len(hws) == len(energies):
-    # Formats the data to be written to the file and then writes the data to the
-    # file with a lable, denoted by the hashtag.  This label can be removed if
-    # needed.
-    to_file = []
-    for i in range(len(hws)):
-        temp = str(nsigmamax)  + ',' + str(nmax) + ',' + str(hws[i]) + ',' + str(energies[i]) + '\n'
-        to_file.append(temp)
-    with open(output_file_name, 'w') as fout:
-        fout.write('#nsigmamax,nmax,hw,Energy\n')
-        for x in to_file:
-            fout.write(x)
-
-    # This section created the graph and saves it to the file name specified
-    # above.  To display the graph instead of saving it, change the last line
-    # to 'plt.plot()' (no quotes).
-    plt.figure()
-    plt.plot (hws, energies, 'r-', label=legend_label)
-    plt.xlabel('h-bar omega (MeV)')
-    plt.ylabel('Ground State Energy (Mev)')
-    plt.legend(bbox_to_anchor=(1, 1))
-    plt.savefig(graph_name, bbox_inches='tight')
-"""
