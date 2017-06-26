@@ -147,11 +147,11 @@ def res_parser_v15b00(self, fin, verbose):
     # TBME file names
     observables = results_dict['Observables']
     tbo_operators = []
-    TBME_filenames = []
+    tbme_filenames = []
     for key, value in observables.items():
         if key[0:5] == 'TBMEf':
-            TBME_filenames.append(value)
-    for operator_name in TBME_filenames:
+            tbme_filenames.append(value)
+    for operator_name in tbme_filenames:
         operator_name = operator_name[5:]
         operator_name = operator_name[:len(operator_name)-4]
         if not (operator_name == 'H' or operator_name == 'rrel2'):
