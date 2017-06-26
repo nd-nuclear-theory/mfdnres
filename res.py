@@ -5,9 +5,15 @@
          -- define setter method for transitions, to only store in
             canonically decreasing (f<i) order
 
+    MORE TODO:
+        - reduce states data member to sorted list
+        - make data members protected/private
+
     Language: Python 3
+
     Mark A. Caprio
     University of Notre Dame
+
     5/31/15 (mac): Initiated (as mfdn_res.py).
     6/5/15 (mac): Allow user-supplied res file parser.
     6/5/15 (mac): Restructure as subpackage.
