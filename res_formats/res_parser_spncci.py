@@ -47,7 +47,7 @@ TODO:
          [quadrupole transitions] -- actually, don't use the MFDn
          transitions structure here, either...
 
-         observables matrices -- store as matrices between
+observables matrices -- store as matrices between
            (observable_filename,(J,g)_final,(J,g)_initial)  [from Observables::filenames]
 
          Modify accessors accordingly for spncci!
@@ -56,14 +56,16 @@ TODO:
 
 
 import mfdnres.res
+from numpy import array_split as array_split
 
 # Imports the parser from the make_dict file
 from mfdnres.make_dict import make_dict_spncii
 
 
-def res_parser_spncci(file_name):
+def res_parser_spncci(self, fin, verbose):
     """
         Arguments:
+            self: an instance of MFDnRunData.
             file_name: a string.  The filename of the results
             file that needs to be analyzed.
         Returned:
@@ -85,95 +87,97 @@ def res_parser_spncci(file_name):
 
     # Inputs the file passed as an argument and stores the
     # parsed file contents in results
-    with open(file_name, 'rt') as fin:
-        for row in fin:
-            results.append(row)
+   
+    for row in fin:
+        results.append(row)
 
     # Passes results to the parser make_dict_spncci and
     # stores the returned dictionary and list
     results_dict, order = make_dict_spncii(results)
 
-    # Prints the returned dictionary.  For debugging purposes
-    for key,value in results_dict.items():
-        print('###KEY###')
-        print(key, '\n')
-        print('#####VALUE#####')
-        if isinstance(value,dict):
-            for k,v in value.items():
-                print('    ###KEY###  ', k)
-                print('    #####VALUE####')
-                if isinstance(key,float) or key == 'BabySpNCCI (listing)':
-                    for x in v:
-                        print('    ',x)
-                else:
-                    print('    ', v)
-        else:
-            print(value)
-        print('\n\n') 
+    hw_listing = results_dict['Mesh']['hw']
+    j_listing = results_dict['Branching']['J']
+    print(j_listing)
+    num_j = len(j_listing)
 
-    # Returns the dictionary (need to remoce this in final version)
-    return results_dict
+    space = results_dict['Space']
+    interaction = results_dict['Interaction']
+    mesh = results_dict['Mesh']
+    for key,value in space.items():
+        self.params[key] = value
+    for key,value in interaction.items():
+        self.params [key] = value
+    for key,value in mesh.items():
+        self.params[key] = value
+
+    spj_listing = results_dict['SpJ (listing)']
+    for x in spj_listing:
+        self.spj_listing.append((float(x[1]), int(x[2])))
+
+    baby_spncci_listing = results_dict['BabySpNCCI (listing)']
+    for x in baby_spncci_listing:
+        subspace_index = int(x[0])
+        irrep_family_index = int(x[1])
+        Nsigmaex = int(x[2])
+        sigma_N = float(x[3])
+        sigma_lambda = int(x[4])
+        sigma_mu = int(x[5])
+        sp = float(x[6])
+        sn = float(x[7])
+        s = float(x[8])
+        nex = int(x[9])
+        omega_N = float(x[10])
+        omega_lambda = int(x[11])
+        omega_mu = int(x[12])
+        gamma_max = int(x[13])
+        upsilon_max = int(x[14])
+        dim = int(x[15])
+        sigma = (sigma_N, sigma_lambda, sigma_mu)
+        omega = (omega_N, omega_lambda, omega_mu)
+        spin = (sp, sn, s)
+        self.dimensions_by_omega[omega] = self.dimensions_by_omega.setdefault(omega,0) + dim
+        self.baby_spncci_listing.append([sigma, omega, spin])
+
+    state_list = []
+    state_lookup = {}
+    print(hw_listing)
+    if len(hw_listing) > 0:
+        for hw in hw_listing:
+            energy = results_dict[float(hw)]['Energies'] 
+            decomp_nex = results_dict[float(hw)]['Decompositions: Nex']
+            decomp_baby_spncci = results_dict[float(hw)]['Decompositions: BabySpNCCI']
+            observables = results_dict[float(hw)]['Observables']
+            print(hw)
+            state = mfdnres.res.SpNCCIStateData(hw)
+            state_list.append (state)
+            state_lookup[hw] = state
+            for x in energy:
+                qn = (float(x[0]), float(x[1]), float(x[2]))
+                key = (float(hw), qn)
+                E = float(x[3])
+                self.properties[key] = {'J': float(x[0]), 'gex': float(x[1]), 'i': float(x[2])}
+                self.energies[key] = E
+            decomp_nex_split = array_split(decomp_nex, num_j)
+            for i in range(0, num_j):
+                state.decomposition_nex[j_listing[i]] = decomp_nex_split[i].tolist()
+            decomp_baby_spncci_split = array_split(decomp_baby_spncci, num_j)
+            for i in range(0, num_j):
+                 state.decomposition_baby_spncci[j_listing[i]] = decomp_baby_spncci_split[i].tolist()
+            observables_split = array_split(observables, num_j)
+            op = str(results_dict['Observables']['filenames'])
+            for i in range(0, num_j):
+                 header_info = observables_split[i][0]
+                 matrix = observables_split[i][1:].tolist()
+                 tup = (op, (float(header_info[4]), float(header_info[5])),
+                        (float(header_info[2]), float(header_info[3])))
+                 state.observables[tup] = matrix
 
 
-<<<<<<< HEAD
+    for state in state_list:
+        self.states[state.hw] = state
+    
+    
+ 
 # Register the parser
-mfdnres.res_format('spncci', res_parser_spncci)
-res = spnciiParser('type_specimens/runmac0405-Z3-N3-Nsigmamax02-Nmax02.res')
-=======
-## res = spnciiParser('type_specimens/runmac0405-Z3-N3-Nsigmamax02-Nmax02.res')
-## 
-## # Move this to its own file with a class of spncci caculation methods
-## """
-## # This section of code makes the graph of energy versus h bar omega.
-## # It also makes a table of the form nsigmamax,nmax,hw,energy for each
-## # hw value and writes those to a file
-## # The list of hw values used in the file are contained in the hw
-## # variable of the Mesh section of the results file.  This line
-## # retrieves those values as a list
-## hws = res['Mesh']['hw']
-## hws = [float(i) for i in hws]
-## 
-## # Retrieves the energies based on the hw value (which is the key)
-## # and stores them in the list energies.
-## energies = []
-## for x in hws:
-##     energies.append(res[x][0][1])
-## 
-## # Retrieves the value of the variables nmax and nsigmamax, both contained
-## # in the section 'Space'
-## nmax =  res['Space']['Nmax']
-## nsigmamax = res['Space']['Nsigmamax']
-## 
-## # The names for the outputted graph and table
-## graphName = 'spncciTest.png'
-## output_file_name = 'spncciTest.txt'
-## 
-## # The lable for the graph
-## legend_label = 'Nsigmamax = ' + str(nsigmamax) + '; Nmax = ' + str(nmax)
-## 
-## # This section creates the graph and table and saves them as the file names
-## # specified above, if there are the same number of elements in hws and energies
-## if len(hws) == len(energies):
-##     # Formats the data to be written to the file and then writes the data to the
-##     # file with a lable, denoted by the hashtag.  This label can be removed if
-##     # needed.
-##     to_file = []
-##     for i in range(len(hws)):
-##         temp = str(nsigmamax)  + ',' + str(nmax) + ',' + str(hws[i]) + ',' + str(energies[i]) + '\n'
-##         to_file.append(temp)
-##     with open(output_file_name, 'w') as fout:
-##         fout.write('#nsigmamax,nmax,hw,Energy\n')
-##         for x in to_file:
-##             fout.write(x)
-## 
-##     # This section created the graph and saves it to the file name specified
-##     # above.  To display the graph instead of saving it, change the last line
-##     # to 'plt.plot()' (no quotes).
-##     plt.figure()
-##     plt.plot (hws, energies, 'r-', label=legend_label)
-##     plt.xlabel('h-bar omega (MeV)')
-##     plt.ylabel('Ground State Energy (Mev)')
-##     plt.legend(bbox_to_anchor=(1, 1))
-##     plt.savefig(graph_name, bbox_inches='tight')
-## """
->>>>>>> e6573ebf45ecd2669fe0766ba1b97da9a35ab1d2
+mfdnres.res.register_res_format('spncci', res_parser_spncci)
+#res = res_parser_spncci('type_specimens/runmac0415-Z3-N3-Nsigmamax02-Nmax02.res')
