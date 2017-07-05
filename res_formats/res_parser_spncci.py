@@ -15,42 +15,16 @@
     finalized form, this should be rearranged into a
     class structure for ease of access to variables.
 
-TODO:
+    Methods:
+        res_parser_spncci: Sorts the parsed SpnCCI results file
+            into an instance of SpNCCIMeshPointData.  Takes as
+            arguments an instance of SpNCCIMeshPointData, a 
+            dictionary with comes from the method make_dict_spncci,
+            from make_dict.py, and a boolean for debugging.  Returns
+            nothing.  Extracts the relevant information from results_dict
+            and stores it in the appropriate attributes of the 
+            instance of SpNCCIMeshPointData.
 
-   Needed fields:
-
-     need to count (J,g) ->  num e-states
-       can extract by tallying from [Energies]
-       but maybe SpNCCI should just output table of num actual eigenstates
-         by (J,g) as min::(dimension,num_eigenstates)
-
-
-
-     params: key-value pairs from -- Space, Interaction, Calculation
-     (i.e., hw) (if not counting run)
-
-     basis: SpJ listing, BabySpNCCI listing
-
-     For actual calculation runs:
-
-         energies
-
-         state.amplitudes [from Decompositions: Nex]
-           => state.decomposition_Nex
-
-         state.decompositin_baby_spncci  [from Decompositions: BabySpNCCI]
-
-         [rms radii] -- from diagonals of the r^2 observable
-            can store in tbo until split out to more appropriate name?
-            no, maybe treat as a transition observable from the get-go
-
-         [quadrupole transitions] -- actually, don't use the MFDn
-         transitions structure here, either...
-
-observables matrices -- store as matrices between
-           (observable_filename,(J,g)_final,(J,g)_initial)  [from Observables::filenames]
-
-         Modify accessors accordingly for spncci!
 
 """
 
@@ -59,61 +33,43 @@ import mfdnres.res
 from numpy import array_split as array_split
 
 # Imports the parser from the make_dict file
-from mfdnres.make_dict import make_dict_spncii
+from mfdnres.make_dict import make_dict_spncci
 
 
-def res_parser_spncci(self, fin, verbose):
+def res_parser_spncci(self, results_dict, verbose):
     """
         Arguments:
-            self: an instance of MFDnRunData.
-            file_name: a string.  The filename of the results
-            file that needs to be analyzed.
+            self (instance of SpNCCIMeshPointData)
+            results_dict (dictionary): Created by make_dict.make_dict_spncci. 
         Returned:
-            results_dict: a dictionary.  What is returned
-            from make_dic_spncci.
+            None.
 
-        This method currently takes in a file names and
-        converts the file contents into a list of strings,
-        where each string is a line from the file.  It then
-        takes the list and passes it to the parser
-        make_dict_spncci.  The dictionary returned from the
-        parser is then printed and returned by the method.
-        This method will be expanded and possibly incoporated
-        into a class structure when the format of the results
-        files is finalized.
+        Takes in the dictionary made by the make_dict_spncci method
+        of make_dict.py as well as an instance of SpNCCIMeshPointData.
+        Extract the relevant information from results_dict and stores
+        it in the appropriate attribute of self.
     """
-    # Stores the results from inputting the file
-    results = []
-
-    # Inputs the file passed as an argument and stores the
-    # parsed file contents in results
-   
-    for row in fin:
-        results.append(row)
-
-    # Passes results to the parser make_dict_spncci and
-    # stores the returned dictionary and list
-    results_dict, order = make_dict_spncii(results)
-
-    hw_listing = results_dict['Mesh']['hw']
+    # Determines what J-values are present in the run and how many.
     j_listing = results_dict['Branching']['J']
-    print(j_listing)
     num_j = len(j_listing)
 
+    # Sets the values of the self.params dictionary to the 
+    # entries under the headings 'Space' and 'Interaction'    
     space = results_dict['Space']
     interaction = results_dict['Interaction']
-    mesh = results_dict['Mesh']
     for key,value in space.items():
         self.params[key] = value
     for key,value in interaction.items():
         self.params [key] = value
-    for key,value in mesh.items():
-        self.params[key] = value
 
+    # Stores the information under the heading 'SpJ (listing)'
+    # in self.spj_listing
     spj_listing = results_dict['SpJ (listing)']
     for x in spj_listing:
         self.spj_listing.append((float(x[1]), int(x[2])))
 
+    # Stores the information under the heading 'BabySpNCCI (listing)'
+    # in self.baby_spncci_listing and self.dimensions_by_omega
     baby_spncci_listing = results_dict['BabySpNCCI (listing)']
     for x in baby_spncci_listing:
         subspace_index = int(x[0])
@@ -138,46 +94,45 @@ def res_parser_spncci(self, fin, verbose):
         self.dimensions_by_omega[omega] = self.dimensions_by_omega.setdefault(omega,0) + dim
         self.baby_spncci_listing.append([sigma, omega, spin])
 
-    state_list = []
-    state_lookup = {}
-    print(hw_listing)
-    if len(hw_listing) > 0:
-        for hw in hw_listing:
-            energy = results_dict[float(hw)]['Energies'] 
-            decomp_nex = results_dict[float(hw)]['Decompositions: Nex']
-            decomp_baby_spncci = results_dict[float(hw)]['Decompositions: BabySpNCCI']
-            observables = results_dict[float(hw)]['Observables']
-            print(hw)
-            state = mfdnres.res.SpNCCIStateData(hw)
-            state_list.append (state)
-            state_lookup[hw] = state
-            for x in energy:
-                qn = (float(x[0]), float(x[1]), float(x[2]))
-                key = (float(hw), qn)
-                E = float(x[3])
-                self.properties[key] = {'J': float(x[0]), 'gex': float(x[1]), 'i': float(x[2])}
-                self.energies[key] = E
-            decomp_nex_split = array_split(decomp_nex, num_j)
-            for i in range(0, num_j):
-                state.decomposition_nex[j_listing[i]] = decomp_nex_split[i].tolist()
-            decomp_baby_spncci_split = array_split(decomp_baby_spncci, num_j)
-            for i in range(0, num_j):
-                 state.decomposition_baby_spncci[j_listing[i]] = decomp_baby_spncci_split[i].tolist()
-            observables_split = array_split(observables, num_j)
-            op = str(results_dict['Observables']['filenames'])
-            for i in range(0, num_j):
-                 header_info = observables_split[i][0]
-                 matrix = observables_split[i][1:].tolist()
-                 tup = (op, (float(header_info[4]), float(header_info[5])),
-                        (float(header_info[2]), float(header_info[3])))
-                 state.observables[tup] = matrix
+    # Retrieves the information from the headings 'Energies', 'Decompositions: Nex', 
+    # 'Decomposition: BabySpNCCI' and 'Observables' by the hw value supplied when
+    # self was created.
+    energy = results_dict[self.hw]['Energies'] 
+    decomp_nex = results_dict[self.hw]['Decompositions: Nex']
+    decomp_baby_spncci = results_dict[self.hw]['Decompositions: BabySpNCCI']
+    observables = results_dict[self.hw]['Observables']
+   
+    # Fills self.energies with the data stored under the heading 'Energies'
+    for x in energy:
+        qn = (float(x[0]), float(x[1]), float(x[2]))
+        E = float(x[3])
+        self.energies[qn] = E
+
+    # Stores the information from 'Decompositions: Nex' and 'Decompositions:
+    # BabySpNCCI' in self.decompositions
+    decomposition_nex = {}
+    decomposition_baby_spncci = {}
+    decomp_nex_split = array_split(decomp_nex, num_j)
+    for i in range(0, num_j):
+        decomposition_nex[j_listing[i]] = decomp_nex_split[i].tolist()
+    self.decomposition['Nex'] = decomposition_nex
+    decomp_baby_spncci_split = array_split(decomp_baby_spncci, num_j)
+    for i in range(0, num_j):
+         decomposition_baby_spncci[j_listing[i]] = decomp_baby_spncci_split[i].tolist()
+    self.decomposition['BabySpNCCI'] = decomposition_baby_spncci
+
+    # Stores the information under the heading 'Observables' in self.observables
+    observables_split = array_split(observables, num_j)
+    op = str(results_dict['Observables']['filenames'])
+    for i in range(0, num_j):
+        header_info = observables_split[i][0]
+        if len(header_info) > 6:
+            matrix = observables_split[i][1:].tolist()
+            tup = (op, (float(header_info[4]), float(header_info[5])),
+                (float(header_info[2]), float(header_info[3])))
+            self.observables[tup] = matrix
 
 
-    for state in state_list:
-        self.states[state.hw] = state
-    
-    
- 
 # Register the parser
 mfdnres.res.register_res_format('spncci', res_parser_spncci)
 #res = res_parser_spncci('type_specimens/runmac0415-Z3-N3-Nsigmamax02-Nmax02.res')
