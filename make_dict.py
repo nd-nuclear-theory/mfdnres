@@ -19,9 +19,32 @@
     This file also contains the class Data, which uses Enum to
     specify the data types of the various sections within the
     results files.
+
+    Classes:
+        Data: Defines the different types of data found in results
+            files.
+            Does so through the use of the import enum.
+    Methods:
+        make_dict_spncci: Parser for SpNCCI results files.  Takes
+            as an argument the list of strings resulting from
+            importing the results file.  Returns a dictionary of the
+            parsed data and a list denoting the order of headings in the
+            results file.
+        spncci_results_section: Helper method for make_dict_spncci.
+            Takes as an argument a list of list, which is the data 
+            contained within a single results heading of a SpNCCI
+            results file (without the headings 'Calculations' or 
+            'Results', and without the hw = line). Returns a 
+            dictionary with the formatted data for the results section.
+        make_dict_mfdn15: Parser for MFDn Version 15 results files.
+            Takes as an argument the list of strings resulting from
+            importing the results file.  Returns a dictionary of the
+            parsed data and a list denoting the order of headings in the
+            results file.
+            
 """
 
-
+# Used in Data
 import enum
 
 
@@ -69,13 +92,13 @@ class Data(enum.Enum):
 num_sign = u"\u0023"
 
 
-def make_dict_spncii(results):
+def make_dict_spncci(results):
     """
         Arguments:
-            results: a list of strings.  The results of importing a results file.
+            results (list of strings:) The results of importing a results file.
                 Each string in results was a line in the results file.
         Returned:
-            results_dic: a dictionary.  This dictionary holds the parsed data.
+            results_dic (dictionary):  This dictionary holds the parsed data.
                 There are four types of entries possible in this dictionary,
                 corresponding to the four data types defined in the class
                 Data.  If a super header is found, the name of the super
@@ -95,11 +118,12 @@ def make_dict_spncii(results):
                 value of hw for that Results section (as a floating point number).
                 The value is then a dictionary formatted with the keys being 
                 section headings and the values being the data in that section.
-            order: a list of tuples.  This list contains typles of the type
-                (headerName, dataType) where headerName is the section
-                label and dataType is from the class Data. This list is used
-                to keep the order the data sections appeared in the results
-                file since they will get scrambled in the dictionary
+            order (list of tuples): Denotes the order headings were located in the file.
+                This list contains typles of the type (headerName, dataType)
+                where headerName is the section label and dataType is from the
+                class Data. This list is used to keep the order the data sections
+                appeared in the results file since they will get scrambled in the
+                dictionary
 
         This method parses a spncci results file.  It takes in a list of strings,
         where each string corresponds to a line of the results file.  It returns
@@ -130,7 +154,7 @@ def make_dict_spncii(results):
     found = False
     index = 0
     while not found:
-        if results[index][0:9] == '[RESULTS]':
+        if len(results[index]) > 7 and results[index][0:9] == '[RESULTS]':
             found = True
         else:
             index = index + 1
@@ -257,9 +281,9 @@ def make_dict_spncii(results):
 def spncci_results_section (results):
     """
         Arguments:
-            results: a list of list.
+            results (list of list)
         Returned:
-            results_dict: a dictionary.
+            results_dict (dictionary)
 
         Reformats the value of results_dict for a
         SpNCCI Results sections.
@@ -276,16 +300,16 @@ def spncci_results_section (results):
             value.append(results[0])
             results.pop(0)
         results_dict[key] = value
-    return results_dict
+    return results_dict    
 
 
 def make_dict_mfdn15(results):
     """
         Arguments:
-            results: a list of strings.   The results of importing a results file.
+            results (list of strings):  The results of importing a results file.
                 Each string in results was a line in the results file.
         Returned:
-            results_dict: a dictionary. This dictionary holds the parsed data.
+            results_dict (dictionary): This dictionary holds the parsed data.
                 There are three types of entries possible in this dictionary
                 corresponding to the four data types defined in the class
                 Data.  If a super header is found, the name of the super
@@ -298,7 +322,8 @@ def make_dict_mfdn15(results):
                 key and a nested list as the value.  Each of the inner list
                 contains one line of data from the results file.  The string
                 as separated into elements of a list using white space.
-            order: a list of tuples. This list contains typles of the type
+            order (list of tuples): Denotes the order headings were located in
+                the results file. This list contains typles of the type
                 (headerName, dataType) where headerName is the section
                 label and dataType is from the class Data. This list is used
                 to keep the order the data sections appeared in the results
