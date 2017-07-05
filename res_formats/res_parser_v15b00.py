@@ -12,8 +12,13 @@
     and the structure of the value depending on the type of data in the
     section. (See the documentation in make_dict for more information).
 
-    This file is currently setup with test code at the bottom for debuggin
+    This file is currently setup with test code at the bottom for debugging
     purposes.
+
+    Methods:
+    res_parser_v15b00: Parses the file and stores relevant information in an 
+        instance of MFDnRunData.  Takes as arguments an instance of MFDnRunData,
+        a file pointer, and a boolean for debugging purposes
 """
 
 
@@ -27,9 +32,10 @@ from mfdnres.make_dict import make_dict_mfdn15
 def res_parser_v15b00(self, fin, verbose):
     """
         Arguments:
-            self: an instance of MFDnRunData.
-            fin: a file pointer.  The results file to be read
-            verbose: a boolean. for debugging purposes
+            self (instance of MFDnRunData)
+            fin (file pointer):  The results file to be read
+            verbose (boolean): For debugging purposes.  
+                Value should be set to 'True' to enable debugging.
         Returned:
             None.
 
@@ -81,7 +87,7 @@ def res_parser_v15b00(self, fin, verbose):
         qn = (float(x[1]), g, float(x[2]))
         T = float(x[3])
         E = float(x[4])
-        state = res.MFDnStateData(qn, T, E)
+        state = mfdnres.res.MFDnStateData(qn, T, E)
         state_list.append(state)
         state_lookup[seq] = qn
         self.properties[state.qn] = {'J': x[1], 'g': g, 'n': x[2], 'T': T}
@@ -101,15 +107,8 @@ def res_parser_v15b00(self, fin, verbose):
             orb_occ = {}
             proton_index = 0
             neutron_index = int(len(occupation_probabilities)/2)
-<<<<<<< HEAD
             while (proton_index < len(occupation_probabilities)/2 - 1
                 and neutron_index < len(occupation_probabilities)):
-=======
-            while (
-                    (proton_index < len(occupation_probabilities)/2 - 1)
-                    and (neutron_index < len(occupation_probabilities))
-            ):
->>>>>>> e6573ebf45ecd2669fe0766ba1b97da9a35ab1d2
                 key = (float(occupation_probabilities[proton_index][2]),
                     float(occupation_probabilities[proton_index][3]), 
                     float(occupation_probabilities[proton_index][4])/2)
@@ -276,10 +275,6 @@ mfdnres.res.register_res_format('v15b00', res_parser_v15b00)
 # test code
 ################################################################
 if __name__ == "__main__":
-    # unit test is currently somewhat inaccessible, since running this
-    # module direcly in its cwd means mfdnres packages cannot be found
-    # unless added to PYTHONPATH
     filename = 'HeReal15/runaem0007-mfdn15-Z2-N1-JISP16-coul0-hw07.711-a_cm20-Nmax02-Mj0.5-lan2000-tol1.0e-06.res'
-    data = res.MFDnRunData()
-    data.read_file(filename, res_format="v15b00", verbose=True)
+    data = mfdnres.res.read_file(filename, res_format="v15b00", verbose=True)
     print("states {}, moments {}, transitions {}".format(len(data.states), len(data.moments), len(data.transitions)))
