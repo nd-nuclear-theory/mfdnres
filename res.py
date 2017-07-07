@@ -22,6 +22,7 @@
 
 """
 
+import glob
 import os
 
 import numpy as np
@@ -147,6 +148,7 @@ class BaseData (object):
         """
         self.params = {}
         self.energies = {}
+        self.filename = ""
 
     ########################################
     # Accessors                            #
@@ -278,7 +280,7 @@ class SpNCCIMeshPointData (BaseData):
 
 
 #################################################
-# MFDnRunData (Child of BaseData)            #
+# MFDnRunData (Child of BaseData)
 #################################################
 class MFDnRunData (BaseData):
     """
@@ -377,7 +379,7 @@ class MFDnRunData (BaseData):
                 the transition, the type of transition as a string, and MJ.  Retrieves reduced
                 matrix element (RME) of transition operator, regardless of which direction it was
                 calculated in the data set.
-            get_rtp: Accessot for the reduced transition probability of transition operator. 
+            get_rtp: Accessor for the reduced transition probability of transition operator. 
                 Takes as arguments two sets of quantum numbers, the final and inital states of
                 the transition, the type of transition as a string, and MJ. Retrieves reduced
                 transition probability (RTP) of transition operator, regardless of which direction
@@ -659,6 +661,8 @@ class MFDnRunData (BaseData):
 class MFDnStateData(object):
     """Class to store results for single MFDn calculated state.
 
+    DEPRECATED
+
     Attributes:
         qn (tuple): quantum numbers (J,g,n)
         properties (dict): quantum number-ish properties ("J", "g", "n", "T")
@@ -686,19 +690,39 @@ class MFDnStateData(object):
         self.energy = energy
         self.obo = {}
 
+##################################################
+# file importer
+##################################################
 
-#################################################
-# register formats                              #
-#################################################
-# fails due to circularity
-#
-#      File ".\mfdnres\res.py", line 165, in <module>
-#        from .formats import *
-#      File ".\mfdnres\formats\res_parser_v14b06.py", line 282, in <module>
-#        mfdnres.res.MFDnRunData.res_parser["v14b06"] = res_parser_v14b06
-#    AttributeError: 'module' object has no attribute 'res'
+def slurp_res_files(directory,res_format):
+    """
+    
+        TODO: accept list of directories
 
-## from .formats import *
+        Arguments:
+            directory (string): Location of the SpNCCI results files. 
+                Should be of the form '/location/of/files/*.res'
+        Returned:
+            data (nested dictionary): Maps from (Nmax, Nsigmamax) to hw to 
+                SpNCCIMeshPointData instance.  The outer keys of the dictionary
+                are tuples of the form (Nmax, Nsigmamax).  The inner keys are 
+                h-bar omega values.  Each h-bar omega value maps to its correspionding
+                instance of SpNCCIMeshPointData.
+
+        Takes all the SpNCCI results files from a specified directory and parses them into
+        a dictionary for later analysis.  This dictionary is returned at the end of the 
+        method.
+    """
+
+    # import all the files from the specified directory
+    files = glob.glob(directory)
+
+    # accumulate parsed data from different res files
+    mesh_point_data_list = []
+    for fle in files:
+        mesh_point_data_list += mfdnres.res.read_file(fle, res_format=res_format, verbose=True)
+
+    return mesh_point_data_list
 
 #################################################
 # test code                                     #

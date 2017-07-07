@@ -36,7 +36,9 @@ def import_res_files(
         data,filename,key_fields,filename_format,res_format,
         base_path=None,verbose=False
 ):
-    """ Imports set of results files into given dictionary with customizable key tuple.
+    """ Import set of results files into given dictionary with customizable key tuple.
+
+    NO LONGER VALID -- REMOVE ONCE FINISHED REFERRING TO CODE
 
     Args:
         data (dict) : container for resulting MFDnRunData objects (key contents determined
@@ -101,6 +103,43 @@ def import_res_files(
 
         # read data
         data[key].read_file(filename,res_format=res_format)
+
+def make_results_dict(
+        mesh_data,key_fields,
+        verbose=False
+):
+    """ Index mesh data into dictionary by specified tuple.
+
+    Args: TODO UPDATE
+        data (dict) : container for resulting MFDnRunData objects (key contents determined
+            by key_fields argument)
+        filename_list (str, list of str) : names of files or directories to process
+        key_fields (tuple of str) : tuple of run descriptor keys to use to generate key to results
+        filename_format (str) : determines which parser to use to parse run descriptor from filename
+        res_format (str) : determines which parser to use to parse MFDn res file
+        base_path (str) : base path to preappend to all filenamse (default: None)
+        verbose (bool): verbose output (default: False)
+
+    """
+
+    results_dict = dict()
+    for mesh_point in mesh_data:
+
+        # make key
+        key = tuple([mesh_point.params[key] for key in key_fields])
+        if (verbose):
+            print("  filename {} key {}".format(mesh_point.filename,key))
+
+        # store data point
+        if (key not in results_dict):
+            # save mesh point
+            results_dict[key] = mesh_point
+        else:
+            # update existing mesh point
+            # TODO
+            pass
+
+    return results_dict
 
 ################################################################
 # output tabulation: basic levels
@@ -942,7 +981,14 @@ def write_band_fit_parameters(results,filename,band,fields=None,verbose=False):
     with open(filename,"wt") as fout:
         fout.write(line)
 
+################################################################
+# BEGIN mac's playpen
+################################################################
 
+
+################################################################
+# END mac's playpen
+################################################################
 
 if (__name__ == "__main__"):
     pass

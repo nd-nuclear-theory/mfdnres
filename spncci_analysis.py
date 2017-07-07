@@ -29,7 +29,7 @@ import glob
 # Imports the parser
 import mfdnres.res
 # Allows for graphing
-import matplotlib.pyplot as plt
+##import matplotlib.pyplot as plt
 
 def spncci_slurp (directory):
     """
@@ -66,7 +66,7 @@ def spncci_slurp (directory):
     # data now has the following format (Nmax, Nsigmamax): hw: instance of SpNCCIMeshPointData
     return data
 
-def e_vs_hw (data, output_file_name, output_graph_name):
+def e_vs_hw(mesh_data,output_file_name):
     """
         Arguments:
             data (nested dictionary): The nested dictionary created by spncci_slurp
@@ -83,36 +83,25 @@ def e_vs_hw (data, output_file_name, output_graph_name):
         x-axis.  Each series of the graph is identified in the legend by Nmax and Nsigmamax.  The
         graph is both displayed and automatically saved to the supplied filename.
     """
-    # The contents of to_file are written to the table file
-    to_file = []
-    for key, value in data.items():
-        (Nmax, Nsigmamax) = key
-        x = []
-        y = []                   
-        for k, v in value.items():
+    # The contents of output_lines are written to the table file
+    output_lines = ['#Nmax  Nsigmamax  hw  energy']
+    for truncation, hw_dictionary in mesh_data.items():
+        (Nmax, Nsigmamax) = truncation
+        for hw, mesh_point_data in hw_dictionary.items():
             # The key is hw
-            x.append(k)
-            energies = v.energies
+            energies = mesh_point_data.energies
             # Finds the quantum number tuple associated with the lowest energy
             lowest_energy_qn = min(energies, key=energies.get)
             # E is set to the lowest energy
             E = energies[lowest_energy_qn]
-            y.append(E)
             # Tabulation to be written to the table file
-            string = str(Nmax) + '  ' + str(Nsigmamax) + '  ' + str(k) + '  ' + str(E)
-            to_file.append(string)
+            string = "{:2d} {:2d} {:7.3} {:e}".format(Nmax,Nsigmamax,hw,E)
+            output_lines.append(string)
         # How the legend of each series will appear on the graph
-        legend_label = 'Nmax: ' + str(Nmax) + '; Nsigmamax: ' + str(Nsigmamax)
-        plt.plot(x, y, 'o', label = legend_label)
+        ##legend_label = 'Nmax: ' + str(Nmax) + '; Nsigmamax: ' + str(Nsigmamax)
 
     # Creates the table
+    output_string = "\n".join(output_lines) + "\n"
     with open(output_file_name, 'wt') as fout:
-        fout.write('#Nmax  Nsigmamax  hw  energy\n')
-        for x in to_file:
-            fout.write(x)
-    # Adds the legend to the top of the graph, sets the axes labels, saves the graph, and then displays it
-    plt.legend(bbox_to_anchor=(0., 1.0, 1., .102), loc=3, ncol=4, mode="expand", borderaxespad=0.)
-    plt.xlabel('h-bar omega (MeV)')
-    plt.ylabel('Energy (MeV)')
-    plt.savefig(output_graph_name)
-    plt.show()
+        fout.write(output_string)
+

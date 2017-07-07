@@ -53,15 +53,43 @@ def res_parser_spncci(self, results_dict, verbose):
     j_listing = results_dict['Branching']['J']
     num_j = len(j_listing)
 
-    # Sets the values of the self.params dictionary to the 
-    # entries under the headings 'Space' and 'Interaction'    
+    ################################################################
+    # populate params
+    ################################################################
+
+    # Set values based on entries in Space and Interaction sections, plus
+    # hw from Calculation section.
+
+    # nuclide = 3 3 -- list of int
+    # A = 6  -- int
+    # Nsigma0 = 9.5  -- float
+    # Nsigmamax = 2  -- int
+    # N1v = 1  -- int
+    # Nmax = 2  -- int
+    # 
+    # interaction = RESERVED  -- str
+    # use_coulomb = 0  -- int -> bool
+
     space = results_dict['Space']
     interaction = results_dict['Interaction']
     for key,value in space.items():
         self.params[key] = value
     for key,value in interaction.items():
-        self.params [key] = value
+        self.params[key] = value
 
+    # convert fields
+    conversions = {
+        "Nsigmamax" : int,
+        "Nmax" : int
+    }
+    for key in conversions:
+        conversion = conversions[key]
+        self.params[key] = conversion(self.params[key])
+
+    self.params["hw"] = self.hw
+
+    # populate spj_listing
+    
     # Stores the information under the heading 'SpJ (listing)'
     # in self.spj_listing
     spj_listing = results_dict['SpJ (listing)']
