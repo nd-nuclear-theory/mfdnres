@@ -132,7 +132,8 @@ def res_parser_spncci(self, results_dict, verbose):
    
     # Fills self.energies with the data stored under the heading 'Energies'
     for x in energy:
-        qn = (float(x[0]), float(x[1]), float(x[2]))
+        # (J,g,n); convert from 0-based output in spncci to standard spectroscopic 1-based numbering in mfdnres
+        qn = (float(x[0]), int(x[1]), int(x[2])+1)
         E = float(x[3])
         self.energies[qn] = E
 
