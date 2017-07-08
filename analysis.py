@@ -6,7 +6,7 @@
 
     6/2/15 (mac): Initiated (as mfdn_analysis.py).
     6/5/15 (mac): Restructure as subpackage.
-    Last modified 7/6/15.
+    7/7/17 (mac): Remove obsolete import_res_files.
 
 """
 
@@ -32,77 +32,6 @@ MU_EM = np.array([1,0,5.586,-3.826])
 # load results files into database
 ################################################################
 
-def import_res_files(
-        data,filename,key_fields,filename_format,res_format,
-        base_path=None,verbose=False
-):
-    """ Import set of results files into given dictionary with customizable key tuple.
-
-    NO LONGER VALID -- REMOVE ONCE FINISHED REFERRING TO CODE
-
-    Args:
-        data (dict) : container for resulting MFDnRunData objects (key contents determined
-            by key_fields argument)
-        filename_list (str, list of str) : names of files or directories to process
-        key_fields (tuple of str) : tuple of run descriptor keys to use to generate key to results
-        filename_format (str) : determines which parser to use to parse run descriptor from filename
-        res_format (str) : determines which parser to use to parse MFDn res file
-        base_path (str) : base path to preappend to all filenamse (default: None)
-        verbose (bool): verbose output (default: False)
-
-    """
-
-    # expand filename specification
-    # upgrade single item to list
-    if (type(filename) == list):
-        raw_filename_list = filename
-    else:
-        raw_filename_list = [filename]
-    # prepend path
-    if (base_path is not None):
-        qualified_filename_list = [
-            os.path.join(base_path,filename)
-            for filename in raw_filename_list
-        ]
-    else:
-        qualified_filename_list = raw_filename_list
-    # expand directory names to explicit lists of files
-    filename_list = []
-    for filename in qualified_filename_list:
-        if (filename[-4:] == ".res"):
-            # individual file
-            filename_list.append(filename)
-        else:
-            # file prefix
-            glob_expression = os.path.join(filename,"*.res")
-            if (verbose):
-                print("Searching for:",glob_expression)
-            prefix_filename_list = glob.glob(glob_expression)
-            filename_list.extend(prefix_filename_list)
-            # directory
-            directory_filename_list = glob.glob(os.path.join(filename,"*.res"))
-            filename_list.extend(directory_filename_list)
-
-    # process files
-    for filename in filename_list:
-
-        # determine key from filename
-        #
-        # TODO: consider importing object, then constructing key from object properties
-        if (verbose):
-            print("Reading:",filename)
-        res_file_info = mfdnres.descriptor.parse_res_filename(filename,filename_format=filename_format)
-        ##key = tuple(map((lambda x : res_file_info[x]),key_fields))
-        key = tuple([res_file_info[key] for key in key_fields])
-        if (verbose):
-            print(res_file_info["descriptor"],key)
-
-        # generate new results object if key not already present
-        if (key not in data):
-            data[key] = mfdnres.res.MFDnRunData()
-
-        # read data
-        data[key].read_file(filename,res_format=res_format)
 
 def make_results_dict(
         mesh_data,key_fields,

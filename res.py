@@ -18,7 +18,10 @@
     6/5/15 (mac): Allow user-supplied res file parser.
     6/5/15 (mac): Restructure as subpackage.
     6/29/17 (jbutler): Added in inheritance for SpNCCI, updated documentation
-    Last modified 6/29/17.
+    7/7/17 (mac):
+        - Generalize slurp_res_files to take list of directory names (after old
+        analysis.import_res_files.
+        - Add directory name generation utility res_file_directory.
 
 """
 
@@ -739,6 +742,36 @@ def slurp_res_files(
             mesh_data += new_mesh_data
 
     return mesh_data
+
+def res_file_directory(username,code,run_number,results_dir="results"):
+    """Construct full path to res file directory, given user, code, and run.
+
+        This function assumes directory naming conventions appropriate
+        to mcscript archive files.
+
+        Arguments:
+            username (str): user name (e.g., "mcaprio")
+            code (str): code name (e.g., "spncci")
+            run_number (str): run name "tail" (e.g., "mac0424")
+
+        Environment:
+            GROUP_HOME: directory name for group top-level results directory
+              (e.g., "/afs/crc.nd.edu/group/nuclthy" or, for local work,
+              "/home/mcaprio")
+
+        >>> res_file_directory("mcaprio","spncci","mac0417")
+
+            /afs/crc.nd.edu/group/nuclthy/results/mcaprio/spncci/runmac0423/results
+
+    """
+
+    group_home = os.environ.get("GROUP_HOME")
+    if (type(group_home) is not str):
+        raise(ValueError("Need to set environment variable GROUP_HOME"))
+
+    res_directory = os.path.join(group_home,results_dir,username,code,"run"+run_number,"results")
+    return res_directory
+
 
 #################################################
 # test code                                     #
