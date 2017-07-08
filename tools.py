@@ -6,7 +6,7 @@
     5/31/15 (mac): Initiated (as mfdn_res.py).
     6/5/15 (mac): Restructure as subpackage.
     7/26/15 (mac): Allow mismatch in line parser.
-    Last modified 7/26/15.
+    7/8/17 (mac): Add write_lines and write_table.
     
 """
 
@@ -45,6 +45,43 @@ def parse_line(line,pattern,strict=True):
         raise(ValueError("unexpected string"))
     
     return match
+
+################################################################
+# table output
+################################################################
+
+def write_lines(filename,lines):
+    """ Write lines of text to file.
+
+    Arguments:
+        filename (str): name for output file
+        lines (list of str): output lines (sans newlines)
+    """
+
+    output_string = "\n".join(lines) + "\n"
+    with open(filename, 'wt') as out_file:
+        out_file.write(output_string)
+
+def write_table(out_filename,format_descriptor,data,verbose=False):
+    """Write output tabulation to file.
+    
+    Data may be in any form accessible by double indexing as
+    data[row][col], e.g., a simple list of lists or a numpy array.
+
+    Arguments:
+       out_filename (str): output filename
+       format_descriptor (str): format descriptor for single line
+       data (array): data values
+       verbose (bool, optional): verbose output flag
+    """
+
+    data_lines = [
+        format_descriptor.format(*entry)
+        for entry in data
+    ]
+    if (verbose):
+        print(data_lines)
+    write_lines(out_filename,data_lines)
 
 ################################################################
 # range construction utilities
