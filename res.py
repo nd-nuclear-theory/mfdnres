@@ -694,7 +694,10 @@ class MFDnStateData(object):
 # file importer
 ##################################################
 
-def slurp_res_files(directory,res_format):
+def slurp_res_files(
+        res_directory_list,res_format,
+        glob_pattern="*.res",verbose=False
+):
     """
     
         TODO: accept list of directories
@@ -714,15 +717,28 @@ def slurp_res_files(directory,res_format):
         method.
     """
 
-    # import all the files from the specified directory
-    files = glob.glob(directory)
+    # process argument: upgrade single directory to list
+    if (type(res_directory_list) == str):
+        res_directory_list = [res_directory_list]
 
-    # accumulate parsed data from different res files
-    mesh_point_data_list = []
-    for fle in files:
-        mesh_point_data_list += mfdnres.res.read_file(fle, res_format=res_format, verbose=True)
+    # accumulate mesh points
+    mesh_data = []
+    for res_directory in res_directory_list:
+        full_glob_pattern = os.path.join(res_directory,glob_pattern)
+        if (verbose):
+            print("Searching for {}...".format(full_glob_pattern))
+        res_filename_list = glob.glob(full_glob_pattern)
 
-    return mesh_point_data_list
+        # accumulate parsed data from different res files
+        for res_filename in res_filename_list:
+            if (verbose):
+                print("Reading {}...".format(res_filename))
+            new_mesh_data = mfdnres.res.read_file(res_filename,res_format=res_format,verbose=True)
+            if (verbose):
+                print("  {:d} mesh points".format(len(new_mesh_data)))
+            mesh_data += new_mesh_data
+
+    return mesh_data
 
 #################################################
 # test code                                     #
