@@ -59,8 +59,6 @@ def parse_line(line,pattern,strict=True):
 #       - ["[section]"]: Section header, where <section> denotes an
 #         arbitrary string.
 
-section_header_regex = re.compile(r"\[(.*)\]")
-
 def is_active_line(tokens):
     """ Identify nonempty, noncomment line.
 
@@ -74,20 +72,39 @@ def is_active_line(tokens):
     """
     return bool(tokens) and (tokens[0]!="#")
 
-def is_section_header_line(tokens):
-    """ Identify header line.
+section_header_regex = re.compile(r"\[(.*)\]")
+
+def extract_section_name(tokens):
+    """ Identify header line and (if header line) extract section name.
 
     Helper function for file parsing.
+    
+    Sections names can contain whitespace, but whitespace will be regularized
+    to single spacing, as an artifact of tokenization followed by rejoining.
 
     Arguments:
         (list of str): tokenized line
 
     Returns:
-        (bool)
+        (str): Header line name (if header) else None.
     """
-    return bool(tokens) and (len(tokens)==1) and bool(section_header_regex.match(tokens[0]))
 
-def split_active_lines(lines):
+    # Beware that, after tokenization, the section name may have been split
+    # over multiple tokens:
+    #
+    #      ('[BabySpNCCI', '(listing)]')
+
+    # test for header (with short circuit trap for empty line)
+    is_header_line = bool(tokens) and (tokens[0][0]=="[") and (tokens[-1][-1]=="]")
+
+    if (is_header_line):
+        spliced_line=" ".join(tokens)
+        return section_header_regex.match(spliced_line).group(1)  # or just chop off the bracket on each end...
+    else:
+        return None
+    
+
+def split_and_prune_lines(lines):
     """Split input lines into tokenized lines, suppressing comment
     (beginning with hash token) or empty lines.
 
@@ -127,16 +144,15 @@ def extracted_sections(tokenized_lines):
 
     # extract first header line (to "prime" the loop)
     header_tokens = next(tokenized_line_iterator,None)
+    section_name = extract_section_name(header_tokens)
+    if (not section_name):
+        raise ValueError("expected section header line but found {}".format(header_tokens))
 
     # loop over sections
-    while (header_tokens):
+    #
+    # Termination is when section_name==None.
+    while (section_name):
         
-        # extract section name
-        if (not is_section_header_line(header_tokens)):
-            raise ValueError("expected section header line but found {}".format(header_tokens))
-        section_name_match = section_header_regex.match(header_tokens[0])
-        section_name = section_name_match.group(1)
-
         # accumulate non-header lines
         #
         # Note: We could almost use itertools.takewhile with
@@ -145,22 +161,24 @@ def extracted_sections(tokenized_lines):
         # filtering layer which inserts an end-of-section flag into
         # the iteration over lines.
         section_lines = []
-        reached_end_of_section = False
-        while (not reached_end_of_section):
+        done_with_section = False
+        while (not done_with_section):
             # get line
             line_tokens = next(tokenized_line_iterator,None)
 
-            # process line
-            reached_end_of_section = is_section_header_line(line_tokens) or (not line_tokens)
-            if (reached_end_of_section):
-                # line is next section header (or None): store it for use as next section name
-                header_tokens = line_tokens
-            else:
-                # line is regular line: append it to this section
+            # check for next section header or end of input
+            next_section_name = extract_section_name(line_tokens)
+            done_with_section = bool(next_section_name) or (not line_tokens)
+
+            # if line is regular line: append it to this section
+            if (not done_with_section):
                 section_lines.append(line_tokens)
 
         # yield section
         yield (section_name,section_lines)
+
+        # advance to next section
+        section_name = next_section_name
 
 ################################################################
 # key-value conversion
@@ -220,7 +238,7 @@ def extract_key_value_pairs(tokenized_lines,conversions):
     for that key string.
 
     >>> test_lines = ["a = 1","b = 1 2 3","c = 42"]
-    >>> tokenized_lines = split_active_lines(test_lines)
+    >>> tokenized_lines = split_and_prune_lines(test_lines)
     >>> conversions = {"a" : singleton_of(int), "b" : list_of(int)}
     >>> extract_key_value_pairs(tokenized_lines,conversions)
     {'b': [1, 2, 3], 'a': 1}
@@ -323,13 +341,13 @@ if (__name__=="__main__"):
 
     # test structured file parsing
 
-    test_lines = ["[A]","# comment","   ","a b","c","[D]","[E]"]
+    test_lines = ["[A]","# comment","   ","a b","c","[D]","[E]","[A Z]"]
     print("Raw lines:",test_lines)
 
-    active_lines_iterator = split_active_lines(test_lines)
+    active_lines_iterator = split_and_prune_lines(test_lines)
     print("Tokenized and filtered lines:",list(active_lines_iterator))
 
-    extracted_sections_iterator = extracted_sections(split_active_lines(test_lines))
+    extracted_sections_iterator = extracted_sections(split_and_prune_lines(test_lines))
     print("Sections:",list(extracted_sections_iterator))
 
     print()
@@ -340,17 +358,17 @@ if (__name__=="__main__"):
 
     test_lines = ["a = 1","b = 1 2 3","c = 42"]
     print("Raw lines:",test_lines)
-    tokenized_lines = split_active_lines(test_lines)
+    tokenized_lines = split_and_prune_lines(test_lines)
     results = extract_key_value_pairs(tokenized_lines,conversions)
     print("Key-value pairs:",results)
     
     # test key-value conversions again with "bad" data
     if (False):
         test_lines = ["a = 1 2","b = 1 2 3","c = 42"]
-        tokenized_lines = split_active_lines(test_lines)
+        tokenized_lines = split_and_prune_lines(test_lines)
         results = extract_key_value_pairs(tokenized_lines,conversions)
 
     if (False):
         test_lines = ["not a valid line","b = 1 2 3","c = 42"]
-        tokenized_lines = split_active_lines(test_lines)
+        tokenized_lines = split_and_prune_lines(test_lines)
         results = extract_key_value_pairs(tokenized_lines,conversions)
