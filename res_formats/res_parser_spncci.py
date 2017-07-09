@@ -1,198 +1,275 @@
-"""spncii Parser Revision 1
-    Julie Butler
-    June 21, 2017
-    Python3
+""" res_parser_spncci
 
-    The controlling file for the spncci results file
-    parser.  The parser used here is the method
-    make_dict_spncci, stored in the file make_dict.py
-    (it is imported below).  Currently this file is set up
-    to parse the file whos name is provided below and make
-    a graph and table of energy versus hw.  This can be
-    expanded later to include more analysis.
+    Provides parser for spncci results files.
 
-    Once the format of the results file is on a more
-    finalized form, this should be rearranged into a
-    class structure for ease of access to variables.
+    Language: Python 3
 
-    Methods:
-        res_parser_spncci: Sorts the parsed SpnCCI results file
-            into an instance of SpNCCIMeshPointData.  Takes as
-            arguments an instance of SpNCCIMeshPointData, a 
-            dictionary with comes from the method make_dict_spncci,
-            from make_dict.py, and a boolean for debugging.  Returns
-            nothing.  Extracts the relevant information from results_dict
-            and stores it in the appropriate attributes of the 
-            instance of SpNCCIMeshPointData.
+    Mark A. Caprio
+    University of Notre Dame
 
+    7/9/17 (mac): Created.
 
 """
 
+import itertools
 
-import mfdnres.res
-from numpy import array_split as array_split
+import numpy as np
 
-# Imports the parser from the make_dict file
-import mfdnres.make_dict
+import mfdnres.tools
+import mfdnres.spncci
+
+################################################################
+# control code
+################################################################
+
+def is_results_sentinel_section(section):
+    """ (Helper function for res_parser_spncci.)
+    """
+    (section_name,_) = section
+    return (section_name == "RESULTS")
 
 def res_parser_spncci(in_file,verbose):
-    """ 
+    """ Parse full spncci results file, into list of one or more results objects.
+
+    Arguments:
+        in_file (stream): input file stream (already opened by caller)
+        verbose (bool,optional): enable verbose output
     """
 
-    # parse full results file into dictionary
-    results_lines = [row for row in in_file]
-    # Makes the dictionary before invoking the "parser" so that make_dict is only
-    # called once, no matter how many mesh points are analyzed
-    results_dict, order = mfdnres.make_dict.make_dict_spncci(results_lines)
+    # perform high-level parsing into sections
+    res_file_lines = [row for row in in_file]
+    tokenized_lines = mfdnres.tools.split_and_prune_lines(res_file_lines)
+    sections = mfdnres.tools.extracted_sections(tokenized_lines)
 
-    # identify mesh hw values
-    mesh_hw_strings = results_dict['Mesh']['hw']
-    if (type(mesh_hw_strings) is not list):
-        mesh_hw_strings = [mesh_hw_strings]  ## interim fix for ambiguous return type (str or list of str)
-    hw_values = list(map(float,mesh_hw_strings))
+    # split out common sections and subsequent groups of results sections
+    grouped_sections = mfdnres.tools.split_when(is_results_sentinel_section,sections)
+    common_sections = list(next(grouped_sections))
+    grouped_results_sections = [list(section_group) for section_group in grouped_sections]
+   
     if (verbose):
-        print("hw_values",hw_values)
+        print("Section counts")
+        print("  Common sections:",len(common_sections))
+        for results_section_group in grouped_results_sections:
+            print("  Results sections (by group):",len(results_section_group))
 
-    # spawn SpNCCIMeshPointData object for ech hw value
+    # generate results objects by mesh point
     mesh_data = []
-    for hw in hw_values:
-        # hw for a SpNCCIMeshPointData instance is defined in the constructor
-        data = mfdnres.res.SpNCCIMeshPointData(hw)
-        # The arguments are different from the MFDn parser.  res_parser_spncci takes
-        # the dictionary from make_dict_spncci as an argument instead of a file pointer.
-        # Reduces run time since make_dict is not called for every mesh point
-        res_parser_spncci_legacy(data, results_dict, verbose=verbose)
-        mesh_data.append(data)
+    if (grouped_results_sections):
+        # there are results sections: actual mesh, not counting run
+        for results_section_group in grouped_results_sections:
+            full_section_group = common_sections + results_section_group
+            results = mfdnres.spncci.SpNCCIMeshPointData()
+            parse_mesh_point(results,full_section_group,section_handlers)
+            mesh_data.append(results)
+    else:
+        # no results sections: counting run
+        results = mfdnres.spncci.SpNCCIMeshPointData()
+        parse_mesh_point(results,common_sections,section_handlers)
+        mesh_data.append(results)
 
     return mesh_data
 
-def res_parser_spncci_legacy(self, results_dict, verbose):
-    """
-        Arguments:
-            self (instance of SpNCCIMeshPointData)
-            results_dict (dictionary): Created by make_dict.make_dict_spncci. 
-        Returned:
-            None.
+def parse_mesh_point(self,sections,section_handlers):
+    """ Parse single mesh point into results object.
 
-        Takes in the dictionary made by the make_dict_spncci method
-        of make_dict.py as well as an instance of SpNCCIMeshPointData.
-        Extract the relevant information from results_dict and stores
-        it in the appropriate attribute of self.
+    Arguments:
+        self (SpNCCIMeshPointData): results object to populate
+        sections (list): data for sections to parse, as (section_name,tokenized_lines) tuples
+        section_handlers (dict): dictionary of section handlers
     """
 
-    # Determines what J-values are present in the run and how many.
-    j_listing = results_dict['Branching']['J']
-    num_j = len(j_listing)
+    for (section_name,tokenized_lines) in sections:
+        if section_name in section_handlers:
+            section_handlers[section_name](self,tokenized_lines)
 
-    ################################################################
-    # populate params
-    ################################################################
+# register the parser
+mfdnres.res.register_res_format('spncci',res_parser_spncci)
 
-    # Set values based on entries in Space and Interaction sections, plus
-    # hw from Calculation section.
+################################################################
+# section handlers
+################################################################
 
-    # nuclide = 3 3 -- list of int
-    # A = 6  -- int
-    # Nsigma0 = 9.5  -- float
-    # Nsigmamax = 2  -- int
-    # N1v = 1  -- int
-    # Nmax = 2  -- int
-    # 
-    # interaction = RESERVED  -- str
-    # use_coulomb = 0  -- int -> bool
-
-    space = results_dict['Space']
-    interaction = results_dict['Interaction']
-    for key,value in space.items():
-        self.params[key] = value
-    for key,value in interaction.items():
-        self.params[key] = value
-
-    # convert fields
+def parse_params(self,tokenized_lines):
+    """
+    Parse any section containing key-value pairs to add to params dictionary.
+    """
     conversions = {
-        "Nsigmamax" : int,
-        "Nmax" : int
+        # Space
+        "nuclide" : mfdnres.tools.list_of(int),
+        "A" : mfdnres.tools.singleton_of(int),
+        "Nsigma" : mfdnres.tools.singleton_of(float),
+        "Nsigmamax" : mfdnres.tools.singleton_of(int),
+        "N1v" : mfdnres.tools.singleton_of(int),
+        "Nmax" : mfdnres.tools.singleton_of(int),
+        # Interaction
+        "interaction" : mfdnres.tools.singleton_of(str),
+        "use_coulomb" : mfdnres.tools.singleton_of(bool),
+        # Relative observables
+        "observable_names" : mfdnres.tools.list_of(str),
+        # Calculation
+        "hw" : mfdnres.tools.singleton_of(float)
     }
-    for key in conversions:
-        conversion = conversions[key]
-        self.params[key] = conversion(self.params[key])
+    key_value_dict = mfdnres.tools.extract_key_value_pairs(
+        tokenized_lines,conversions
+    )
+    self.params.update(key_value_dict)
 
-    self.params["hw"] = self.hw
+def parse_observables(self,tokenized_lines):
+    """
+    Legacy support: Parse ambiguously named "Observables" sections.
 
-    # populate spj_listing
+    These are to be renamed in future spncci runs!
+    """
     
-    # Stores the information under the heading 'SpJ (listing)'
-    # in self.spj_listing
-    spj_listing = results_dict['SpJ (listing)']
-    for x in spj_listing:
-        self.spj_listing.append((float(x[1]), int(x[2])))
+    #trap unfortunate overload of Observables section name
+    if (tokenized_lines[0][0]!="filenames"):
+        parse_observable_rmes(self,tokenized_lines)
+        return
 
-    # Stores the information under the heading 'BabySpNCCI (listing)'
-    # in self.baby_spncci_listing and self.dimensions_by_omega
-    baby_spncci_listing = results_dict['BabySpNCCI (listing)']
-    for x in baby_spncci_listing:
-        subspace_index = int(x[0])
-        irrep_family_index = int(x[1])
-        Nsigmaex = int(x[2])
-        sigma_N = float(x[3])
-        sigma_lambda = int(x[4])
-        sigma_mu = int(x[5])
-        sp = float(x[6])
-        sn = float(x[7])
-        s = float(x[8])
-        nex = int(x[9])
-        omega_N = float(x[10])
-        omega_lambda = int(x[11])
-        omega_mu = int(x[12])
-        gamma_max = int(x[13])
-        upsilon_max = int(x[14])
-        dim = int(x[15])
-        sigma = (sigma_N, sigma_lambda, sigma_mu)
-        omega = (omega_N, omega_lambda, omega_mu)
-        spin = (sp, sn, s)
-        self.dimensions_by_omega[omega] = self.dimensions_by_omega.setdefault(omega,0) + dim
-        self.baby_spncci_listing.append([sigma, omega, spin])
-
-    # Retrieves the information from the headings 'Energies', 'Decompositions: Nex', 
-    # 'Decomposition: BabySpNCCI' and 'Observables' by the hw value supplied when
-    # self was created.
-    energy = results_dict[self.hw]['Energies'] 
-    decomp_nex = results_dict[self.hw]['Decompositions: Nex']
-    decomp_baby_spncci = results_dict[self.hw]['Decompositions: BabySpNCCI']
-    observables = results_dict[self.hw]['Observables']
-   
-    # Fills self.energies with the data stored under the heading 'Energies'
-    for x in energy:
-        # (J,g,n); convert from 0-based output in spncci to standard spectroscopic 1-based numbering in mfdnres
-        qn = (float(x[0]), int(x[1]), int(x[2])+1)
-        E = float(x[3])
-        self.energies[qn] = E
-
-    # Stores the information from 'Decompositions: Nex' and 'Decompositions:
-    # BabySpNCCI' in self.decompositions
-    decomposition_nex = {}
-    decomposition_baby_spncci = {}
-    decomp_nex_split = array_split(decomp_nex, num_j)
-    for i in range(0, num_j):
-        decomposition_nex[j_listing[i]] = decomp_nex_split[i].tolist()
-    self.decomposition['Nex'] = decomposition_nex
-    decomp_baby_spncci_split = array_split(decomp_baby_spncci, num_j)
-    for i in range(0, num_j):
-         decomposition_baby_spncci[j_listing[i]] = decomp_baby_spncci_split[i].tolist()
-    self.decomposition['BabySpNCCI'] = decomposition_baby_spncci
-
-    # Stores the information under the heading 'Observables' in self.observables
-    observables_split = array_split(observables, num_j)
-    op = str(results_dict['Observables']['filenames'])
-    for i in range(0, num_j):
-        header_info = observables_split[i][0]
-        if len(header_info) > 6:
-            matrix = observables_split[i][1:].tolist()
-            tup = (op, (float(header_info[4]), float(header_info[5])),
-                (float(header_info[2]), float(header_info[3])))
-            self.observables[tup] = matrix
+    conversions = {
+        "filenames" : mfdnres.tools.list_of(str)
+    }
+    key_value_dict = mfdnres.tools.extract_key_value_pairs(
+        tokenized_lines,conversions
+    )
+    self.params["observable_names"] = key_value_dict["filenames"]
 
 
-# Register the parser
-mfdnres.res.register_res_format('spncci', res_parser_spncci)
-#res = res_parser_spncci('type_specimens/runmac0415-Z3-N3-Nsigmamax02-Nmax02.res')
+def parse_spj_listing(self,tokenized_lines):
+    """ Parse matrices of RMEs.
+
+    Future: May be adding gex quantum number.
+    
+    Warning: Hard-coded gex=0.
+    """
+
+    self.spj_listing = np.array(
+        tokenized_lines,
+        dtype=[("subspace_index",int),("J",float),("dim",int)]
+        )
+    gex = 0
+    self.Jgex_values = list((J,gex) for J in self.spj_listing["J"])
+
+def parse_baby_spncci_listing(self,tokenized_lines):
+    """ Parse matrices of RMEs.
+    """
+    table = np.array(
+        tokenized_lines,
+        dtype=[
+            ("subspace_index",int),("irrep_family_index",int),
+            ("Nsigmaex",int),("sigma.N",float),("sigma.lambda",int),("sigma.mu",int),
+            ("Sp",float),("Sn",float),("S",float),
+            ("Nex",int),("omega.N",float),("omega.lambda",int),("omega.mu",int),
+            ("gamma_max",int),("upsilon_max",int),("dim",int)
+        ]
+    )
+    self.baby_spncci_listing = table
+
+def parse_decompositions_Nex(self,tokenized_lines):
+    """ Parse matrices of RMEs.
+    """
+
+    self.decompositions["Nex"] = {}
+    tokenized_lines_iterator = iter(tokenized_lines)  # so that we can read through sequentially
+    for (J,gex) in self.Jgex_values:
+
+        # skip empty eigenspace
+        if ((J,gex) not in self.num_eigenvalues):
+            continue
+
+        # read table
+        lines = itertools.islice(tokenized_lines_iterator,self.params["Nmax"]+1)
+        numbers = [[float(x) for x in row] for row in lines]
+        self.decompositions["Nex"][(J,gex)]=np.array(numbers,dtype=float)
+        ## print("Numbers:",numbers)
+        ## print((J,gex),self.decompositions["Nex"][(J,gex)])
+
+def parse_decompositions_baby_spncci(self,tokenized_lines):
+    """ Parse matrices of RMEs.
+    """
+
+    self.decompositions["BabySpNCCI"] = {}
+    baby_spncci_dim = len(self.baby_spncci_listing)
+    tokenized_lines_iterator = iter(tokenized_lines)  # so that we can read through sequentially
+    for (J,gex) in self.Jgex_values:
+
+        # skip empty eigenspace
+        if ((J,gex) not in self.num_eigenvalues):
+            continue
+
+        # read table
+        lines = itertools.islice(tokenized_lines_iterator,baby_spncci_dim)
+        numbers = [[float(x) for x in row] for row in lines]
+        self.decompositions["BabySpNCCI"][(J,gex)]=np.array(numbers,dtype=float)
+        ##print(self.decompositions["BabySpNCCI"][(J,gex)][:,0])
+
+def parse_energies(self,tokenized_lines):
+    """ Parse matrices of RMEs.
+    """
+
+    # import energy tabulation
+    table = np.array(
+        tokenized_lines,
+        dtype=[("J",float),("gex",int),("n0",int),("E",float)]
+        )
+
+    # sort energies into energies dictionary
+    for entry in table:
+        (J,gex,n0,E)=entry
+        n = n0 + 1  # convert to 1-based spectroscopic numbering of states
+        self.energies[(J,gex,n)]=E
+        self.num_eigenvalues[(J,gex)]=self.num_eigenvalues.setdefault((J,gex),0)+1
+
+def parse_observable_rmes(self,tokenized_lines):
+    """ Parse matrices of RMEs.
+    """
+
+    tokenized_lines_iterator = iter(tokenized_lines)  # so that we can read through sequentially
+
+    observable_matrix_header = next(tokenized_lines_iterator,None)
+    while (observable_matrix_header):
+
+        # parse header
+        conversions = (int,int,float,int,float,int,int,int)
+        (observable_index,sector_index,J_bra,gex_bra,J_ket,gex_ket,rows,cols)=[
+            conversion(x)
+            for (x,conversion) in zip(observable_matrix_header,conversions)
+        ]
+        
+        # prepare matrix key
+        observable_name = self.params["observable_names"][observable_index]
+        key = (observable_name,(J_bra,gex_bra),(J_ket,gex_ket))
+
+        # read matrix
+        lines = itertools.islice(tokenized_lines_iterator,rows)
+        numbers = [[float(x) for x in row] for row in lines]
+        self.observables[key]=np.array(numbers,dtype=float)
+        ## print("Key:",key)
+        ## print(self.observables[key])
+
+        # attempt to read next header
+        observable_matrix_header = next(tokenized_lines_iterator,None)
+    
+
+section_handlers = {
+    # PARAMETERS
+    "Space" : parse_params,
+    "Interaction" : parse_params,
+    "Relative observables" : parse_params,
+    "Observables" : parse_observables,  # legacy support for early runs
+    # BASIS
+    "SpJ (listing)" : parse_spj_listing,
+    "BabySpNCCI (listing)" : parse_baby_spncci_listing,
+    # RESULTS
+    "Calculation" : parse_params,
+    "Energies" : parse_energies,
+    "Decompositions: Nex" : parse_decompositions_Nex,
+    "Decompositions: BabySpNCCI" : parse_decompositions_baby_spncci,
+    "Observable RMEs" : parse_observable_rmes
+
+}
+
+
+if (__name__=="__main__"):
+    #res = res_parser_spncci('type_specimens/runmac0415-Z3-N3-Nsigmamax02-Nmax02.res')
+    pass

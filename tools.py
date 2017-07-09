@@ -376,6 +376,10 @@ def value_range(x1,x2,dx,epsilon=0.00001):
         x += dx
     return value_list
 
+################################################################
+# test code
+################################################################
+
 if (__name__=="__main__"):
 
     # test structured file parsing
