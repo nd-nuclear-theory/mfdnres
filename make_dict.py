@@ -91,6 +91,8 @@ class Data(enum.Enum):
 # from the code.
 num_sign = u"\u0023"
 
+# Really?  I don't see the problem.
+this_is_also_a_num_sign = "#"
 
 def make_dict_spncci(results):
     """

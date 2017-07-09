@@ -101,7 +101,5 @@ def e_vs_hw(mesh_data,output_file_name):
         ##legend_label = 'Nmax: ' + str(Nmax) + '; Nsigmamax: ' + str(Nsigmamax)
 
     # Creates the table
-    output_string = "\n".join(output_lines) + "\n"
-    with open(output_file_name, 'wt') as fout:
-        fout.write(output_string)
+    res.tools.write_lines(output_file_name,output_lines)
 
