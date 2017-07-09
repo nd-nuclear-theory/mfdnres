@@ -11,6 +11,7 @@
     
 """
 
+import itertools
 import re
 
 ################################################################
@@ -270,6 +271,49 @@ def extract_key_value_pairs(tokenized_lines,conversions):
     return results
 
 ################################################################
+# iterator for splitting sequence on sentinel value
+################################################################
+
+def split_when(sentinel_condition,data):
+    """Break a sequence into subsequences separated by sentinel values.
+
+    The sentinel condition need not return a boolean, but must
+    logically equivalent to True for sentinel data values and must
+    evaluate to a single, consistent logically false value for all
+    non-sentinels (most likely None).
+
+    To generate explicit sublists:
+
+        split_iterator = split_when(...)
+        split_list = [list(sublist) for sublist in split_iterator]
+
+    >>>non_decadal_numbers_iterator=split_when((lambda x: not x%10),range(30))
+    >>>non_decadal_numbers_list=[list(sublist) for sublist in non_decadal_numbers_iterator]
+    [[1, 2, 3, 4, 5, 6, 7, 8, 9], [11, 12, 13, 14, 15, 16, 17, 18, 19], [21, 22, 23, 24, 25, 26, 27, 28, 29]]
+
+    Arguments:
+        sentinel_condition (function): test for sentinel values of the data
+            separate groups
+        data (iterable): sequence of values to group
+
+    Returns:
+        (iterator of iterators): iterators over each of the subsequences
+
+    """
+
+    # group by value of boolean condition
+    #
+    # Resulting iterator yields:
+    #
+    # [...,(False,<group iterator>),(True,<group iterator>,...]
+    grouped_data=itertools.groupby(data,key=sentinel_condition)
+    
+    # generate subsequences
+    for (is_sentinel,group_iterator) in grouped_data:
+        if (not is_sentinel):
+            yield group_iterator
+
+################################################################
 # table output
 ################################################################
 
@@ -332,11 +376,6 @@ def value_range(x1,x2,dx,epsilon=0.00001):
         x += dx
     return value_list
 
-
-################################################################
-# test
-################################################################
-
 if (__name__=="__main__"):
 
     # test structured file parsing
@@ -372,3 +411,8 @@ if (__name__=="__main__"):
         test_lines = ["not a valid line","b = 1 2 3","c = 42"]
         tokenized_lines = split_and_prune_lines(test_lines)
         results = extract_key_value_pairs(tokenized_lines,conversions)
+
+    # test sequence splitting
+    non_decadal_numbers_iterator=split_when((lambda x: not x%10),range(30))
+    non_decadal_numbers_list=[list(sublist) for sublist in non_decadal_numbers_iterator]
+    print("Non-decadal numbers:",list(non_decadal_numbers_list))
