@@ -12,9 +12,11 @@
     Mark A. Caprio
     University of Notre Dame
 
-    7/9/17 (mac): Extract
+    7/9/17 (mac): Extract SpNCCIMeshPointData from res.py.
 
 """
+
+import math
 
 import numpy as np
 
@@ -89,23 +91,43 @@ class SpNCCIMeshPointData(mfdnres.res.BaseResultsData):
     def get_basis (self):
         print('Need to implement')
 
-    def get_rme(self,qnf,qni,op,Mj,default=np.nan):
+    def get_radius(self,qn,radius_type,default=np.nan):
+        """
+        Note: Raw gt-convention RME is intrinsic squared radius, i.e., summed over particles.
+
+        TODO:
+          - fail gracefully with default
+
         """
 
-        !!!!!!!!!!!!!!!! WIP !!!!!!!!!!!!!!!!
+        # extract labels
+        (J,gex,n) = qn
+        n0 = n-1
 
-            Arguments:
-                qnf (tuple):   A set of quantum numbers in the form (J, g, n) that
-                    represents the final state of the transition.
-                qni (tuple):  A set of quantum numbers in the form (J, g, n) that
-                    represents the initial state of the tranistion.
-                op (string):  Specifies the operator.
-                    Should be set to either 'M1' or 'E2'.
-                Mj (float): (ADD DESCRIPTION HERE)
-                default (float):  The value to be returned if elements are undefiend.
-            Returned:
-                values (numpy vector):  Contains the values of the reduced matrix elements
-                    for different components of the operator.
+        # retrieve underlying rme
+        if (radius_type=="r"):
+            sum_sqr_radius = self.observables[("r2intr",(J,gex),(J,gex))][n0,n0]
+        elif (radius_type in {"rp","rn"}):
+            sum_sqr_radius = default
+        else:
+            raise ValueError("radius type code")
+
+        # derive final value from rme
+        A = self.params["A"]
+        rms_radius = math.sqrt(1/A*sum_sqr_radius)
+
+        return rms_radius
+        
+
+    def get_rme(self,observable,qn_bra,qn_ket,default=np.nan):
+        """
+
+        
+        <Jf||op||Ji>_Edmonds = sqrt(2*Jf+1) * <Jf||op||Ji>_gt
+
+        TODO:
+          - implement bra-ket conjugation flip
+          - fail gracefully with default
 
             Retrieves reduced matrix element (RME) of transition operator,
             regardless of which direction it was calculated in the data set.
@@ -123,27 +145,39 @@ class SpNCCIMeshPointData(mfdnres.res.BaseResultsData):
             other operators (e.g., GT).
 
         """
-        if (op not in {"M1","E2"}):
-            raise ValueError("get_rme supports only M1 and E2 at present")
 
-        if ((qnf,qni,op,Mj) in self.transitions):
-            # available as direct entry
-            values = np.array(self.transitions[(qnf,qni,op,Mj)])
-        elif ((qni,qnf,op,Mj) in self.transitions):
-            # available as reversed entry
-            values = np.array(self.transitions[(qni,qnf,op,Mj)])
-            (Ji,_,_) = qni
-            (Jf,_,_) = qnf
-            values *= (-1)**(Jf-Ji)
-        else:
-            # fall through to default
-            if (op == "M1"):
-                values = default*np.ones(4)
-            elif (op == "E2"):
-                values = default*np.ones(2)
+        # extract labels
+        (J_bra,gex_bra,n_bra) = qn_bra
+        (J_ket,gex_ket,n_ket) = qn_ket
+        n0_bra = n_bra-1
+        n0_ket = n_ket-1
 
-        return values
- 
+        # retrieve underlying rme
+        rme_gt = self.observables[(observable,(J_bra,gex_bra),(J_ket,gex_ket))][n0_bra,n0_ket]
+
+        # derive final value from rme
+        rme_edmonds = math.sqrt(2*J_bra+1)*rme_gt
+
+        return rme_edmonds
+
+    def get_rtp(self,observable,qn_bra,qn_ket,default=np.nan):
+        """
+        """ 
+
+        # extract labels
+        (J_bra,gex_bra,n_bra) = qn_bra
+        (J_ket,gex_ket,n_ket) = qn_ket
+
+        # retrieve underlying rme
+        rme = self.get_rme(observable,qn_bra,qn_ket)
+
+        # derive final value from rme
+        rtp = 1/(2*J_ket+1)*rme**2
+
+        return rtp
+    
+
+
     ########################################
     # Methods
     ########################################

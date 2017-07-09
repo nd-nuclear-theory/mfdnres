@@ -649,7 +649,7 @@ def slurp_res_files(
         for res_filename in res_filename_list:
             if (verbose):
                 print("Reading {}...".format(res_filename))
-            new_mesh_data = read_file(res_filename,res_format=res_format,verbose=True)
+            new_mesh_data = read_file(res_filename,res_format=res_format,verbose=verbose)
             if (verbose):
                 print("  {:d} mesh points".format(len(new_mesh_data)))
             mesh_data += new_mesh_data

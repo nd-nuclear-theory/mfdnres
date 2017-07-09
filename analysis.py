@@ -119,13 +119,49 @@ def make_energy_table(mesh_data,qn):
      )
     return table
 
-def make_rme_table(mesh_data,observable_name,qnf,qni):
-    """ Generate energy tabulation.
+def make_radius_table(mesh_data,qn):
+    """ Generate radius tabulation.
 
-    TODO finish and validate
+    TODO: change format to give rp, rn, and rm
 
     Data format:
-        Nsigmamax Nmax hw E
+        Nsigmamax Nmax hw r
+
+    Arguments:
+        mesh_data (list): data for mesh points
+        qn (tuple): quantum numbers (J,g,n) of level to retrieve
+    
+    Returns:
+       (array): data table 
+    """
+    
+    # sort mesh data
+    #
+    # Make copy of mesh ordered lexicographically by (Nsigmamax,Nmax,hw).
+
+    ordered_data = sorted(mesh_data,key=key_function_Nsigmamax_Nmax_hw)
+
+    # tabulate values
+    table_data = [
+            (
+                mesh_point.params["Nsigmamax"],
+                mesh_point.params["Nmax"],
+                mesh_point.params["hw"],
+                mesh_point.get_radius(qn,"r")
+            )
+            for mesh_point in ordered_data
+        ]
+    table = np.array(
+        table_data,
+        dtype = [("Nsigmamax",int),("Nmax",int),("hw",float),("r",float)]
+     )
+    return table
+
+def make_rme_table(mesh_data,observable,qnf,qni):
+    """ Generate RME tabulation.
+
+    Data format:
+        Nsigmamax Nmax hw RME
 
     Arguments:
         mesh_data (list): data for mesh points
@@ -148,7 +184,44 @@ def make_rme_table(mesh_data,observable_name,qnf,qni):
                 mesh_point.params["Nsigmamax"],
                 mesh_point.params["Nmax"],
                 mesh_point.params["hw"],
-                mesh_point.get_rme(observable_name,qnf,qni)
+                mesh_point.get_rme(observable,qnf,qni)
+            )
+            for mesh_point in ordered_data
+        ]
+    table = np.array(
+        table_data,
+        dtype = [("Nsigmamax",int),("Nmax",int),("hw",float),("RME",float)]
+     )
+    return table
+
+def make_rtp_table(mesh_data,observable,qnf,qni):
+    """ Generate RTP tabulation.
+
+    Data format:
+        Nsigmamax Nmax hw RTP
+
+    Arguments:
+        mesh_data (list): data for mesh points
+        observable_name (str): key naming observable
+        qnf, qni (tuple): quantum numbers (J,g,n) of final and initial levels
+    
+    Returns:
+       (array): data table
+    """
+    
+    # sort mesh data
+    #
+    # Make copy of mesh ordered lexicographically by (Nsigmamax,Nmax,hw).
+
+    ordered_data = sorted(mesh_data,key=key_function_Nsigmamax_Nmax_hw)
+
+    # tabulate values
+    table_data = [
+            (
+                mesh_point.params["Nsigmamax"],
+                mesh_point.params["Nmax"],
+                mesh_point.params["hw"],
+                mesh_point.get_rtp(observable,qnf,qni)
             )
             for mesh_point in ordered_data
         ]
