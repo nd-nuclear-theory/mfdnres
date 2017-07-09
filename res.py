@@ -81,16 +81,26 @@ def read_file(filename,res_format,verbose=False):
 
         # Check for SpNCCI results files
         elif res_format == 'spncci':
+
+            # parse full results file into dictionary
             results = []
             for row in fin:
                 results.append(row)
             # Makes the dictionary before invoking the "parser" so that make_dict is only
             # called once, no matter how many mesh points are analyzed
             results_dict, order = mfdnres.make_dict.make_dict_spncci(results)
-            mesh_points = results_dict['Mesh']['hw']
-            for x in mesh_points:
+
+            # identify mesh hw values
+            mesh_hw_strings = results_dict['Mesh']['hw']
+            if (type(mesh_hw_strings) is not list):
+                mesh_hw_strings = [mesh_hw_strings]  ## interim fix for ambiguous return type (str or list of str)
+            hw_values = map(float,mesh_hw_strings)
+            ## print("hw_values",hw_values)
+
+            # spawn SpNCCIMeshPointData object for ech hw value
+            for hw in hw_values:
                 # hw for a SpNCCIMeshPointData instance is defined in the constructor
-                data = SpNCCIMeshPointData(x)
+                data = SpNCCIMeshPointData(hw)
                 # The arguments are different from the MFDn parser.  res_parser_spncci takes
                 # the dictionary from make_dict_spncci as an argument instead of a file pointer.
                 # Reduces run time since make_dict is not called for every mesh point
@@ -169,17 +179,16 @@ class BaseData (object):
              quantum numbers.
         """
         # Makes a list of unsorted quantum number tuples
-        raw_qn_list = list(self.states.keys())
+        raw_qn_list = list(self.energies.keys())
         # Sorts the quantum numbers based on their associated energy
-        qn_list = sorted(raw_qn_list,key=(lambda qn : self.states[qn].energy))
+        qn_list = sorted(raw_qn_list,key=(lambda qn : self.energies[qn]))
         return qn_list
 
-    def get_energies (self,qn):
-        """
+    def get_energy(self,qn):
+        """ Retrieve the energy of level with given quantum numbers.
+
             Arguments:
                 qn (tuple): A tuple of quantum numbers.
-                    (J, g, n) for MFDn or (hw, (J, gex, i)) for SpNCCI.
-                property (string):  The name of the property that is to be returned.
             Returned:
                 value(varies): The energy for a valid set of quantum numbers.
                     If the set of quantum numbers is valid, value is set to the
@@ -194,8 +203,9 @@ class BaseData (object):
         if qn in self.energies:
             value = self.energies[qn]
         else:
-            print(qn, 'is not a valid set of quantum numbers.  Returning None.')
-            value = None 
+            raise(ValueError("No energy found for quantum numbers {}".format(qn)))
+            ## print(qn, 'is not a valid set of quantum numbers.  Returning None.')
+            ## value = None 
         return value
 
     ########################################
@@ -264,7 +274,7 @@ class SpNCCIMeshPointData (BaseData):
             Initialized self.hw to the value given in the arguments.
         """
         super().__init__()
-        self.hw = float(hw)
+        self.hw = hw
         self.spj_listing = []
         self.baby_spncci_listing = []
         self.dimensions_by_omega = {}
@@ -277,6 +287,61 @@ class SpNCCIMeshPointData (BaseData):
     def get_basis (self):
         print('Need to implement')
 
+    def get_rme(self,qnf,qni,op,Mj,default=np.nan):
+        """
+
+        !!!!!!!!!!!!!!!! WIP !!!!!!!!!!!!!!!!
+
+            Arguments:
+                qnf (tuple):   A set of quantum numbers in the form (J, g, n) that
+                    represents the final state of the transition.
+                qni (tuple):  A set of quantum numbers in the form (J, g, n) that
+                    represents the initial state of the tranistion.
+                op (string):  Specifies the operator.
+                    Should be set to either 'M1' or 'E2'.
+                Mj (float): (ADD DESCRIPTION HERE)
+                default (float):  The value to be returned if elements are undefiend.
+            Returned:
+                values (numpy vector):  Contains the values of the reduced matrix elements
+                    for different components of the operator.
+
+            Retrieves reduced matrix element (RME) of transition operator,
+            regardless of which direction it was calculated in the data set.
+
+            Obtains RME <Jf||op||Ji>, using relation
+                <Jf||op||Ji> = (-)^(Jf-Ji) <Ji||op||Jf>
+            which applies to both the M1 and E2 operators under Condon-Shortley phase
+            conventions (Suhonen Ch. 6) for these operators.  Derived from
+            W-E theorem, symmetry of CG coefficient, and conjugation
+            properties of these operators.
+
+            Note that for MFDn the reference state is the "final" state.
+
+            Limitations: Conjugation relations need to be checked for
+            other operators (e.g., GT).
+
+        """
+        if (op not in {"M1","E2"}):
+            raise ValueError("get_rme supports only M1 and E2 at present")
+
+        if ((qnf,qni,op,Mj) in self.transitions):
+            # available as direct entry
+            values = np.array(self.transitions[(qnf,qni,op,Mj)])
+        elif ((qni,qnf,op,Mj) in self.transitions):
+            # available as reversed entry
+            values = np.array(self.transitions[(qni,qnf,op,Mj)])
+            (Ji,_,_) = qni
+            (Jf,_,_) = qnf
+            values *= (-1)**(Jf-Ji)
+        else:
+            # fall through to default
+            if (op == "M1"):
+                values = default*np.ones(4)
+            elif (op == "E2"):
+                values = default*np.ones(2)
+
+        return values
+ 
     ########################################
     # Methods                              #
     ########################################
@@ -572,7 +637,7 @@ class MFDnRunData (BaseData):
     def get_rme(self,qnf,qni,op,Mj,default=np.nan):
         """
             Arguments:
-               qnf (tuple):   A set of quantum numbers in the form (J, g, n) that
+                qnf (tuple):   A set of quantum numbers in the form (J, g, n) that
                     represents the final state of the transition.
                 qni (tuple):  A set of quantum numbers in the form (J, g, n) that
                     represents the initial state of the tranistion.
