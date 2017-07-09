@@ -7,7 +7,8 @@
     6/2/15 (mac): Initiated (as mfdn_analysis.py).
     6/5/15 (mac): Restructure as subpackage.
     7/7/17 (mac): Remove obsolete import_res_files.
-
+    7/8/17 (mac): Start adding new tabulation functions which return
+      arrays of data rather than writing to file.
 """
 
 import os
@@ -71,7 +72,94 @@ def make_results_dict(
     return results_dict
 
 ################################################################
-# output tabulation: basic levels
+# tabulation functions
+################################################################
+
+
+def key_function_Nsigmamax_Nmax_hw(mesh_point):
+    """
+    TODO: To replace with generic factory function for key functions.
+    """
+    return (mesh_point.params["Nsigmamax"],mesh_point.params["Nmax"],mesh_point.params["hw"])
+
+
+def make_energy_table(mesh_data,qn):
+    """ Generate energy tabulation.
+
+    Data format:
+        Nsigmamax Nmax hw E
+
+    Arguments:
+        mesh_data (list): data for mesh points
+        qn (tuple): quantum numbers (J,g,n) of level to retrieve
+    
+    Returns:
+       (array): data table 
+    """
+    
+    # sort mesh data
+    #
+    # Make copy of mesh ordered lexicographically by (Nsigmamax,Nmax,hw).
+
+    ordered_data = sorted(mesh_data,key=key_function_Nsigmamax_Nmax_hw)
+
+    # tabulate values
+    table_data = [
+            (
+                mesh_point.params["Nsigmamax"],
+                mesh_point.params["Nmax"],
+                mesh_point.params["hw"],
+                mesh_point.get_energy(qn)
+            )
+            for mesh_point in ordered_data
+        ]
+    table = np.array(
+        table_data,
+        dtype = [("Nsigmamax",int),("Nmax",int),("hw",float),("E",float)]
+     )
+    return table
+
+def make_rme_table(mesh_data,observable_name,qnf,qni):
+    """ Generate energy tabulation.
+
+    TODO finish and validate
+
+    Data format:
+        Nsigmamax Nmax hw E
+
+    Arguments:
+        mesh_data (list): data for mesh points
+        observable_name (str): key naming observable
+        qnf, qni (tuple): quantum numbers (J,g,n) of final and initial levels
+    
+    Returns:
+       (array): data table
+    """
+    
+    # sort mesh data
+    #
+    # Make copy of mesh ordered lexicographically by (Nsigmamax,Nmax,hw).
+
+    ordered_data = sorted(mesh_data,key=key_function_Nsigmamax_Nmax_hw)
+
+    # tabulate values
+    table_data = [
+            (
+                mesh_point.params["Nsigmamax"],
+                mesh_point.params["Nmax"],
+                mesh_point.params["hw"],
+                mesh_point.get_rme(observable_name,qnf,qni)
+            )
+            for mesh_point in ordered_data
+        ]
+    table = np.array(
+        table_data,
+        dtype = [("Nsigmamax",int),("Nmax",int),("hw",float),("RTP",float)]
+     )
+    return table
+
+################################################################
+# LEGACY -- output tabulation: basic levels
 ################################################################
 
 def write_level_table(results,filename,levels=None):
@@ -118,7 +206,7 @@ def write_level_table(results,filename,levels=None):
 ################################################################
 
 def write_radii_table(results,filename,levels=None):
-    """Writes radius data.
+    """ LEGACY -- Writes radius data.
 
         seq J p n T rp rn r
 
