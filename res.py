@@ -52,68 +52,45 @@ def register_res_format(format_name,parser):
 
 
 def read_file(filename,res_format,verbose=False):
-    """
+    """ Invoke appropriate parser to parse results file.
+
+        The results will be a list of results data objects, one for each mesh point.
+
         Arguments:
-            filename (string): Name of results file.
-                The name of the results file to be parsed and analyzed.
-            res_format (string):  Name of a parser.
-                The parser to be used.  Must be registered in res_format_parser
+            filename (str): Name of results file.
+            res_format (str):  Name of results file parser to use.
+                The parser to be used.  Must be registered in res_format_parser.
             verbose (boolean): For debugging purposes.  Set to False by default.
-        Returned:
+
+        Returns:
             data_instances (list): Container for MFDnRunData/SpNCCIMeshPointData instances.
                 A list of of the MFDnRunData or SpNCCIMeshPointData instances generated
                 from the inputted results file.
-
-        Parses the filename sepcified in the arguments using the parser also specified in the 
-        arguments.  Returns a list of MFDnRunData/SpNCCIMeshPointData instances.  If MFDn results
-        files are bring ana;yzed, only one instance should be returned.  If SpNCCI results files are
-        being analyzed, one instance should be returned fro each mesh point in the results file.
     """
-    # Holds the instances of MFDnRunData/SpNCCIMeshPointData 
-    data_instance = []
 
-    with open(filename, 'rt') as fin:
-        # Check for MFDn results files
-        if res_format == 'v14b06' or res_format == 'v15b00' or res_format == 'v14b05':
+    # temporary special-case trap for legacy parsers
+    #
+    # TODO: fix up legacy parsers to new standard and remove this
+    # special case trap code
+    #
+    # These parsers populated a single MFDnRunData object.  Now
+    # all parsers should return a list of results data objects.
+        
+    if res_format == 'v14b06' or res_format == 'v15b00' or res_format == 'v14b05':
+        with open(filename, 'rt') as fin:
             data = MFDnRunData()
             res_format_parser[res_format](data, fin, verbose=verbose)
-            data_instance.append(data)
+            full_data = [data]
+        return full_data
 
-        # Check for SpNCCI results files
-        elif res_format == 'spncci':
-
-            # parse full results file into dictionary
-            results = []
-            for row in fin:
-                results.append(row)
-            # Makes the dictionary before invoking the "parser" so that make_dict is only
-            # called once, no matter how many mesh points are analyzed
-            results_dict, order = mfdnres.make_dict.make_dict_spncci(results)
-
-            # identify mesh hw values
-            mesh_hw_strings = results_dict['Mesh']['hw']
-            if (type(mesh_hw_strings) is not list):
-                mesh_hw_strings = [mesh_hw_strings]  ## interim fix for ambiguous return type (str or list of str)
-            hw_values = map(float,mesh_hw_strings)
-            ## print("hw_values",hw_values)
-
-            # spawn SpNCCIMeshPointData object for ech hw value
-            for hw in hw_values:
-                # hw for a SpNCCIMeshPointData instance is defined in the constructor
-                data = SpNCCIMeshPointData(hw)
-                # The arguments are different from the MFDn parser.  res_parser_spncci takes
-                # the dictionary from make_dict_spncci as an argument instead of a file pointer.
-                # Reduces run time since make_dict is not called for every mesh point
-                res_format_parser[res_format](data, results_dict, verbose=verbose)
-                data_instance.append(data)
-
-    return data_instance        
+    with open(filename,'rt') as fin:
+        return res_format_parser[res_format](fin,verbose=verbose)
 
 
 #################################################
-# BaseRunData                                   #
+# BaseResultsData
 #################################################
-class BaseData (object):
+class BaseResultsData (object):
     """
         Notes:
             A set of quantum numbers for an MFDnRunData instance are of the
@@ -213,11 +190,11 @@ class BaseData (object):
     ########################################
 
 #################################################
-# SpNCCIMeshPointData (Child of BaseData)          #
+# SpNCCIMeshPointData (Child of BaseResultsData)          #
 #################################################
-class SpNCCIMeshPointData (BaseData):
+class SpNCCIMeshPointData (BaseResultsData):
     """
-        Child of BaseData
+        Child of BaseResultsData
         Attributes:
             self.params (dictionary):  Container for properties of run.
                 Inherited from BaseRunData.
@@ -348,11 +325,11 @@ class SpNCCIMeshPointData (BaseData):
 
 
 #################################################
-# MFDnRunData (Child of BaseData)
+# MFDnRunData (Child of BaseResultsData)
 #################################################
-class MFDnRunData (BaseData):
+class MFDnRunData (BaseResultsData):
     """
-        Child of BaseData
+        Child of BaseResultsData
         Attributes:
             self.params (dictionary):  Container for properties of run.
                 Inherited from BaseRunData.

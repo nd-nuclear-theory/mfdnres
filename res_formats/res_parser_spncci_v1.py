@@ -33,40 +33,10 @@ import mfdnres.res
 from numpy import array_split as array_split
 
 # Imports the parser from the make_dict file
-import mfdnres.make_dict
+from mfdnres.make_dict import make_dict_spncci
 
-def res_parser_spncci(in_file,verbose):
-    """ 
-    """
 
-    # parse full results file into dictionary
-    results_lines = [row for row in in_file]
-    # Makes the dictionary before invoking the "parser" so that make_dict is only
-    # called once, no matter how many mesh points are analyzed
-    results_dict, order = mfdnres.make_dict.make_dict_spncci(results_lines)
-
-    # identify mesh hw values
-    mesh_hw_strings = results_dict['Mesh']['hw']
-    if (type(mesh_hw_strings) is not list):
-        mesh_hw_strings = [mesh_hw_strings]  ## interim fix for ambiguous return type (str or list of str)
-    hw_values = list(map(float,mesh_hw_strings))
-    if (verbose):
-        print("hw_values",hw_values)
-
-    # spawn SpNCCIMeshPointData object for ech hw value
-    mesh_data = []
-    for hw in hw_values:
-        # hw for a SpNCCIMeshPointData instance is defined in the constructor
-        data = mfdnres.res.SpNCCIMeshPointData(hw)
-        # The arguments are different from the MFDn parser.  res_parser_spncci takes
-        # the dictionary from make_dict_spncci as an argument instead of a file pointer.
-        # Reduces run time since make_dict is not called for every mesh point
-        res_parser_spncci_legacy(data, results_dict, verbose=verbose)
-        mesh_data.append(data)
-
-    return mesh_data
-
-def res_parser_spncci_legacy(self, results_dict, verbose):
+def res_parser_spncci(self, results_dict, verbose):
     """
         Arguments:
             self (instance of SpNCCIMeshPointData)
@@ -79,7 +49,6 @@ def res_parser_spncci_legacy(self, results_dict, verbose):
         Extract the relevant information from results_dict and stores
         it in the appropriate attribute of self.
     """
-
     # Determines what J-values are present in the run and how many.
     j_listing = results_dict['Branching']['J']
     num_j = len(j_listing)
