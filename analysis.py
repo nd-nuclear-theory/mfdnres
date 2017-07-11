@@ -119,10 +119,8 @@ def make_energy_table(mesh_data,qn):
      )
     return table
 
-def make_radius_table(mesh_data,qn):
+def make_radius_table(mesh_data,radius_type,qn):
     """ Generate radius tabulation.
-
-    TODO: change format to give rp, rn, and rm
 
     Data format:
         Nsigmamax Nmax hw r
@@ -147,7 +145,7 @@ def make_radius_table(mesh_data,qn):
                 mesh_point.params["Nsigmamax"],
                 mesh_point.params["Nmax"],
                 mesh_point.params["hw"],
-                mesh_point.get_radius(qn,"r")
+                mesh_point.get_radius(radius_type,qn)
             )
             for mesh_point in ordered_data
         ]
