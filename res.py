@@ -165,7 +165,7 @@ class BaseResultsData (object):
         qn_list = sorted(raw_qn_list,key=(lambda qn : self.energies[qn]))
         return qn_list
 
-    def get_energy(self,qn):
+    def get_energy(self,qn,default=np.nan):
         """ Retrieve the energy of level with given quantum numbers.
 
             Arguments:
@@ -181,12 +181,10 @@ class BaseResultsData (object):
             a message to the console.
         """
         # Check to be sure the quantum numbers supplied are in self.energies
-        if qn in self.energies:
+        try:
             value = self.energies[qn]
-        else:
-            raise(ValueError("No energy found for quantum numbers {}".format(qn)))
-            ## print(qn, 'is not a valid set of quantum numbers.  Returning None.')
-            ## value = None 
+        except:
+            return default
         return value
 
     ########################################

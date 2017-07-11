@@ -9,6 +9,7 @@
     7/7/17 (mac): Remove obsolete import_res_files.
     7/8/17 (mac): Start adding new tabulation functions which return
       arrays of data rather than writing to file.
+    7/11/17 (mac): Pull out extrapolation function to remove scipy dependence.
 """
 
 import os
@@ -20,7 +21,6 @@ import numpy as np
 # intra-package references
 import mfdnres.res
 import mfdnres.descriptor
-import mfdnres.nonlinear
 
 ################################################################
 # global constants
@@ -119,10 +119,8 @@ def make_energy_table(mesh_data,qn):
      )
     return table
 
-def make_radius_table(mesh_data,qn):
+def make_radius_table(mesh_data,radius_type,qn):
     """ Generate radius tabulation.
-
-    TODO: change format to give rp, rn, and rm
 
     Data format:
         Nsigmamax Nmax hw r
@@ -147,7 +145,7 @@ def make_radius_table(mesh_data,qn):
                 mesh_point.params["Nsigmamax"],
                 mesh_point.params["Nmax"],
                 mesh_point.params["hw"],
-                mesh_point.get_radius(qn,"r")
+                mesh_point.get_radius(radius_type,qn)
             )
             for mesh_point in ordered_data
         ]
@@ -758,61 +756,6 @@ def write_network_table(results,filename,band):
     with open(filename,"wt") as fout:
         fout.writelines(lines)
 
-################################################################
-# extrapolation
-################################################################
-
-def extrapolate_energies_exp(Nmax_values,E_values,c2_guess=0.3,verbose=False):
-    """Obtain exponentially extrapolated energy.
-
-    Args:
-        Nmax_values (NumPy vector): vector of Nmax values for the fit
-        E_values (NumPy vector): vector of energy values for the fit
-        c2_guess (float, optional): assumed exponential decay constant for initial linear fit
-        verbose (bool, optional): whether or not to display fit progress
-
-    Returns:
-        (float): extrapolated energy value
-
-    Example:
-
-        >>> Nmax_values = np.array([6,8,10])
-        >>> E_values = np.array([-34.849,-37.293,-38.537])
-        >>> mfdnres.analysis.extrapolate_energies_exp(Nmax_values,E_values,verbose=True)
-
-        Exponential fit
-        Nmax values: [ 6  8 10]
-        E values: [-34.849 -37.293 -38.537]
-        Linear fit assuming c2 = 0.3
-        (c0,c1): (-40.15798483275664, 32.030180719893316)
-        Nonlinear fit returns: (array([-39.82661333,  37.74536425,   0.33765202]), 2)
-    """
-
-    if (verbose):
-        print("Exponential fit")
-        print("Nmax values:",Nmax_values)
-        print("E values:",E_values)
-
-    # do preliminary linear fit
-    # based on typical assumed exponential decay constant
-    A = np.array([
-        [1,math.exp(-c2_guess*Nmax)]
-        for Nmax in Nmax_values
-    ])
-    (c0_guess,c1_guess) = np.linalg.lstsq(A,E_values)[0]
-    if (verbose):
-        print("Linear fit assuming c2 = {}".format(c2_guess))
-        print("(c0,c1):",(c0_guess,c1_guess))
-
-    # do nonlinear fit
-    c_guess = np.array([c0_guess,c1_guess,c2_guess])
-    fit = mfdnres.nonlinear.fit(mfdnres.nonlinear.model_exp,Nmax_values,E_values,c_guess)
-    if (verbose):
-        print("Nonlinear fit returns:",fit)
-    (c_values,_) = fit
-    (c0,_,_) = c_values
-
-    return c0
 
 ################################################################
 # band fitting

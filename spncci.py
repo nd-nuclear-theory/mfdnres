@@ -88,15 +88,19 @@ class SpNCCIMeshPointData(mfdnres.res.BaseResultsData):
     ########################################
     # Accessors
     ########################################        
-    def get_basis (self):
-        print('Need to implement')
 
-    def get_radius(self,qn,radius_type,default=np.nan):
+    def get_baby_spncci_subspace_label(self,baby_spncci_subspace_index,label):
+        """
+        Arguments:
+            subspace_index (int): subspace index
+            label (str): one of the dtype labels for the basis listing
+                structured array (e.g., "Nex", "omega.mu", ...)
+        """
+        return self.baby_spncci_listing[baby_spncci_subspace_index][label]
+
+    def get_radius(self,radius_type,qn,default=np.nan):
         """
         Note: Raw gt-convention RME is intrinsic squared radius, i.e., summed over particles.
-
-        TODO:
-          - fail gracefully with default
 
         """
 
@@ -106,7 +110,13 @@ class SpNCCIMeshPointData(mfdnres.res.BaseResultsData):
 
         # retrieve underlying rme
         if (radius_type=="r"):
-            sum_sqr_radius = self.observables[("r2intr",(J,gex),(J,gex))][n0,n0]
+            key = ("r2intr",(J,gex),(J,gex))
+            ## if (key not in self.observables):
+            ##     return np.nan
+            try:
+                sum_sqr_radius = self.observables[("r2intr",(J,gex),(J,gex))][n0,n0]
+            except:
+                return default
         elif (radius_type in {"rp","rn"}):
             sum_sqr_radius = default
         else:
@@ -153,7 +163,10 @@ class SpNCCIMeshPointData(mfdnres.res.BaseResultsData):
         n0_ket = n_ket-1
 
         # retrieve underlying rme
-        rme_gt = self.observables[(observable,(J_bra,gex_bra),(J_ket,gex_ket))][n0_bra,n0_ket]
+        try:
+            rme_gt = self.observables[(observable,(J_bra,gex_bra),(J_ket,gex_ket))][n0_bra,n0_ket]
+        except:
+            return default
 
         # derive final value from rme
         rme_edmonds = math.sqrt(2*J_bra+1)*rme_gt
@@ -169,12 +182,31 @@ class SpNCCIMeshPointData(mfdnres.res.BaseResultsData):
         (J_ket,gex_ket,n_ket) = qn_ket
 
         # retrieve underlying rme
-        rme = self.get_rme(observable,qn_bra,qn_ket)
+        try:
+            rme = self.get_rme(observable,qn_bra,qn_ket)
+        except:
+            return default
 
         # derive final value from rme
         rtp = 1/(2*J_ket+1)*rme**2
 
         return rtp
+
+    def get_decomposition(self,decomposition_type,qn):
+        """
+        """ 
+
+        # extract labels
+        (J,gex,n) = qn
+        n0 = n-1
+
+        # retrieve decomposition
+        try:
+            decomposition = self.decompositions[decomposition_type][(J,gex)][:,n0]
+        except:
+            return None
+
+        return decomposition
     
 
 
