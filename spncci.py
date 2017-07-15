@@ -150,7 +150,7 @@ class SpNCCIMeshPointData(mfdnres.res.BaseResultsData):
             ##     return np.nan
             try:
                 Jg_pair = ((J,gex),(J,gex))
-                sum_sqr_radius = self.get_rme_matrix["r2intr",Jg_pair][n0,n0]
+                sum_sqr_radius = self.get_rme_matrix("r2intr",Jg_pair)[n0,n0]
             except:
                 return default
         elif (radius_type in {"rp","rn"}):
