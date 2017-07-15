@@ -117,7 +117,8 @@ class SpNCCIMeshPointData(mfdnres.res.BaseResultsData):
         (Jg_pair_canonical,flipped,canonicalization_factor) = mfdnres.tools.canonicalize_Jg_pair(
             Jg_pair,mfdnres.tools.RMEConvention.kGroupTheory
         )
-        print("Jg_pair_canonical {} flipped {} canonicalization_factor {}".format(Jg_pair_canonical,flipped,canonicalization_factor))
+        if (verbose):
+            print("Jg_pair_canonical {} flipped {} canonicalization_factor {}".format(Jg_pair_canonical,flipped,canonicalization_factor))
         
         # retrieve underlying matrix
         key = (observable,Jg_pair_canonical)
@@ -164,7 +165,7 @@ class SpNCCIMeshPointData(mfdnres.res.BaseResultsData):
         return rms_radius
 
 
-    def get_rme(self,observable,qn_pair,default=np.nan,verbose=True):
+    def get_rme(self,observable,qn_pair,default=np.nan,verbose=False):
         """
 
         
