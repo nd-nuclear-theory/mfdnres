@@ -182,7 +182,7 @@ def make_rme_table(mesh_data,observable,qnf,qni):
                 mesh_point.params["Nsigmamax"],
                 mesh_point.params["Nmax"],
                 mesh_point.params["hw"],
-                mesh_point.get_rme(observable,qnf,qni)
+                mesh_point.get_rme(observable,(qnf,qni))
             )
             for mesh_point in ordered_data
         ]
@@ -219,7 +219,7 @@ def make_rtp_table(mesh_data,observable,qnf,qni):
                 mesh_point.params["Nsigmamax"],
                 mesh_point.params["Nmax"],
                 mesh_point.params["hw"],
-                mesh_point.get_rtp(observable,qnf,qni)
+                mesh_point.get_rtp(observable,(qnf,qni))
             )
             for mesh_point in ordered_data
         ]

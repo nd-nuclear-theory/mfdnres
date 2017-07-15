@@ -98,6 +98,40 @@ class SpNCCIMeshPointData(mfdnres.res.BaseResultsData):
         """
         return self.baby_spncci_listing[baby_spncci_subspace_index][label]
 
+    def get_rme_matrix(self,observable,Jg_pair,verbose=False):
+        """Retrieve RME matrix for observable.
+
+        Assumes stored matrices are between (J,g) subspaces in
+        canonical order.  Takes care of canonicalization on retrieval.
+
+        Assumes matrix elementrs are in group-theory convention.
+
+        Assumes matrices on diagonal sector are completely filled in,
+        rather than stored just as upper triangles.
+
+        ...
+
+        """
+
+        # determine canonicalization
+        (Jg_pair_canonical,flipped,canonicalization_factor) = mfdnres.tools.canonicalize_Jg_pair(
+            Jg_pair,mfdnres.tools.RMEConvention.kGroupTheory
+        )
+        print("Jg_pair_canonical {} flipped {} canonicalization_factor {}".format(Jg_pair_canonical,flipped,canonicalization_factor))
+        
+        # retrieve underlying matrix
+        key = (observable,Jg_pair_canonical)
+        try:
+            matrix = self.observables[observable][Jg_pair_canonical]
+        except:
+            return None
+
+        # derive canonicalized matrix
+        if (flipped):
+            matrix = canonicalization_factor*matrix.transpose()
+
+        return matrix
+
     def get_radius(self,radius_type,qn,default=np.nan):
         """
         Note: Raw gt-convention RME is intrinsic squared radius, i.e., summed over particles.
@@ -114,7 +148,8 @@ class SpNCCIMeshPointData(mfdnres.res.BaseResultsData):
             ## if (key not in self.observables):
             ##     return np.nan
             try:
-                sum_sqr_radius = self.observables[("r2intr",(J,gex),(J,gex))][n0,n0]
+                Jg_pair = ((J,gex),(J,gex))
+                sum_sqr_radius = self.get_rme_matrix["r2intr",Jg_pair][n0,n0]
             except:
                 return default
         elif (radius_type in {"rp","rn"}):
@@ -127,36 +162,23 @@ class SpNCCIMeshPointData(mfdnres.res.BaseResultsData):
         rms_radius = math.sqrt(1/A*sum_sqr_radius)
 
         return rms_radius
-        
 
-    def get_rme(self,observable,qn_bra,qn_ket,default=np.nan):
+
+    def get_rme(self,observable,qn_pair,default=np.nan,verbose=True):
         """
 
         
-        <Jf||op||Ji>_Edmonds = sqrt(2*Jf+1) * <Jf||op||Ji>_gt
+        <Jf||op||Ji>_Racah = sqrt(2*Jf+1) * <Jf||op||Ji>_gt
 
         TODO:
           - implement bra-ket conjugation flip
           - fail gracefully with default
 
-            Retrieves reduced matrix element (RME) of transition operator,
-            regardless of which direction it was calculated in the data set.
-
-            Obtains RME <Jf||op||Ji>, using relation
-                <Jf||op||Ji> = (-)^(Jf-Ji) <Ji||op||Jf>
-            which applies to both the M1 and E2 operators under Condon-Shortley phase
-            conventions (Suhonen Ch. 6) for these operators.  Derived from
-            W-E theorem, symmetry of CG coefficient, and conjugation
-            properties of these operators.
-
-            Note that for MFDn the reference state is the "final" state.
-
-            Limitations: Conjugation relations need to be checked for
-            other operators (e.g., GT).
 
         """
 
         # extract labels
+        (qn_bra,qn_ket) = qn_pair
         (J_bra,gex_bra,n_bra) = qn_bra
         (J_ket,gex_ket,n_ket) = qn_ket
         n0_bra = n_bra-1
@@ -164,26 +186,31 @@ class SpNCCIMeshPointData(mfdnres.res.BaseResultsData):
 
         # retrieve underlying rme
         try:
-            rme_gt = self.observables[(observable,(J_bra,gex_bra),(J_ket,gex_ket))][n0_bra,n0_ket]
+            Jg_pair = ((J_bra,gex_bra),(J_ket,gex_ket))
+            if (verbose):
+                print("  Looking up rme matrix {} {} ->  {}[{}]".format(observable,qn_pair,Jg_pair,(n0_bra,n0_ket)))
+            matrix = self.get_rme_matrix(observable,Jg_pair,verbose=verbose)
+            rme_gt = matrix[n0_bra,n0_ket]
         except:
             return default
 
         # derive final value from rme
-        rme_edmonds = math.sqrt(2*J_bra+1)*rme_gt
+        rme_racah = math.sqrt(2*J_bra+1)*rme_gt
 
-        return rme_edmonds
+        return rme_racah
 
-    def get_rtp(self,observable,qn_bra,qn_ket,default=np.nan):
+    def get_rtp(self,observable,qn_pair,default=np.nan):
         """
         """ 
 
         # extract labels
+        (qn_bra,qn_ket) = qn_pair
         (J_bra,gex_bra,n_bra) = qn_bra
         (J_ket,gex_ket,n_ket) = qn_ket
 
         # retrieve underlying rme
-        try:
-            rme = self.get_rme(observable,qn_bra,qn_ket)
+        try: 
+            rme = self.get_rme(observable,qn_pair)
         except:
             return default
 
