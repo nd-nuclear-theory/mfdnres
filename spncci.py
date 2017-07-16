@@ -157,7 +157,7 @@ class SpNCCIMeshPointData(mfdnres.res.BaseResultsData):
 
         # derive final value from rme
         A = self.params["A"]
-        rms_radius = math.sqrt(1/A*sum_sqr_radius)
+        rms_radius = math.sqrt(sum_sqr_radius)
 
         return rms_radius
 
