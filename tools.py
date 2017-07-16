@@ -8,10 +8,13 @@
     7/26/15 (mac): Allow mismatch in line parser.
     7/8/17 (mac): Add write_lines and write_table.
     7/9/17 (mac): Add parsing tools for structured results files.
+    7/14/17 (mac): Add canonicalization tools for (J,g) subspace pairs.
     
 """
 
+import enum
 import itertools
+import math
 import re
 
 ################################################################
@@ -377,6 +380,130 @@ def value_range(x1,x2,dx,epsilon=0.00001):
     return value_list
 
 ################################################################
+# matrix element canonicalization
+################################################################
+
+class RMEConvention(enum.Enum):
+    kAngularMomentum = 0
+    kGroupTheory = 1
+
+def canonicalization_prescription_Jg(Jg_pair,rme_convention):
+    """Provide phase/normalization factor from canonicalization, assuming
+    operator has spherical-harmonic-like conjugation properties (M1,
+    E2, etc.).
+
+    Under angular momentum convention, conjugation yields:
+
+        <J||A_{J0}||J'> = (-)^(J'-J)*Hat(J')/Hat(J)*<J'||A_{J0}||J>
+
+    Under group theory convention, conjugation yields:
+
+        <J||A_{J0}||J'> = (-)^(J'-J)*<J'||A_{J0}||J>
+
+    Arguments:
+       Jg_pair (tuple): ((J_bra,g_bra),(J_ket,g_ket))
+       rme_convention (RMEPhaseConvention): phase and normalization convention on RMEs
+
+    Returns:
+        flipped (bool): whether or not flip necessary to canonicalize
+        canonicalization_factor (float): canonicalization phase
+
+    """
+
+    (Jg_bra,Jg_ket) = Jg_pair
+
+    if (Jg_bra <= Jg_ket):
+        # canonical
+        flipped = False
+        canonicalization_factor = 1.
+    else:
+        # non-canonical
+        #
+        # expression for canonicalization factor is based on sector labels
+        # *after* swap (i.e., need canonical m.e. on RHS of assignment)
+        (J_bra,_)=Jg_ket  # note swap
+        (J_ket,_)=Jg_bra  # note swap
+        flipped = True
+        canonicalization_factor = (-1)**(J_ket-J_bra)
+        if (rme_convention==RMEConvention.kGroupTheory):
+            canonicalization_factor *= math.sqrt((2*J_bra+1)/(2*J_ket+1))
+
+    return (flipped,canonicalization_factor)
+
+
+def canonicalize_Jg_pair(Jg_pair,rme_convention):
+    """Put subspace labels in canonical order, and provide
+    phase/normalization factor from canonicalization, assuming
+    operator has spherical-harmonic-like conjugation properties (M1,
+    E2, etc.).
+
+    See canonicalization_prescription for phase conventions.
+
+    Arguments:
+       Jg_pair (tuple): ((J_bra,g_bra),(J_ket,g_ket))
+       rme_convention (RMEPhaseConvention): phase and normalization convention on RMEs
+
+    Returns:
+        (Jg_bra',Jg_ket') (tuple): canonicalized (J,g) pair
+        flipped (bool): whether or not flip necessary to canonicalize
+        canonicalization_factor (float): canonicalization phase
+
+
+    """
+
+    (Jg_bra,Jg_ket) = Jg_pair
+    (flipped,canonicalization_factor) = canonicalization_prescription_Jg(Jg_pair,rme_convention)
+
+    if (flipped):
+        # non-canonical
+        Jg_pair_canonical = tuple(reversed(Jg_pair))
+    else:
+        # canonical
+        Jg_pair_canonical = Jg_pair
+
+    return (Jg_pair_canonical,flipped,canonicalization_factor)
+
+## def canonicalize_Jgn_pair(Jgn_pair,rme_convention):
+##     """Put state labels in canonical order, and provide
+##     phase/normalization factor from canonicalization, assuming
+##     operator has spherical-harmonic-like conjugation properties (M1,
+##     E2, etc.).
+## 
+##     See canonicalization_prescription for phase conventions.
+## 
+##     Arguments:
+##        Jgn_pair (tuple): ((J_bra,g_bra,n_bra),(J_ket,g_ket,n_ket))
+##        rme_convention (RMEPhaseConvention): phase and normalization convention on RMEs
+## 
+##     Returns:
+##         phase (float): canonicalization phase
+##         (Jgn_bra',Jgn_ket') (tuple): canonicalized (J,g,n) pair
+## 
+##     """
+## 
+##     (Jgn_bra,Jgn_ket) = Jgn_pair
+##     (J_bra,g_bra,_)=Jg_bra
+##     (J_ket,g_ket_)=Jg_ket
+##     Jg_bra = (J_bra,g_bra)
+##     Jg_ket = (J_ket,g_ket)
+## 
+##     if (Jg_bra <= Jg_ket):
+##         # canonical
+##         Jgn_pair_canonical = (Jgn_bra,Jgn_ket)
+##         flipped = False
+##         canonicalization_factor = 1.
+##     else:
+##         # non-canonical
+##         Jgn_pair_canonical = (Jgn_ket,Jgn_bra)
+##         flipped = True
+##         canonicalization_factor = (-1)**(J_ket-J_bra)
+##         if (rme_convention==RMEConvention.kGroupTheory):
+##             canonicalization_factor *= math.sqrt((2*J_bra+1)/(2*J_ket+1))
+## 
+##     return (Jgn_pair_canonical,flipped,canonicalization_factor)
+
+
+################################################################
 # test code
 ################################################################
 
@@ -420,3 +547,13 @@ if (__name__=="__main__"):
     non_decadal_numbers_iterator=split_when((lambda x: not x%10),range(30))
     non_decadal_numbers_list=[list(sublist) for sublist in non_decadal_numbers_iterator]
     print("Non-decadal numbers:",list(non_decadal_numbers_list))
+
+    # test canonicalization
+    print("Canonicalization")
+    Jg_pair = ((2,0),(0,0))
+    (Jg_pair_canonical,flipped,canonicalization_factor) = canonicalize_Jg_pair(Jg_pair,RMEConvention.kGroupTheory)
+    print("{} -> {} flipped {} canonicalization_factor {}".format(Jg_pair,Jg_pair_canonical,flipped,canonicalization_factor))
+    Jg_pair = ((0,0),(2,0))
+    (Jg_pair_canonical,flipped,canonicalization_factor) = canonicalize_Jg_pair(Jg_pair,RMEConvention.kGroupTheory)
+    print("{} -> {} flipped {} canonicalization_factor {}".format(Jg_pair,Jg_pair_canonical,flipped,canonicalization_factor))
+

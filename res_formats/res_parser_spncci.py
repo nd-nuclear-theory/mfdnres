@@ -221,7 +221,12 @@ def parse_energies(self,tokenized_lines):
         self.num_eigenvalues[(J,gex)]=self.num_eigenvalues.setdefault((J,gex),0)+1
 
 def parse_observable_rmes(self,tokenized_lines):
-    """ Parse matrices of RMEs.
+    """Parse matrices of RMEs.
+
+    Matrix is canonicalized (assuming RMEs are in group theory
+    convention and operator has spherical-harmonic-like conjugation
+    properties).
+
     """
 
     tokenized_lines_iterator = iter(tokenized_lines)  # so that we can read through sequentially
@@ -235,15 +240,28 @@ def parse_observable_rmes(self,tokenized_lines):
             conversion(x)
             for (x,conversion) in zip(observable_matrix_header,conversions)
         ]
-        
+
+        # determine canonicalization
+        Jg_pair = ((J_bra,gex_bra),(J_ket,gex_ket))
+        (Jg_pair_canonical,flipped,canonicalization_factor) = mfdnres.tools.canonicalize_Jg_pair(
+            Jg_pair,mfdnres.tools.RMEConvention.kGroupTheory
+        )
+
         # prepare matrix key
         observable_name = self.params["observable_names"][observable_index]
-        key = (observable_name,(J_bra,gex_bra),(J_ket,gex_ket))
 
         # read matrix
         lines = itertools.islice(tokenized_lines_iterator,rows)
         numbers = [[float(x) for x in row] for row in lines]
-        self.observables[key]=np.array(numbers,dtype=float)
+        matrix = np.array(numbers,dtype=float)
+
+        # canonicalize matrix
+        if (flipped):
+            matrix = canonicalization_factor*matrix.transpose()
+
+        # store matrix
+        observable_dict = self.observables.setdefault(observable_name,dict())
+        observable_dict[Jg_pair_canonical] = matrix
         ## print("Key:",key)
         ## print(self.observables[key])
 
