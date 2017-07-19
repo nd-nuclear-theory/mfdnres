@@ -234,6 +234,13 @@ class SpNCCIMeshPointData(mfdnres.res.BaseResultsData):
         return decomposition
 
 ################################################################
+# sorting
+################################################################
+
+# standard spncci sorting and tabulation key
+KEY_DESCRIPTOR_NNHW = (("Nsigmamax",int),("Nmax",int),("hw",float))
+
+################################################################
 # Q-invariant analysis
 ################################################################
 

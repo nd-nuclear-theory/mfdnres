@@ -14,6 +14,7 @@
 
 import os
 import math
+import functools
 import glob
 import configparser # for band file
 import numpy as np
@@ -30,33 +31,82 @@ import mfdnres.descriptor
 MU_EM = np.array([1,0,5.586,-3.826])
 
 ################################################################
-# load results files into database
+# consolidate data into dictionary
 ################################################################
 
+def extract_key(key_fields,mesh_point):
+    """Generate key tuple from mesh point data's parameters.
 
-def make_results_dict(
-        mesh_data,key_fields,
-        verbose=False
-):
-    """ Index mesh data into dictionary by specified tuple.
+    This function may be specialized to return a specific key, e.g.:
 
-    Args: TODO UPDATE
-        data (dict) : container for resulting MFDnRunData objects (key contents determined
-            by key_fields argument)
-        filename_list (str, list of str) : names of files or directories to process
-        key_fields (tuple of str) : tuple of run descriptor keys to use to generate key to results
-        filename_format (str) : determines which parser to use to parse run descriptor from filename
-        res_format (str) : determines which parser to use to parse MFDn res file
-        base_path (str) : base path to preappend to all filenamse (default: None)
-        verbose (bool): verbose output (default: False)
+        key_function_Nsigmamax_Nmax_hw = functools.partial(
+            extract_key,
+            ("Nsigmamax","Nmax","hw")
+        )
+
+    This process would normally be done through make_key_function.
+
+    Arguments:
+        key_fields (tuple of str) : tuple of run descriptor keys to
+            use to generate key to results
+        mesh_data (list): data for mesh points
+
+    Returns:
+        (tuple): values of given parameters
 
     """
+    key = tuple([mesh_point.params[key] for key in key_fields])
+    return key
+
+def make_key_function(key_descriptor):
+    """Generate key function from dtype descriptor for parameter tuple.
+
+    Example key descriptor:
+
+       (("Nsigmamax",int),("Nmax",int),("hw",float))
+
+    Arguments:
+        key_descriptor (tuple of tuple): dtype descriptor for key
+
+    """
+
+    key_fields = [name for (name,_) in key_descriptor]
+    key_function = functools.partial(extract_key,key_fields)
+    return key_function
+
+def make_results_dict(
+        mesh_data,key_descriptor,
+        verbose=False
+):
+    """Load mesh data into dictionary, using specified parameter tuple as
+       key.
+
+    For now, in the even that the same mesh point arises multiple
+    times on input (i.e., a given value for the key tuple is
+    duplicated), the final occurrence overwrites any earlier
+    occurrences.  In the future, a more sophisticated "merging"
+    process might be appropriate.
+
+    The given key function will normally be generated using
+    make_key_function.
+
+    Arguments:
+        mesh_data (list): data for mesh points
+        key_descriptor (tuple of tuple): dtype descriptor for key
+        verbose (bool,optional): verbose output
+
+    Returns:
+        (dict): mapping from key tuple to data object
+
+    """
+
+    key_function = make_key_function(key_descriptor)
 
     results_dict = dict()
     for mesh_point in mesh_data:
 
         # make key
-        key = tuple([mesh_point.params[key] for key in key_fields])
+        key = key_function(mesh_point)
         if (verbose):
             print("  filename {} key {}".format(mesh_point.filename,key))
 
@@ -65,97 +115,115 @@ def make_results_dict(
             # save mesh point
             results_dict[key] = mesh_point
         else:
-            # update existing mesh point
-            # TODO
-            pass
+            # TODO: do smart merge "update" on existing mesh point
+            # overwrite mesh point
+            results_dict[key] = mesh_point
 
     return results_dict
+
+def sorted_mesh_data(
+        mesh_data,key_descriptor,
+        verbose=False
+):
+    """Sort and consolidate mesh data, using specified parameter tuple as
+       key.
+
+    See docstring for make_results_dict, which provides the underlying
+    sorting and consolidation engine.
+
+    Arguments:
+        mesh_data (list): data for mesh points
+        key_descriptor (tuple of tuple): dtype descriptor for key
+        verbose (bool,optional): verbose output
+
+    Returns:
+        (list): sorted and consolidated list of data objects
+    """
+
+    results_dict = make_results_dict(
+        mesh_data,key_descriptor,
+        verbose=verbose
+    )
+    new_mesh_data = [
+        results_dict[key]
+        for key in sorted(results_dict.keys())
+        ]
+    return new_mesh_data
+    
 
 ################################################################
 # tabulation functions
 ################################################################
 
+def make_energy_table(mesh_data,key_descriptor,qn):
 
-def key_function_Nsigmamax_Nmax_hw(mesh_point):
-    """
-    TODO: To replace with generic factory function for key functions.
-    """
-    return (mesh_point.params["Nsigmamax"],mesh_point.params["Nmax"],mesh_point.params["hw"])
+    """Generate energy tabulation.
 
+    The key descriptor is used to provide the parameter columns of the
+    tabulation (and may in general be different from the key which was
+    used for sorting the data, e.g., it might add additional parameter
+    columns).
 
-def make_energy_table(mesh_data,qn):
-    """ Generate energy tabulation.
+    It is expected that the mesh data have already been sorted and
+    consolidated to make the key values unique, or else the table will
+    contain duplicate entries.
 
     Data format:
-        Nsigmamax Nmax hw E
+        param1 param2 ... E
 
     Arguments:
         mesh_data (list): data for mesh points
+        key_descriptor (tuple of tuple): dtype descriptor for key
         qn (tuple): quantum numbers (J,g,n) of level to retrieve
     
     Returns:
-       (array): data table 
+       (array): data table
+
     """
     
-    # sort mesh data
-    #
-    # Make copy of mesh ordered lexicographically by (Nsigmamax,Nmax,hw).
-
-    ordered_data = sorted(mesh_data,key=key_function_Nsigmamax_Nmax_hw)
-
     # tabulate values
+    key_function = make_key_function(key_descriptor)
     table_data = [
-            (
-                mesh_point.params["Nsigmamax"],
-                mesh_point.params["Nmax"],
-                mesh_point.params["hw"],
-                mesh_point.get_energy(qn)
-            )
-            for mesh_point in ordered_data
-        ]
+        key_function(mesh_point) + (mesh_point.get_energy(qn),)
+        for mesh_point in mesh_data
+    ]
+
+    # convert to structured array
     table = np.array(
         table_data,
-        dtype = [("Nsigmamax",int),("Nmax",int),("hw",float),("E",float)]
+        dtype = list(key_descriptor)+[("E",float)]
      )
     return table
 
-def make_radius_table(mesh_data,radius_type,qn):
+def make_radius_table(mesh_data,key_descriptor,radius_type,qn):
     """ Generate radius tabulation.
 
-    Data format:
-        Nsigmamax Nmax hw r
+    See docstring for make_energy_table for sorting and tabulation conventions.
 
     Arguments:
         mesh_data (list): data for mesh points
+        key_descriptor (tuple of tuple): dtype descriptor for key
         qn (tuple): quantum numbers (J,g,n) of level to retrieve
     
     Returns:
        (array): data table 
     """
     
-    # sort mesh data
-    #
-    # Make copy of mesh ordered lexicographically by (Nsigmamax,Nmax,hw).
-
-    ordered_data = sorted(mesh_data,key=key_function_Nsigmamax_Nmax_hw)
-
     # tabulate values
+    key_function = make_key_function(key_descriptor)
     table_data = [
-            (
-                mesh_point.params["Nsigmamax"],
-                mesh_point.params["Nmax"],
-                mesh_point.params["hw"],
-                mesh_point.get_radius(radius_type,qn)
-            )
-            for mesh_point in ordered_data
-        ]
+        key_function(mesh_point) + (mesh_point.get_radius(radius_type,qn),)
+        for mesh_point in mesh_data
+    ]
+
+    # convert to structured array
     table = np.array(
         table_data,
-        dtype = [("Nsigmamax",int),("Nmax",int),("hw",float),("r",float)]
+        dtype = list(key_descriptor)+[("r",float)]
      )
     return table
 
-def make_rme_table(mesh_data,observable,qnf,qni):
+def make_rme_table(mesh_data,key_descriptor,observable,qnf,qni):
     """ Generate RME tabulation.
 
     Data format:
@@ -163,6 +231,7 @@ def make_rme_table(mesh_data,observable,qnf,qni):
 
     Arguments:
         mesh_data (list): data for mesh points
+        key_descriptor (tuple of tuple): dtype descriptor for key
         observable_name (str): key naming observable
         qnf, qni (tuple): quantum numbers (J,g,n) of final and initial levels
     
@@ -170,29 +239,21 @@ def make_rme_table(mesh_data,observable,qnf,qni):
        (array): data table
     """
     
-    # sort mesh data
-    #
-    # Make copy of mesh ordered lexicographically by (Nsigmamax,Nmax,hw).
-
-    ordered_data = sorted(mesh_data,key=key_function_Nsigmamax_Nmax_hw)
-
     # tabulate values
+    key_function = make_key_function(key_descriptor)
     table_data = [
-            (
-                mesh_point.params["Nsigmamax"],
-                mesh_point.params["Nmax"],
-                mesh_point.params["hw"],
-                mesh_point.get_rme(observable,(qnf,qni))
-            )
-            for mesh_point in ordered_data
-        ]
+        key_function(mesh_point) + (mesh_point.get_rme(observable,(qnf,qni)),)
+        for mesh_point in mesh_data
+    ]
+
+    # convert to structured array
     table = np.array(
         table_data,
-        dtype = [("Nsigmamax",int),("Nmax",int),("hw",float),("RME",float)]
+        dtype = list(key_descriptor)+[("RME",float)]
      )
     return table
 
-def make_rtp_table(mesh_data,observable,qnf,qni):
+def make_rtp_table(mesh_data,key_descriptor,observable,qnf,qni):
     """ Generate RTP tabulation.
 
     Data format:
@@ -200,6 +261,7 @@ def make_rtp_table(mesh_data,observable,qnf,qni):
 
     Arguments:
         mesh_data (list): data for mesh points
+        key_descriptor (tuple of tuple): dtype descriptor for key
         observable_name (str): key naming observable
         qnf, qni (tuple): quantum numbers (J,g,n) of final and initial levels
     
@@ -207,25 +269,18 @@ def make_rtp_table(mesh_data,observable,qnf,qni):
        (array): data table
     """
     
-    # sort mesh data
-    #
-    # Make copy of mesh ordered lexicographically by (Nsigmamax,Nmax,hw).
-
-    ordered_data = sorted(mesh_data,key=key_function_Nsigmamax_Nmax_hw)
-
+    
     # tabulate values
+    key_function = make_key_function(key_descriptor)
     table_data = [
-            (
-                mesh_point.params["Nsigmamax"],
-                mesh_point.params["Nmax"],
-                mesh_point.params["hw"],
-                mesh_point.get_rtp(observable,(qnf,qni))
-            )
-            for mesh_point in ordered_data
-        ]
+        key_function(mesh_point) + (mesh_point.get_rtp(observable,(qnf,qni)),)
+        for mesh_point in mesh_data
+    ]
+
+    # convert to structured array
     table = np.array(
         table_data,
-        dtype = [("Nsigmamax",int),("Nmax",int),("hw",float),("RTP",float)]
+        dtype = list(key_descriptor)+[("RTP",float)]
      )
     return table
 
