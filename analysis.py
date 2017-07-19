@@ -131,6 +131,12 @@ def sorted_mesh_data(
     See docstring for make_results_dict, which provides the underlying
     sorting and consolidation engine.
 
+    Example:
+        # import data
+        slurp_directory = mfdnres.res.res_file_directory("mcaprio","spncci","mac0419")
+        mesh_data = mfdnres.res.slurp_res_files(slurp_directory,"spncci",verbose=False)
+        mesh_data = mfdnres.analysis.sorted_mesh_data(mesh_data,mfdnres.spncci.KEY_DESCRIPTOR_NNHW)
+
     Arguments:
         mesh_data (list): data for mesh points
         key_descriptor (tuple of tuple): dtype descriptor for key
