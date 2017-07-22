@@ -231,6 +231,28 @@ def list_of(conversion):
         return list(map(conversion,data))
     return f
 
+def tuple_of(conversion):
+    """Generate conversion function to convert list of strings to tuple
+    of given type.
+
+    Note that a tuple may be preferable to a list, since a tuple is hashable.
+
+    >>> a = ["1","2"]
+    >>> tuple_of(int)(a)
+        (1,2)
+
+    Arguments:
+        conversion (function): type converstion function for single entry
+    
+    Returns:
+        (function): function to convert list of such entries
+
+    """
+
+    def f(data):
+        return tuple(map(conversion,data))
+    return f
+
 def extract_key_value_pairs(tokenized_lines,conversions):
     """ Parse tokenized lines as key-value pairs.
     

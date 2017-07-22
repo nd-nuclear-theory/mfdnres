@@ -95,7 +95,7 @@ def parse_params(self,tokenized_lines):
     """
     conversions = {
         # Space
-        "nuclide" : mfdnres.tools.list_of(int),
+        "nuclide" : mfdnres.tools.tuple_of(int),  # use tuple so parameter is hashable when used as analysis key
         "A" : mfdnres.tools.singleton_of(int),
         "Nsigma" : mfdnres.tools.singleton_of(float),
         "Nsigmamax" : mfdnres.tools.singleton_of(int),
@@ -112,6 +112,7 @@ def parse_params(self,tokenized_lines):
     key_value_dict = mfdnres.tools.extract_key_value_pairs(
         tokenized_lines,conversions
     )
+
     self.params.update(key_value_dict)
 
 def parse_observables(self,tokenized_lines):
