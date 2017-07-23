@@ -93,6 +93,8 @@ def parse_params(self,tokenized_lines):
     """
     Parse any section containing key-value pairs to add to params dictionary.
     """
+
+    # extract key-value pairs
     conversions = {
         # Space
         "nuclide" : mfdnres.tools.tuple_of(int),  # use tuple so parameter is hashable when used as analysis key
@@ -113,7 +115,13 @@ def parse_params(self,tokenized_lines):
         tokenized_lines,conversions
     )
 
+    # augment nuclide with separate "nuclide.Z" and "nuclide.N" for easy key retrieval
+    if ("nuclide" in key_value_dict):
+        (key_value_dict["nuclide.Z"],key_value_dict["nuclide.N"]) = key_value_dict["nuclide"]
+
+    # update to params dictionary
     self.params.update(key_value_dict)
+
 
 def parse_observables(self,tokenized_lines):
     """
