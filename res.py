@@ -53,11 +53,15 @@ def register_res_format(format_name,parser):
 
     res_format_parser[format_name] = parser
 
+##################################################
+# res file import
+##################################################
 
 def read_file(filename,res_format,verbose=False):
-    """ Invoke appropriate parser to parse results file.
+    """Read sintle results file, by invoking appropriate parser.
 
-        The results will be a list of results data objects, one for each mesh point.
+        The results will be a list of results data objects, one for
+        each mesh point within the results file.
 
         Arguments:
             filename (str): Name of results file.
@@ -69,6 +73,7 @@ def read_file(filename,res_format,verbose=False):
             data_instances (list): Container for MFDnRunData/SpNCCIMeshPointData instances.
                 A list of of the MFDnRunData or SpNCCIMeshPointData instances generated
                 from the inputted results file.
+
     """
 
     # temporary special-case trap for legacy parsers
@@ -89,6 +94,81 @@ def read_file(filename,res_format,verbose=False):
     with open(filename,'rt') as fin:
         return res_format_parser[res_format](fin,verbose=verbose)
 
+def slurp_res_files(
+        res_directory_list,res_format,
+        glob_pattern="*.res",verbose=False
+):
+    """Read all results file in given directories.
+
+        The results will be a list of results data objects, one for
+        each mesh point within the results file.
+    
+        Arguments:
+            res_directory_list (string): directory or list of directories
+                containing files to import
+
+        Returned:
+            mesh_data (list): list of data objects (BaseResultsData)
+
+    """
+
+    # process argument: upgrade single directory to list
+    if (type(res_directory_list) == str):
+        res_directory_list = [res_directory_list]
+
+    # accumulate mesh points
+    mesh_data = []
+    for res_directory in res_directory_list:
+        full_glob_pattern = os.path.join(res_directory,glob_pattern)
+        if (verbose):
+            print("Searching for {}...".format(full_glob_pattern))
+        res_filename_list = glob.glob(full_glob_pattern)
+
+        # accumulate parsed data from different res files
+        for res_filename in res_filename_list:
+            if (verbose):
+                print("Reading {}...".format(res_filename))
+            new_mesh_data = read_file(res_filename,res_format=res_format,verbose=verbose)
+            if (verbose):
+                print("  {:d} mesh points".format(len(new_mesh_data)))
+            mesh_data += new_mesh_data
+
+    return mesh_data
+
+def res_file_directory(username,code,run_number,results_dir="results",run_results_are_in_subdir=True):
+    """Construct full path to res file directory, given user, code, and run.
+
+        This function assumes directory naming conventions appropriate
+        to mcscript archive files.
+
+        Arguments:
+            username (str): user name (e.g., "mcaprio")
+            code (str): code name (e.g., "spncci")
+            run_number (str): run name "tail" (e.g., "mac0424")
+            results_dir (str,optional): name of top-level results directory within GROUP_HOME
+            run_results_are_in_subdir (bool,optional): if results are in subdirectory "results"
+              of run directory (as in an mcscript multi-task run)
+
+        Environment:
+            GROUP_HOME: directory name for group top-level results directory
+              (e.g., "/afs/crc.nd.edu/group/nuclthy" for shared group results directory,
+               or, for local work in your home directory, you may set equal to HOME)
+
+        >>> res_file_directory("mcaprio","spncci","mac0417")
+
+            /afs/crc.nd.edu/group/nuclthy/results/mcaprio/spncci/runmac0423/results
+
+    """
+
+    group_home = os.environ.get("GROUP_HOME")
+    if (type(group_home) is not str):
+        raise(ValueError("Need to set environment variable GROUP_HOME"))
+
+    res_directory = os.path.join(group_home,results_dir,username,code,"run"+run_number)
+    if (run_results_are_in_subdir):
+        res_directory = os.path.join(res_directory,"results")
+
+    return res_directory
 
 #################################################
 # BaseResultsData
@@ -186,11 +266,6 @@ class BaseResultsData (object):
         except:
             return default
         return value
-
-    ########################################
-    # Methods                              #
-    ########################################
-
 
 
 #################################################
@@ -603,86 +678,6 @@ class MFDnStateData(object):
         self.properties["T"] = T
         self.energy = energy
         self.obo = {}
-
-##################################################
-# file importer
-##################################################
-
-def slurp_res_files(
-        res_directory_list,res_format,
-        glob_pattern="*.res",verbose=False
-):
-    """
-    
-        TODO: accept list of directories
-
-        Arguments:
-            directory (string): Location of the SpNCCI results files. 
-                Should be of the form '/location/of/files/*.res'
-        Returned:
-            data (nested dictionary): Maps from (Nmax, Nsigmamax) to hw to 
-                SpNCCIMeshPointData instance.  The outer keys of the dictionary
-                are tuples of the form (Nmax, Nsigmamax).  The inner keys are 
-                h-bar omega values.  Each h-bar omega value maps to its correspionding
-                instance of SpNCCIMeshPointData.
-
-        Takes all the SpNCCI results files from a specified directory and parses them into
-        a dictionary for later analysis.  This dictionary is returned at the end of the 
-        method.
-    """
-
-    # process argument: upgrade single directory to list
-    if (type(res_directory_list) == str):
-        res_directory_list = [res_directory_list]
-
-    # accumulate mesh points
-    mesh_data = []
-    for res_directory in res_directory_list:
-        full_glob_pattern = os.path.join(res_directory,glob_pattern)
-        if (verbose):
-            print("Searching for {}...".format(full_glob_pattern))
-        res_filename_list = glob.glob(full_glob_pattern)
-
-        # accumulate parsed data from different res files
-        for res_filename in res_filename_list:
-            if (verbose):
-                print("Reading {}...".format(res_filename))
-            new_mesh_data = read_file(res_filename,res_format=res_format,verbose=verbose)
-            if (verbose):
-                print("  {:d} mesh points".format(len(new_mesh_data)))
-            mesh_data += new_mesh_data
-
-    return mesh_data
-
-def res_file_directory(username,code,run_number,results_dir="results"):
-    """Construct full path to res file directory, given user, code, and run.
-
-        This function assumes directory naming conventions appropriate
-        to mcscript archive files.
-
-        Arguments:
-            username (str): user name (e.g., "mcaprio")
-            code (str): code name (e.g., "spncci")
-            run_number (str): run name "tail" (e.g., "mac0424")
-
-        Environment:
-            GROUP_HOME: directory name for group top-level results directory
-              (e.g., "/afs/crc.nd.edu/group/nuclthy" or, for local work,
-              "/home/mcaprio")
-
-        >>> res_file_directory("mcaprio","spncci","mac0417")
-
-            /afs/crc.nd.edu/group/nuclthy/results/mcaprio/spncci/runmac0423/results
-
-    """
-
-    group_home = os.environ.get("GROUP_HOME")
-    if (type(group_home) is not str):
-        raise(ValueError("Need to set environment variable GROUP_HOME"))
-
-    res_directory = os.path.join(group_home,results_dir,username,code,"run"+run_number,"results")
-    return res_directory
-
 
 #################################################
 # test code                                     #

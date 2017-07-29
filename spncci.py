@@ -58,7 +58,6 @@ class SpNCCIMeshPointData(mfdnres.res.BaseResultsData):
                 data section.  Each tuple has the format (J, dim), where J is a float and dim is
                 an int.
             self.baby_spncci_listing (list of list):
-            self.dimensions_by_omega (dictionary):
             self.decompositions (dictionary):
             self.observables (dictionary):
         Accessors:

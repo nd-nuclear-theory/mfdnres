@@ -81,14 +81,19 @@ def make_results_dict(
     """Load mesh data into dictionary, using specified parameter tuple as
        key.
 
+    Example key descriptor:
+
+       (("Nsigmamax",int),("Nmax",int),("hw",float))
+
+    Example:
+        >>> KEY_DESCRIPTOR_NMAX_HW = (("Nmax",int),("hw",float))
+
+
     For now, in the even that the same mesh point arises multiple
     times on input (i.e., a given value for the key tuple is
     duplicated), the final occurrence overwrites any earlier
     occurrences.  In the future, a more sophisticated "merging"
     process might be appropriate.
-
-    The given key function will normally be generated using
-    make_key_function.
 
     Arguments:
         mesh_data (list): data for mesh points
