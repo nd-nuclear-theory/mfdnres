@@ -14,45 +14,58 @@ import os
 import mfdnres
 
 def test_basic_import():
+    """ Test of single-file import
+    """
 
-    data_dir = r"c:\work\research\data\mfdn"
-    filename = os.path.join(data_dir,"run0355","run0355-mfdn-Z2-N2-JISP16-1-hw20.000-aL20-Nmax04-MM0-lan500.res") # no M1 moments, no trans
-    filename = os.path.join(data_dir,"run0363","run0363-mfdn-Z4-N3-N2LOopt500-0-hw20.000-aL100-Nmax10-MM1-lan1000.res") # dipole moments but not trans
-    filename = os.path.join(data_dir,"run0352","run0352-mfdn-Z4-N5-JISP16-1-hw20.000-aL100-Nmax10-MM1-lan1000.res") # no M1 moment
+    print("test_basic_import")
 
-    results = mfdnres.res.MFDnRunData()
-    results.read_file(filename,res_format="v14b06",verbose=False)
+    ## data_dir = mfdnres.res.res_file_directory("mcaprio","mfdn","0355",run_results_are_in_subdir=False)
+    ## filename = os.path.join(data_dir,"run0355-mfdn-Z2-N2-JISP16-1-hw20.000-aL20-Nmax04-MM0-lan500.res") # no M1 moments, no trans
+
+    ## data_dir = mfdnres.res.res_file_directory("mcaprio","mfdn","0363",run_results_are_in_subdir=False)
+    ## filename = os.path.join(data_dir,"run0363-mfdn-Z4-N3-N2LOopt500-0-hw20.000-aL100-Nmax10-MM1-lan1000.res") # dipole moments but not trans
+
+    data_dir = mfdnres.res.res_file_directory("mcaprio","mfdn","0352",run_results_are_in_subdir=False)
+    filename = os.path.join(data_dir,"run0352-mfdn-Z4-N5-JISP16-1-hw20.000-aL100-Nmax10-MM1-lan1000.res") # no M1 moment
+
+    res_format = "v14b06"
+
+    results = mfdnres.res.read_file(filename,res_format,verbose=False)[0]
+    print(results.get_levels())
     print(results.states[(1/2,0,1)].properties)
     print(results.states[(1/2,0,1)].obo)
-    print(results.states[(1/2,0,1)].tbo)
     ## print(results.transitions)
     print("states {}, moments {}, transitions {}".format(len(results.states),len(results.moments),len(results.transitions)))
 
 def test_directory_slurp():
-    # test of slurping input directory and level output functions
+    """ Test of slurping input directory and level output functions.
+    """
+
+    print("test_directory_slurp")
+
+    data_dir = mfdnres.res.res_file_directory("mcaprio","mfdn","0352",run_results_are_in_subdir=False)
+    res_format = "v14b06"
 
     # slurp directory
-    data = {}
-    #         data,filename,key_fields,filename_format,res_format,
-    mfdnres.analysis.import_res_files(
-        data,
-        filename = r"c:/work/data/results/mfdn/run0352",
-        key_fields = ("interaction","Nmax","hw"),
-        filename_format="format_5_ho",
-        res_format="v14b06",
-        verbose=True
-    )
+    mesh_data = mfdnres.res.slurp_res_files(data_dir,res_format)
+    KEY_DESCRIPTOR_INTERACTION_NMAX_HW =  (("interaction",str),("Nmax",int),("hw",float))
+    ## KEY_DESCRIPTOR_NMAX_HW =  (("Nmax",int),("hw",float))
+    results_dict = mfdnres.analysis.make_results_dict(mesh_data,KEY_DESCRIPTOR_NMAX_HW)
 
+    #("interaction","Nmax","hw")
     # dump levels
-    print("Data:",data)
-    results = data[("JISP16",10,20.000)]
+    print("mesh_data:",mesh_data)
+    print("results_dict:",results_dict)
+    results = results_dict[("JISP16",10,20.000)]
     mfdnres.analysis.write_level_table(
         results,
         "test-levels.dat"
     )
 
 def test_legacy_band_output():
-    # DEPRECATED: functions to reproduce berotor style band moment and transition files
+    """
+    DEPRECATED: functions to reproduce berotor style band moment and transition files
+    """
 
     # slurp directory
     data = {}
@@ -95,15 +108,19 @@ def test_legacy_band_output():
     )
 
 def test_band_file():
-    # test of input of band configuration file
+    """
+    test of input of band configuration file
+    """
 
     # reading band configuration file
     filename = r"band-Z4-N3-JISP16-1-hw20.000-Nmax10-band1.cfg"
     mfdnres.analysis.BandDefinition(filename)
 
 def test_band_output():
-    # validation of new consolidated band output
-    # on old JISP+NC run0339
+    """
+    validation of new consolidated band output
+    on old JISP+NC run0339
+    """
 
     # slurp directory
     data = {}
@@ -128,8 +145,10 @@ def test_band_output():
     mfdnres.analysis.write_band_fit_parameters(results,"test-band-fit.dat",band)
 
 def test_am_output():
-    # test of angular momentum output
-    # run0359 for 3He Nmax04
+    """
+    test of angular momentum output
+    run0359 for 3He Nmax04
+    """
 
     # slurp directory
     data = {}
@@ -151,7 +170,7 @@ def test_am_output():
 
 
 if (__name__ == "__main__"):
-    ##test_basic_import()
+    test_basic_import()
     test_directory_slurp()
     ##test_band_file()
     ##test_band_output()
