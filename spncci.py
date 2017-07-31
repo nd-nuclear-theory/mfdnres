@@ -60,6 +60,7 @@ class SpNCCIMeshPointData(mfdnres.res.BaseResultsData):
             self.baby_spncci_listing (list of list):
             self.decompositions (dictionary):
             self.observables (dictionary):
+
         Accessors:
             get_levels: Accessor for all quantum numbers.
                 Inherited from BaseRunData.
@@ -72,7 +73,6 @@ class SpNCCIMeshPointData(mfdnres.res.BaseResultsData):
                 The the set of quantum numbers is valid, it returns the energy associated with those
                 quantum numbers.  If the quantum numbers are not valid, it returns None and prints a
                 message to the console.      
-        Methods:
        
     """
     ########################################

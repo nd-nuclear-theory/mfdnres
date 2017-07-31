@@ -12,3 +12,7 @@ import mfdnres.filename_formats  # register parsers
 # analysis control
 import mfdnres.analysis
 from . import analysis
+
+# optional: user must load
+## import mfdnres.band
+## from . import band
