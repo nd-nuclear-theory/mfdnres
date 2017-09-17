@@ -3,12 +3,14 @@
     Language: Python 3
     Mark A. Caprio
     University of Notre Dame
+
     5/31/15 (mac): Initiated (as mfdn_res.py).
     6/5/15 (mac): Restructure as subpackage.
     7/26/15 (mac): Allow mismatch in line parser.
     7/8/17 (mac): Add write_lines and write_table.
     7/9/17 (mac): Add parsing tools for structured results files.
     7/14/17 (mac): Add canonicalization tools for (J,g) subspace pairs.
+    9/17/17 (mac): Add bool_from_str.
     
 """
 
@@ -188,9 +190,32 @@ def extracted_sections(tokenized_lines):
 # key-value conversion
 ################################################################
 
+def bool_from_str(s):
+    """Convert string to bool.
+
+    The accepted values are string representations of integers,
+    normally "0" or "1".
+
+    This function is necessary since naive use of the library function
+    bool fails to give the semantically desired behavior.
+
+    >>> a = "0"
+    >>> bool(a)
+        True
+    >>> bool_from_str(a)
+        False
+    """
+
+    return bool(int(s))
+
+    
 def singleton_of(conversion):
+
     """Generate conversion function to convert a single-entry list of
     strings to a single value of given type.
+
+    Caution: For integers representing boolean values, use conversion function
+    mfdnres.tools.bool_from_str, rather than simply bool.
 
     >>> a = ["1"]
     >>> singleton_of(int)(a)
@@ -214,6 +239,9 @@ def singleton_of(conversion):
 def list_of(conversion):
     """Generate conversion function to convert list of strings to list
     of given type.
+
+    Caution: For integers representing boolean values, use conversion function
+    mfdnres.tools.bool_from_str, rather than simply bool.
 
     >>> a = ["1","2"]
     >>> list_of(int)(a)

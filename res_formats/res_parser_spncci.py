@@ -8,7 +8,7 @@
     University of Notre Dame
 
     7/9/17 (mac): Created.
-
+    9/17/17 (mac): Fix bool conversion on input.
 """
 
 import itertools
@@ -105,7 +105,7 @@ def parse_params(self,tokenized_lines):
         "Nmax" : mfdnres.tools.singleton_of(int),
         # Interaction
         "interaction" : mfdnres.tools.singleton_of(str),
-        "use_coulomb" : mfdnres.tools.singleton_of(bool),
+        "use_coulomb" : mfdnres.tools.singleton_of(mfdnres.tools.bool_from_str),
         # Relative observables
         "observable_names" : mfdnres.tools.list_of(str),
         # Calculation
@@ -115,8 +115,15 @@ def parse_params(self,tokenized_lines):
         tokenized_lines,conversions
     )
 
-    # augment nuclide with separate "nuclide.Z" and "nuclide.N" for easy key retrieval
+    # ad hoc: force interaction to "JISP16" until properly provided in spncci results file
+    if ("interaction" in key_value_dict):
+        if (key_value_dict["interaction"]=="RESERVED"):
+            key_value_dict["interaction"]="JISP16"
+
+    # augment nuclide with separate "nuclide-Z" and "nuclide-N" for easy key retrieval
     if ("nuclide" in key_value_dict):
+        (key_value_dict["nuclide-Z"],key_value_dict["nuclide-N"]) = key_value_dict["nuclide"]
+        # DEPRECATED: "nuclide.Z" and "nuclide.N" do not work in format strings.
         (key_value_dict["nuclide.Z"],key_value_dict["nuclide.N"]) = key_value_dict["nuclide"]
 
     # update to params dictionary

@@ -336,7 +336,7 @@ def write_network_table(results,filename,band,energy_cutoff=None):
         filename (str): output filename
         band (BandDefinition): band providing set of initial levels
            (and Mj values)
-        energy_cutoff (float,optional): energy cutoff to limit output file size
+        energy_cutoff (float,optional): energy cutoff to limit output size
 
     """
 
