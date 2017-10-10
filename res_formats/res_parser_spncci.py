@@ -16,7 +16,7 @@ import itertools
 import numpy as np
 
 import mfdnres.tools
-import mfdnres.spncci
+import mfdnres.spncci_results_data
 
 ################################################################
 # control code
@@ -27,6 +27,20 @@ def is_results_sentinel_section(section):
     """
     (section_name,_) = section
     return (section_name == "RESULTS")
+
+
+def parse_mesh_point(self,sections,section_handlers):
+    """ Parse single mesh point into results object.
+
+    Arguments:
+        self (BaseResultsData): results object to populate
+        sections (list): data for sections to parse, as (section_name,tokenized_lines) tuples
+        section_handlers (dict): dictionary of section handlers
+    """
+
+    for (section_name,tokenized_lines) in sections:
+        if section_name in section_handlers:
+            section_handlers[section_name](self,tokenized_lines)
 
 def res_parser_spncci(in_file,verbose):
     """ Parse full spncci results file, into list of one or more results objects.
@@ -58,29 +72,16 @@ def res_parser_spncci(in_file,verbose):
         # there are results sections: actual mesh, not counting run
         for results_section_group in grouped_results_sections:
             full_section_group = common_sections + results_section_group
-            results = mfdnres.spncci.SpNCCIMeshPointData()
+            results = mfdnres.spncci_results_data.SpNCCIResultsData()
             parse_mesh_point(results,full_section_group,section_handlers)
             mesh_data.append(results)
     else:
         # no results sections: counting run
-        results = mfdnres.spncci.SpNCCIMeshPointData()
+        results = mfdnres.spncci_results_data.SpNCCIResultsData()
         parse_mesh_point(results,common_sections,section_handlers)
         mesh_data.append(results)
 
     return mesh_data
-
-def parse_mesh_point(self,sections,section_handlers):
-    """ Parse single mesh point into results object.
-
-    Arguments:
-        self (SpNCCIMeshPointData): results object to populate
-        sections (list): data for sections to parse, as (section_name,tokenized_lines) tuples
-        section_handlers (dict): dictionary of section handlers
-    """
-
-    for (section_name,tokenized_lines) in sections:
-        if section_name in section_handlers:
-            section_handlers[section_name](self,tokenized_lines)
 
 # register the parser
 mfdnres.res.register_res_format('spncci',res_parser_spncci)

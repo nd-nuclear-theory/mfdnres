@@ -12,7 +12,7 @@
         Returns a nested dictionary.  The outer keys of the dictionar
         are tuples of (Nmax, Nsigmamax).  The inner keys are h-bar omega
         values.  Each h-bar omega value maps to an instance of
-        SpNCCIMeshPointData.  
+        SpNCCIResultsData.  
     e_vs_hw: creates a table and graph of energy versus h-bar omega.  Takes
         as arguments a dictionary made from spncci_slurp, a filename for the
         outputted table, and a filename for the outputted graph.  Returns nothing.
@@ -38,10 +38,10 @@ def spncci_slurp (directory):
                 Should be of the form '/location/of/files/*.res'
         Returned:
             data (nested dictionary): Maps from (Nmax, Nsigmamax) to hw to 
-                SpNCCIMeshPointData instance.  The outer keys of the dictionary
+                SpNCCIResultsData instance.  The outer keys of the dictionary
                 are tuples of the form (Nmax, Nsigmamax).  The inner keys are 
                 h-bar omega values.  Each h-bar omega value maps to its correspionding
-                instance of SpNCCIMeshPointData.
+                instance of SpNCCIResultsData.
 
         Takes all the SpNCCI results files from a specified directory and parses them into
         a dictionary for later analysis.  This dictionary is returned at the end of the 
@@ -63,7 +63,7 @@ def spncci_slurp (directory):
         for x in instances:
             temp[x.hw] = x
         data[(Nmax, Nsigmamax)] = temp
-    # data now has the following format (Nmax, Nsigmamax): hw: instance of SpNCCIMeshPointData
+    # data now has the following format (Nmax, Nsigmamax): hw: instance of SpNCCIResultsData
     return data
 
 def e_vs_hw(mesh_data,output_file_name):

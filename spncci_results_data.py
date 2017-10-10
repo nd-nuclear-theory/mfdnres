@@ -10,6 +10,7 @@
     7/9/17 (mac): Extract SpNCCIMeshPointData from res.py.
     7/15/17 (mac): Implement approximate shape invariants.
     7/22/17 (mac): Move out approximate shape invariants.
+    10/10/17 (mac): Rename SpNCCIMeshPointData to SpNCCIResultsData.
 
 """
 
@@ -18,7 +19,7 @@ import math
 import numpy as np
 
 import mfdnres.am
-import mfdnres.res
+import mfdnres.results_data
 
 
 ################################################################
@@ -31,9 +32,9 @@ import mfdnres.res
 KEY_DESCRIPTOR_NNHW = (("Nsigmamax",int),("Nmax",int),("hw",float))
 
 #################################################
-# SpNCCIMeshPointData (Child of BaseResultsData)
+# SpNCCIResultsData (child of BaseResultsData)
 #################################################
-class SpNCCIMeshPointData(mfdnres.res.BaseResultsData):
+class SpNCCIResultsData(mfdnres.results_data.ResultsData):
     """
         Child of BaseResultsData
         Attributes:

@@ -1,90 +1,29 @@
-""" res_parser_v14b06.py -- provide res file parser for MFDn version 14 beta 06
+""" res_parser_mfdn_v14b05.py -- provide res file parser for MFDn version 14 beta 05 with VXX input
 
     Language: Python 3
     Mark A. Caprio
     University of Notre Dame
-    5/31/15 (mac): Initiated as part of mfdn_res.py.
-    6/5/15 (mac): Extracted from mfdn_res.py.
-    Last modified 6/10/15.
-
+    7/26/15 (mac): Adapted from res_parser_v14b06:
+        -- Change expected positioning and format for basis parameter lines.
+        -- Set up for generic input file format.
+        -- Make less strict on expected name of radius observables.
+        -- Remove unneeded special case patch for mac early squared am operator runs.
+        -- AD HOC: Removed TBO block, but in general will need.  Better to restucture input 
+          to block identification loop and block handlers.
+    10/10/16 (mac): Update to return list containing single mesh point.
+    
 """
 
 import re
 
-# intra-packager references
-import mfdnres.tools  # for line parser
-import mfdnres.res  # for data storage objects and parser registry
+# intra-package references
+import mfdnres.mfdn_results_data
+import mfdnres.tools
 
-def read_occupations(self,fin):
-    """
-
-      More details
-
-         RMS radius:                      proton, neutron, matter
-
-         Orb. Occ. :         n, l, 2j,     prot,  neut
-         Shell Occ.:             1+2n+l,   prot,  neut
-
-      Next state :    1    binding energy :  -31.17544
-         J, T, Ex  :    4.00000    1.00010    0.00000
-         RMS radius:                          2.10634    2.33128    2.24401
-
-         Orb. Occ. :           0   0   1       1.847836   1.876969
-         ...
-
-         Shell Occ.:                   1       1.847836   1.876969
-         ...
-
-         Total # of Nucleons:              4.000000   6.000001
-
-
-
-    Fields:
-
-       Orbital occupation: n l 2j np nn
-       Shell occupation: (N+1) np nn
-
-    """
-
-
-    # skip to occupations
-    done = False
-    while (not done):
-        # read line (until blank line reached)
-        line=fin.readline().strip()
-        if (line[0:11] == "Shell Occ.:"):
-            done = True
-    mfdnres.tools.parse_line(fin.readline(),r"")
-
-    # iterate through states
-    for seq in range(1,999):
-        # read state header
-        mfdnres.tools.parse_line(fin.readline(),r"Next state :")
-        mfdnres.tools.parse_line(fin.readline(),r"J, T, Ex  :")
-        mfdnres.tools.parse_line(fin.readline(),r"RMS radius:")
-        mfdnres.tools.parse_line(fin.readline(),r"")
-
-        # read occupations
-        orbital_occupations = {}
-        done = False
-        while (not done):
-            # read line (until blank line reached)
-            line=fin.readline().strip()
-            if (line == ""):
-                done = True
-                continue
-            # extract and store data from line
-            match = mfdnres.tools.parse_line(line,r"Orb. Occ. :\s+(?P<n>\S+)\s+(?P<l>\S+)\s+(?P<jj>\S+)\s+(?P<np>\S+)\s+(?P<nn>\S+)")
-            orbital_nlj = (int(match.group("n")),int(match.group("l")),int(match.group("j"))/2)
-            orbital_occ = (float(match.group("np")),float(match.group("nn")))
-            orbital_occupations[orbital_nlj] = orbital_occ
-
-    # TODO: continue
-
-def res_parser_v14b06(self,fin,verbose):
+def res_parser_mfdn_v14b05(fin,verbose):
     """ Read result file data into MFDnRunData object.  If any
     data is duplicative of the old, the new data will overwrite
-    the old.
+    the old. 
 
     Args:
         self (MFDnRunData): instance into which we are reading results
@@ -94,24 +33,34 @@ def res_parser_v14b06(self,fin,verbose):
     """
 
     ################################################################
+    # set up container
+    ################################################################
+
+    results = mfdnres.mfdn_results_data.MFDnResultsData()
+
+    ################################################################
     # read header
     ################################################################
 
     mfdnres.tools.parse_line(fin.readline(),r"")
     mfdnres.tools.parse_line(fin.readline(),r"OUTPUT from MFD-nuclear-physics Version 14")
     mfdnres.tools.parse_line(fin.readline(),r"")
-    mfdnres.tools.parse_line(fin.readline(),r"2-body interaction data in H2full format")
-    line = fin.readline().strip()
-    if (line.split()[0] == "hbar-omega"):
-        match = mfdnres.tools.parse_line(line,r"hbar-omega\s+(?P<hw>[\-0-9.]+)\s+nucleon mass\s+(?P<mN>[\-0-9.]+)")
-        self.params["hw"] = float(match.group("hw"))
-        line = fin.readline()
-    else:
-        self.params["hw"] = 0.
-    mfdnres.tools.parse_line(line,r"TBME binary file")  # Hamiltonian
+    match = mfdnres.tools.parse_line(fin.readline(),r"hbar-omega\s+(?P<hw>[\-0-9.]+)")
+    results.params["hw"] = float(match.group("hw"))
+    mfdnres.tools.parse_line(fin.readline(),r"nucleon mass\s+(?P<mN>[\-0-9.]+)")
     mfdnres.tools.parse_line(fin.readline(),r"")
+    match = mfdnres.tools.parse_line(fin.readline(),r"2-body interaction data in (?P<format>\S+) format")
+    interaction_format = match.group("format")
+    if (interaction_format == "_vxx_v4"):
+        # VXX format
+        # eat Hamiltonian input lines
+        while (fin.readline().strip() != ""):
+            pass
+    else:
+        raise ValueError("Hamiltonian file format mode {} not recognized by MFDn results parser".format(interaction_format))
+
     mfdnres.tools.parse_line(fin.readline(),r"INPUT: read in TBME files")
-    mfdnres.tools.parse_line(fin.readline(),r"TBME binary file  tbme-rrel2.bin")
+    mfdnres.tools.parse_line(fin.readline(),r"TBME binary file  ([^\.]+)\.bin")  # radius observable
 
     # read names of additional two-body observables
     tbo_operators = []
@@ -124,21 +73,18 @@ def res_parser_v14b06(self,fin,verbose):
 
         match = mfdnres.tools.parse_line(line,r"TBME binary file\s+tbme-(\w+)")
         operator_name = match.group(1)
-        # ad hoc fix to mac's squared operator names through run0365
-        if (operator_name in ["L", "Sp", "Sn", "S", "J"]):
-            operator_name += "2"
         tbo_operators.append(operator_name)
-
+            
     mfdnres.tools.parse_line(fin.readline(),r"")
 
     # Z and N
     match = mfdnres.tools.parse_line(fin.readline(),r"Number of protons \(and neutrons\)\s+(?P<Z>\d+)\s+(?P<N>\d+)")
-    self.params["nuclide"] = (int(match.group("Z")),int(match.group("N")))
+    results.params["nuclide"] = (int(match.group("Z")),int(match.group("N")))
 
     # Nmin and Nmax
     match = mfdnres.tools.parse_line(fin.readline(),r"Number of HO quanta above minimal conf\s+(?P<Nmin>\d+)\s+to\s+(?P<Nmax>\d+)")
-    self.params["Nmin"] = int(match.group("Nmin"))
-    self.params["Nmax"] = int(match.group("Nmax"))
+    results.params["Nmin"] = int(match.group("Nmin"))
+    results.params["Nmax"] = int(match.group("Nmax"))
 
     mfdnres.tools.parse_line(fin.readline(),"")
 
@@ -178,7 +124,7 @@ def res_parser_v14b06(self,fin,verbose):
 
         # set up state instance
         # initialize new state
-        state = mfdnres.res.MFDnStateData(qn,T,E)
+        state = mfdnres.mfdn_results_data.MFDnStateData(qn,T,E)
         # save state to working list for this res file
         state_list.append(state)
         # save lookup information (by sequence number) for processing transitions below
@@ -188,8 +134,8 @@ def res_parser_v14b06(self,fin,verbose):
         state.occupations = list(map(float,match.group("occupations").split()))
 
         # save observables to dictionaries
-        self.properties[state.qn] = {"J":J,"g":g,"n":n,"T":T}
-        self.energies[state.qn] = E
+        results.properties[state.qn] = {"J":J,"g":g,"n":n,"T":T}
+        results.energies[state.qn] = E
 
 
     # extract poor man's Mj
@@ -203,13 +149,13 @@ def res_parser_v14b06(self,fin,verbose):
         line=fin.readline().strip()
         if (verbose):
             print(">>> Amplitudes:",line)
-
+        
         # read state data
         match = mfdnres.tools.parse_line(line,r"(?P<seq>\S+)\s+(?P<J>\S+)\s+(?P<g>\S+)\s+(?P<n>\S+)\s+(?P<T>\S+)\s+(?P<Eabs>\S+)\s+(?P<amplitudes>.*)")
         state.amplitudes = list(map(float,match.group("amplitudes").split()))
 
         # make sure TBO dictionary available
-        self.tbo.setdefault(state.qn,{})
+        results.tbo.setdefault(state.qn,{})
 
     mfdnres.tools.parse_line(fin.readline(),r"")
 
@@ -227,29 +173,29 @@ def res_parser_v14b06(self,fin,verbose):
         error = float(match.group("error"))  # do not store since not uniquely defined when runs are combined
         radii = list(map(float,match.group("radii").split()))
         ##(state.tbo["rp"],state.tbo["rn"],state.tbo["r"]) = radii
-        (self.tbo[state.qn]["rp"],self.tbo[state.qn]["rn"],self.tbo[state.qn]["r"]) = radii
+        (results.tbo[state.qn]["rp"],results.tbo[state.qn]["rn"],results.tbo[state.qn]["r"]) = radii
 
 
 
     mfdnres.tools.parse_line(fin.readline(),r"")
 
     # additional TBO group
-    mfdnres.tools.parse_line(fin.readline(),r"Seq    J    NP  n    T      additional Two-Body observables")
-    if (verbose):
-        print("TBO operators:",tbo_operators)
-    for state in state_list:
-        # read line
-        line=fin.readline().strip()
-        if (verbose):
-            print(">>> Additional TBO:",line)
-
-        # read state data
-        match = mfdnres.tools.parse_line(line,r"(?P<seq>\S+)\s+(?P<J>\S+)\s+(?P<g>\S+)\s+(?P<n>\S+)\s+(?P<T>\S+)\s+(?P<TBO>.*)")
-        tbo_values = list(map(float,match.group("TBO").split()))
-        for i in range(len(tbo_values)):
-            ##state.tbo[tbo_operators[i]] = tbo_values[i]
-            self.tbo[state.qn][tbo_operators[i]] = tbo_values[i]
-    mfdnres.tools.parse_line(fin.readline(),r"")
+##    mfdnres.tools.parse_line(fin.readline(),r"Seq    J    NP  n    T      additional Two-Body observables",strict=False)
+##    if (verbose):
+##        print("TBO operators:",tbo_operators)
+##    for state in state_list:
+##        # read line
+##        line=fin.readline().strip()
+##        if (verbose):
+##            print(">>> Additional TBO:",line)
+##        
+##        # read state data
+##        match = mfdnres.tools.parse_line(line,r"(?P<seq>\S+)\s+(?P<J>\S+)\s+(?P<g>\S+)\s+(?P<n>\S+)\s+(?P<T>\S+)\s+(?P<TBO>.*)")
+##        tbo_values = list(map(float,match.group("TBO").split()))
+##        for i in range(len(tbo_values)):
+##            ##state.tbo[tbo_operators[i]] = tbo_values[i]
+##            results.tbo[state.qn][tbo_operators[i]] = tbo_values[i]
+##    mfdnres.tools.parse_line(fin.readline(),r"")
 
     # magnetic moments group
     line=fin.readline().strip()
@@ -265,36 +211,30 @@ def res_parser_v14b06(self,fin,verbose):
             line=fin.readline().strip()
             if (verbose):
                 print(">>> Magnetic moments:",line)
-
+            
             # read state data
             match = mfdnres.tools.parse_line(line,r"(?P<seq>\S+)\s+(?P<J>\S+)\s+(?P<g>\S+)\s+(?P<n>\S+)\s+(?P<T>\S+)\s+(?P<moments>.*)")
             moment_values = list(map(float,match.group("moments").split()))
-            self.moments[(state.qn,"M1EM")] = moment_values[0]
-            self.moments[(state.qn,"M1")] = moment_values[1:5]
-
+            results.moments[(state.qn,"M1EM")] = moment_values[0]
+            results.moments[(state.qn,"M1")] = moment_values[1:5]
+    mfdnres.tools.parse_line(fin.readline(),r"")
+    
     # one-body radii and E2 group
-    line=fin.readline().strip()
-    if (line == ""):
+    mfdnres.tools.parse_line(fin.readline(),r"Seq    J    NP  n    T     R2-OneBody\(pro,neu\)     E2\(pro,neu\)moment")
+    for state in state_list:
+        # read line
         line=fin.readline().strip()
-    if (line.split()[0] == "No"):
-        # must allow for group being replaced by warning message when not HO basis
-        mfdnres.tools.parse_line(line,r"No R2OB nor E2 moments because not HO basis")
-    else:
-        mfdnres.tools.parse_line(line,r"Seq    J    NP  n    T     R2-OneBody\(pro,neu\)     E2\(pro,neu\)moment")
-        for state in state_list:
-            # read line
-            line=fin.readline().strip()
-            if (verbose):
-                print(">>> One-body radii & E2 moments:",line)
-
-            # read state data
-            match = mfdnres.tools.parse_line(line,r"(?P<seq>\S+)\s+(?P<J>\S+)\s+(?P<g>\S+)\s+(?P<n>\S+)\s+(?P<T>\S+)\s+(?P<moments>.*)")
-            moment_values = list(map(float,match.group("moments").split()))
-            state.obo["r2_ob"] = moment_values[:2]
-            if (len(moment_values) == 4):
-                # E2 moments defined
-                self.moments[(state.qn,"E2")] = moment_values[2:]
-        mfdnres.tools.parse_line(fin.readline(),r"")
+        if (verbose):
+            print(">>> One-body radii & E2 moments:",line)
+        
+        # read state data
+        match = mfdnres.tools.parse_line(line,r"(?P<seq>\S+)\s+(?P<J>\S+)\s+(?P<g>\S+)\s+(?P<n>\S+)\s+(?P<T>\S+)\s+(?P<moments>.*)")
+        moment_values = list(map(float,match.group("moments").split()))
+        state.obo["r2_ob"] = moment_values[:2]
+        if (len(moment_values) == 4):
+            # E2 moments defined
+            results.moments[(state.qn,"E2")] = moment_values[2:]
+    mfdnres.tools.parse_line(fin.readline(),r"")
 
     ################################################################
     # accumulate states to total dictionary by (J,g,n)
@@ -302,7 +242,7 @@ def res_parser_v14b06(self,fin,verbose):
 
     for state in state_list:
         qn = state.qn
-        self.states[qn] = state
+        results.states[qn] = state
 
     ################################################################
     # access transition data
@@ -314,7 +254,7 @@ def res_parser_v14b06(self,fin,verbose):
         # if no transition properties to read, we are done...
         return
     mfdnres.tools.parse_line(fin.readline(),r"")
-
+        
 
     # read each transition group
     done_with_transitions = False
@@ -341,8 +281,8 @@ def res_parser_v14b06(self,fin,verbose):
             match = mfdnres.tools.parse_line(line,r"(?P<seq>\S+)\s+(?P<J>\S+)\s+(?P<g>\S+)\s+(?P<n>\S+)\s+(?P<T>\S+)\s+(?P<me>.*)")
             seqi = int(match.group("seq"))
             me_values = list(map(float,match.group("me").split()))
-            self.transitions[(state_lookup[seqf],state_lookup[seqi],"GT",Mj)] = me_values[0:2]
-
+            results.transitions[(state_lookup[seqf],state_lookup[seqi],"GT",Mj)] = me_values[0:2]
+            
             # read ahead
             line=fin.readline().strip()
 
@@ -354,8 +294,8 @@ def res_parser_v14b06(self,fin,verbose):
             match = mfdnres.tools.parse_line(line,r"(?P<seq>\S+)\s+(?P<J>\S+)\s+(?P<g>\S+)\s+(?P<n>\S+)\s+(?P<T>\S+)\s+(?P<Eabs>\S+)\s+(?P<me>.*)")
             seqi = int(match.group("seq"))
             me_values = list(map(float,match.group("me").split()))
-            self.transitions[(state_lookup[seqf],state_lookup[seqi],"M1",Mj)] = me_values[0:4]
-
+            results.transitions[(state_lookup[seqf],state_lookup[seqi],"M1",Mj)] = me_values[0:4]
+            
             # read ahead
             line=fin.readline().strip()
 
@@ -367,32 +307,21 @@ def res_parser_v14b06(self,fin,verbose):
             match = mfdnres.tools.parse_line(line,r"(?P<seq>\S+)\s+(?P<J>\S+)\s+(?P<g>\S+)\s+(?P<n>\S+)\s+(?P<T>\S+)\s+(?P<Eabs>\S+)\s+(?P<me>.*)")
             seqi = int(match.group("seq"))
             me_values = list(map(float,match.group("me").split()))
-            self.transitions[(state_lookup[seqf],state_lookup[seqi],"E2",Mj)] = me_values[0:2]
-
+            results.transitions[(state_lookup[seqf],state_lookup[seqi],"E2",Mj)] = me_values[0:2]
+            
             # read ahead
             line=fin.readline().strip()
 
+    # package results
+    mesh_data = [results]
+    return mesh_data
+
 # register parser
-mfdnres.res.register_res_format("v14b06",res_parser_v14b06)
+mfdnres.res.register_res_format("mfdn_v14b05",res_parser_mfdn_v14b05)
 
 ################################################################
 # test code
 ################################################################
 
 if (__name__ == "__main__"):
-
-    # unit test is currently somewhat inaccessible, since running this
-    # module direcly in its cwd means mfdnres packages cannot be found
-    # unless added to PYTHONPATH
-
-
-    import os
-
-    filename = os.path.join("type_specimens","v14b06h2_run0381-mfdn-Z4-N6-N2LOopt500-0-hw20.000-aL100-Nmax07-Mj4.0-lan1500.res") # H2 format
-
-    data = mfdnres.res.MFDnRunData()
-    data.read_file(filename,res_format="v14b05",verbose=True)
-    print(data.states[(1/2,1,1)].properties)
-    print(data.states[(1/2,1,1)].obo)
-    ## print(data.transitions)
-    print("states {}, moments {}, transitions {}".format(len(data.states),len(data.moments),len(data.transitions)))
+    pass
