@@ -26,6 +26,14 @@ class MFDnResultsData (mfdnres.results_data.ResultsData):
 
         TODO clean up docstring
 
+
+
+        TODO: finish neatening transition phases
+            - check GT conjugation phase
+            - define setter method for transitions, to only store in
+               canonically decreasing (f<i) order
+            - reduce states data member to sorted list
+ 
         Attributes:
             self.params (dictionary):  Container for properties of run.
                 Inherited from BaseResultsData.

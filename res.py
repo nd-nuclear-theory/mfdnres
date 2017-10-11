@@ -1,16 +1,6 @@
-"""res.py -- import and retrieval of data from MFDn res file
+"""res.py
 
-    TODO: finish neatening transition phases
-         -- check GT conjugation phase
-         -- define setter method for transitions, to only store in
-            canonically decreasing (f<i) order
-
-    TODO: extract MFDn specific daughter class to own file, so res.py
-    is code-agnostic
-
-    MORE TODO:
-        - reduce states data member to sorted list
-        - make data members protected/private
+    Import control code for results files.
 
     Language: Python 3
 
@@ -36,6 +26,9 @@ import glob
 import os
 
 import numpy as np
+
+#intra-packages references
+import mfdnres.descriptor
 
 ################################################################
 # filename utility
@@ -138,12 +131,28 @@ def read_file(filename,res_format,filename_format=None,verbose=False):
     ##         full_data = [data]
     ##     return full_data
 
+    # parse results filename for any supplementary run parameters
+    if (filename_format is None):
+        info_from_filename = {}
+    else:
+        info_from_filename = mfdnres.descriptor.parse_res_filename(filename,filename_format)
+
     # parse results file contents for run parameters and data
     with open(filename,'rt') as fin:
-        return res_format_parser[res_format](fin,verbose=verbose)
+        results_list = res_format_parser[res_format](fin,verbose=verbose)
 
-    # parse results filename for any supplementary run parameters
-    pass
+    # augment parameters with those obtained from filename
+    #
+    # Note: The parameter values obtained from the filename will
+    # *override* any parameter values obtained by parsing the results
+    # file.  So beware that parameter values formatted for the
+    # filename might have lower precision than those stored in the
+    # results file.
+
+    for results in results_list:
+        results.params.update(info_from_filename)
+
+    return results_list
 
 def slurp_res_files(
         res_directory_list,res_format,

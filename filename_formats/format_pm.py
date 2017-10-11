@@ -85,4 +85,6 @@ mfdnres.descriptor.register_filename_format("format_pm",parser)
 if (__name__ == "__main__"):
 
     filename = r"MFDn.res.Z4.N5.JISP16.Nmin1.Nm13.hw20.0.La500.St06.tol1e-6"
-    print(parser(filename))
+    info = mfdnres.descriptor.parse_res_filename(filename,filename_format="format_pm")
+    print(filename)
+    print(info)

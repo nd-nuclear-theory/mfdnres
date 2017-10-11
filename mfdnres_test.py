@@ -18,18 +18,14 @@ def test_basic_import_v14b05():
     """
 
     print("test_basic_import_v14b05")
-
-
-    import os
+    res_format = "mfdn_v14b05"
 
     filename = os.path.join("example","type_specimens","mfdn","v14b05-vxx","MFDn.res.Z4.N5.JISP16.Nmin1.Nm13.hw20.0.La500.St06.tol1e-6") # VXX format, no trans
-    res_format = "mfdn_v14b05"
-    res_filename_format = None
-
-    results_list = mfdnres.res.read_file(filename,res_format,res_filename_format,verbose=False)
+    filename_format="format_pm"
+    results_list = mfdnres.res.read_file(filename,res_format,filename_format,verbose=False)
     results = results_list[0]
-
-    results = mfdnres.res.read_file(filename,res_format,verbose=False)[0]
+    print(filename)
+    print(results.params)
     print(results.get_levels())
     print(results.states[(1/2,1,1)].properties)
     print(results.states[(1/2,1,1)].obo)
@@ -41,6 +37,10 @@ def test_basic_import_v14b06():
     """
 
     print("test_basic_import_v14b06")
+    res_format = "mfdn_v14b06"
+
+    ## data_dir = mfdnres.res.res_file_directory("mcaprio","mfdn","0352",run_results_are_in_subdir=False)
+    ## filename = os.path.join(data_dir,"run0352-mfdn-Z4-N5-JISP16-1-hw20.000-aL100-Nmax10-MM1-lan1000.res") # no M1 moment, filename format 5
 
     ## data_dir = mfdnres.res.res_file_directory("mcaprio","mfdn","0355",run_results_are_in_subdir=False)
     ## filename = os.path.join(data_dir,"run0355-mfdn-Z2-N2-JISP16-1-hw20.000-aL20-Nmax04-MM0-lan500.res") # no M1 moments, no trans
@@ -48,17 +48,39 @@ def test_basic_import_v14b06():
     ## data_dir = mfdnres.res.res_file_directory("mcaprio","mfdn","0363",run_results_are_in_subdir=False)
     ## filename = os.path.join(data_dir,"run0363-mfdn-Z4-N3-N2LOopt500-0-hw20.000-aL100-Nmax10-MM1-lan1000.res") # dipole moments but not trans
 
-    data_dir = mfdnres.res.res_file_directory("mcaprio","mfdn","0352",run_results_are_in_subdir=False)
-    filename = os.path.join(data_dir,"run0352-mfdn-Z4-N5-JISP16-1-hw20.000-aL100-Nmax10-MM1-lan1000.res") # no M1 moment
-
-    res_format = "mfdn_v14b06"
+    filename = os.path.join("example","type_specimens","mfdn","v14b06-h2","run0352-mfdn-Z4-N5-JISP16-1-hw20.000-aL100-Nmax10-MM1-lan1000.res") # no M1 moment, filename format 5
+    filename_format="format_5_ho"
+    results_list = mfdnres.res.read_file(filename,res_format,filename_format,verbose=False)
+    results = results_list[0]
+    print(filename)
+    print(results.params)
+    print(results.get_levels())
+    print(results.states[(1/2,0,1)].properties)
+    print(results.states[(1/2,0,1)].obo)
 
     ## filename = os.path.join("type_specimens","v14b06h2_run0381-mfdn-Z4-N6-N2LOopt500-0-hw20.000-aL100-Nmax07-Mj4.0-lan1500.res") # H2 format
     ## print(data.states[(1/2,1,1)].properties)
     ## print(data.states[(1/2,1,1)].obo)
 
+    filename = os.path.join("example","type_specimens","mfdn","v14b06-h2","run0381-mfdn-Z4-N6-N2LOopt500-0-hw20.000-aL100-Nmax07-Mj4.0-lan1500.res")
+    filename_format="format_6_ho"
+    results_list = mfdnres.res.read_file(filename,res_format,filename_format,verbose=False)
+    results = results_list[0]
+    print(filename)
+    print(results.params)
+    print(results.get_levels())
+    print(results.states[(4.0,1,1)].properties)
+    print(results.states[(4.0,1,1)].obo)
+    ## print(results.transitions)
+    print("states {}, moments {}, transitions {}".format(len(results.states),len(results.moments),len(results.transitions)))
 
-    results = mfdnres.res.read_file(filename,res_format,verbose=False)[0]
+
+    filename = os.path.join("example","type_specimens","mfdn","v14b06-h2","runmac0428-mfdn-Z4-N3-JISP16-coul1-hw20.000-a_cm20-Nmax04-Mj0.5-lan1000-tol1.0e-06.res")
+    filename_format="format_7_ho"
+    results_list = mfdnres.res.read_file(filename,res_format,filename_format,verbose=False)
+    results = results_list[0]
+    print(filename)
+    print(results.params)
     print(results.get_levels())
     print(results.states[(1/2,0,1)].properties)
     print(results.states[(1/2,0,1)].obo)
@@ -88,6 +110,9 @@ WIP
     res_format = "mfdn_v14b06"
 
     results = mfdnres.res.read_file(filename,res_format,verbose=False)[0]
+
+    print(filename)
+    print(results.params)
     print(results.get_levels())
     print(results.states[(1/2,0,1)].properties)
     print(results.states[(1/2,0,1)].obo)
@@ -102,11 +127,13 @@ def test_basic_import_spncci():
 
     filename = os.path.join("example","type_specimens","spncci","runmac0420-Z3-N3-Nsigmamax02-Nmax02.res")
     res_format = "spncci"
-    res_filename_format = None
+    filename_format = None
 
-    results_list = mfdnres.res.read_file(filename,res_format,res_filename_format,verbose=False)
+    results_list = mfdnres.res.read_file(filename,res_format,filename_format,verbose=False)
     results = results_list[0]
 
+    print(filename)
+    print(results.params)
     print(results.get_levels())
     ##print("states {}, moments {}, transitions {}".format(len(results.states),len(results.moments),len(results.transitions)))
 

@@ -78,7 +78,7 @@ mfdnres.descriptor.register_filename_format("format_5_ho",parser)
 
 if (__name__ == "__main__"):
 
-    # run0352-mfdn-Z4-N5-JISP16-1-hw20.000-aL100-Nmax10-MM1-lan1000.res
-
     filename = r"run0352-mfdn-Z4-N5-JISP16-1-hw20.000-aL100-Nmax10-MM1-lan1000.res"
-    parser(filename)
+    info = mfdnres.descriptor.parse_res_filename(filename,filename_format="format_5_ho")
+    print(filename)
+    print(info)

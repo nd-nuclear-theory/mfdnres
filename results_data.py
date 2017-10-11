@@ -27,7 +27,13 @@ class ResultsData (object):
     Attributes:
         params (dict): Mesh point run parameters, as dictionary of keyword->value.
 
-            Ex: For spncci, 
+            Ex: For spncci (runmac0420)...
+
+            {'hw': 10.0, 'Nsigmamax': 2, 'nuclide': (3, 3),
+            'nuclide-N': 3, 'A': 6, 'use_coulomb': False, 'nuclide-Z':
+            3, 'Nmax': 2, 'observable_names': ['hamiltonian',
+            'r2intr', 'Qintr'], 'interaction': 'JISP16', 'nuclide.N':
+            3, 'nuclide.Z': 3, 'N1v': 1}
 
         energies (dict): Energy eigenvalues, as dictionary qn->energy.
 

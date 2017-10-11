@@ -13,11 +13,6 @@
 import re
 
 # intra-package references
-if (__name__ == "__main__"):
-    # set up for unit test
-    import sys
-    import os
-    sys.path.append(os.path.join(sys.path[0],"..",".."))
 import mfdnres.descriptor
 
 def parser(filename):
@@ -82,11 +77,11 @@ mfdnres.descriptor.register_filename_format("format_7_ho",parser)
 if (__name__ == "__main__"):
 
     filename = r"run0000-mfdn-Z2-N6-Daejeon16-coul1-hw05.000-a_cm20-Nmax02-Mj0.0-lan500-tol1.0e-06-natorb-no0.res"
-    info = parser(filename)
+    info = mfdnres.descriptor.parse_res_filename(filename,filename_format="format_7_ho")
     print(filename)
     print(info)
 
     filename = r"run0000-mfdn-Z2-N6-Daejeon16-coul1-hw05.000-a_cm20-Nmax02x-Mj0.0-lan500-tol1.0e-06.res"
-    info = parser(filename)
+    info = mfdnres.descriptor.parse_res_filename(filename,filename_format="format_7_ho")
     print(filename)
     print(info)

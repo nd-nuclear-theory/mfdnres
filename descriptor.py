@@ -1,4 +1,6 @@
-"""descriptor.py -- filename (or task descriptor) parsing for MFDn res files
+"""descriptor.py
+
+    Defines filename (or task descriptor) parsing for MFDn res files.
 
 
     A filename parsing function is assumed to provide the following
@@ -33,7 +35,6 @@
 
     6/2/15 (mac): Initiated (as mfdn_descriptor.py).
     6/5/15 (mac): Restructure as part of package.
-    Last modified 6/11/15.
 
 """
 
@@ -91,3 +92,5 @@ def parse_res_filename(filename,filename_format):
 
 if (__name__ == "__main__"):
     pass
+
+

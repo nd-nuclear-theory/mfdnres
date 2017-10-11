@@ -12,15 +12,10 @@
 import re
 
 # intra-package references
-if (__name__ == "__main__"):
-    # set up for unit test
-    import sys
-    import os
-    sys.path.append(os.path.join(sys.path[0],"..",".."))
 import mfdnres.descriptor
 
 def parser(filename):
-    """ Parses results filename in format 5, restricted to the ho basis special case.
+    """ Parses results filename in format 6, restricted to the ho basis special case.
 
     Args:
         filename (string) : filename (as basename)
@@ -77,6 +72,6 @@ mfdnres.descriptor.register_filename_format("format_6_ho",parser)
 if (__name__ == "__main__"):
 
     filename = r"run0376-mfdn-Z4-N6-JISP16-1-hw15.000-aL100-Nmax04-Mj0.0-lan1500.res"
-    info = parser(filename)
+    info = mfdnres.descriptor.parse_res_filename(filename,filename_format="format_6_ho")
     print(filename)
     print(info)
