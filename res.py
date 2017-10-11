@@ -115,7 +115,7 @@ def read_file(filename,res_format,filename_format=None,verbose=False):
         verbose (bool,optional): enable debugging output
 
     Returns:
-        (list): list of mesh point data objects
+        (list of ResultsData): list of mesh point data objects
 
     """
 
@@ -156,19 +156,26 @@ def read_file(filename,res_format,filename_format=None,verbose=False):
 
 def slurp_res_files(
         res_directory_list,res_format,
+        filename_format=None,
         glob_pattern="*.res",verbose=False
 ):
     """Read all results file in given directories.
 
-        The results will be a list of results data objects, one for
-        each mesh point within the results file.
+    The results will be a list of results data objects, one for
+    each mesh point within the results file.
     
-        Arguments:
-            res_directory_list (string): directory or list of directories
-                containing files to import
+    Arguments:
+        res_directory_list (str or list of str): directory or list of directories
+            containing files to import
+        res_format (str): identifier string for the results file parser to use
+        filename_format (str,optional): identifier string for the results
+            filename parser to use
+        glob_pattern (str,optional): glob pattern for results filenames to read
+            within each directory
+        verbose (bool,optional): enable debugging output
 
-        Returned:
-            mesh_data (list): list of data objects (BaseResultsData)
+    Returns:
+        (list of ResultsData): list of mesh point data objects
 
     """
 
@@ -188,7 +195,11 @@ def slurp_res_files(
         for res_filename in res_filename_list:
             if (verbose):
                 print("Reading {}...".format(res_filename))
-            new_mesh_data = read_file(res_filename,res_format=res_format,verbose=verbose)
+            new_mesh_data = read_file(
+                res_filename,
+                res_format=res_format,filename_format=filename_format,
+                verbose=verbose
+            )
             if (verbose):
                 print("  {:d} mesh points".format(len(new_mesh_data)))
             mesh_data += new_mesh_data

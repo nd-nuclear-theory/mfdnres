@@ -13,11 +13,11 @@ import os
 
 import mfdnres
 
-def test_basic_import_v14b05():
+def test_read_results_v14b05():
     """ Test single-file import for MFDn v14b06.
     """
 
-    print("test_basic_import_v14b05")
+    print("test_read_results_v14b05")
     res_format = "mfdn_v14b05"
 
     filename = os.path.join("example","type_specimens","mfdn","v14b05-vxx","MFDn.res.Z4.N5.JISP16.Nmin1.Nm13.hw20.0.La500.St06.tol1e-6") # VXX format, no trans
@@ -32,11 +32,11 @@ def test_basic_import_v14b05():
     ## print(results.transitions)
     print("states {}, moments {}, transitions {}".format(len(results.states),len(results.moments),len(results.transitions)))
 
-def test_basic_import_v14b06():
+def test_read_results_v14b06():
     """ Test single-file import for MFDn v14b06.
     """
 
-    print("test_basic_import_v14b06")
+    print("test_read_results_v14b06")
     res_format = "mfdn_v14b06"
 
     ## data_dir = mfdnres.res.res_file_directory("mcaprio","mfdn","0352",run_results_are_in_subdir=False)
@@ -87,7 +87,7 @@ def test_basic_import_v14b06():
     ## print(results.transitions)
     print("states {}, moments {}, transitions {}".format(len(results.states),len(results.moments),len(results.transitions)))
 
-def test_basic_import_v15():
+def test_read_results_v15():
     """ Test single-file import for MFDn v15.
 
 pfasano/mfdn/runpjf0015
@@ -96,7 +96,7 @@ runpjf0015-mfdn15-Z3-N4-JISP16-coul1-hw20.000-a_cm40-Nmax02-Mj0.5-lan1000-tol1.0
 WIP
     """
 
-    print("test_basic_import")
+    print("test_read_results")
 
     ## data_dir = mfdnres.res.res_file_directory("mcaprio","mfdn","0355",run_results_are_in_subdir=False)
     ## filename = os.path.join(data_dir,"run0355-mfdn-Z2-N2-JISP16-1-hw20.000-aL20-Nmax04-MM0-lan500.res") # no M1 moments, no trans
@@ -119,11 +119,11 @@ WIP
     ## print(results.transitions)
     print("states {}, moments {}, transitions {}".format(len(results.states),len(results.moments),len(results.transitions)))
 
-def test_basic_import_spncci():
+def test_read_results_spncci():
     """ Test single-file import for spncci.
     """
 
-    print("test_basic_import_spncci")
+    print("test_read_results_spncci")
 
     filename = os.path.join("example","type_specimens","spncci","runmac0420-Z3-N3-Nsigmamax02-Nmax02.res")
     res_format = "spncci"
@@ -146,9 +146,10 @@ def test_directory_slurp():
 
     data_dir = mfdnres.res.res_file_directory("mcaprio","mfdn","0352",run_results_are_in_subdir=False)
     res_format = "mfdn_v14b06"
+    filename_format="format_5_ho"
 
     # slurp directory
-    mesh_data = mfdnres.res.slurp_res_files(data_dir,res_format)
+    mesh_data = mfdnres.res.slurp_res_files(data_dir,res_format,filename_format)
     KEY_DESCRIPTOR_INTERACTION_NMAX_HW =  (("interaction",str),("Nmax",int),("hw",float))
     print(mesh_data[0].params)
     results_dict = mfdnres.analysis.make_results_dict(mesh_data,KEY_DESCRIPTOR_INTERACTION_NMAX_HW)
@@ -273,12 +274,13 @@ def test_am_output():
 if (__name__ == "__main__"):
 
     # basic import tests
-    test_basic_import_v14b05()
-    test_basic_import_v14b06()
-    test_basic_import_spncci()
+    ## test_read_results_v14b05()
+    ## test_read_results_v14b06()
+    ## test_read_results_v15()
+    ## test_read_results_spncci()
 
     # directory slurp test
-    ##test_directory_slurp()
+    test_directory_slurp()
 
     # analysis tests
     ##test_band_file()
