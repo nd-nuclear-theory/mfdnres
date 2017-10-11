@@ -11,6 +11,7 @@
     7/9/17 (mac): Add parsing tools for structured results files.
     7/14/17 (mac): Add canonicalization tools for (J,g) subspace pairs.
     9/17/17 (mac): Add bool_from_str.
+    10/10/17 (mac): Gracefully ignore null key-value lines.
     
 """
 
@@ -288,6 +289,11 @@ def extract_key_value_pairs(tokenized_lines,conversions):
 
        [<key>,"=",<v1>,...]
 
+    An "null" key-value line will be silently ignored:
+
+       [<key>,"="]
+
+
     Values are only retained if a conversion is specified
     for that key string.
 
@@ -307,6 +313,11 @@ def extract_key_value_pairs(tokenized_lines,conversions):
 
     results = dict()
     for tokenized_line in tokenized_lines:
+        
+        # skip "null" key-value line
+        null_line = (len(tokenized_line)==2) and (tokenized_line[1]=="=")
+        if (null_line):
+            continue
 
         # validate line format
         valid_line = (len(tokenized_line)>=3) and (tokenized_line[1]=="=")

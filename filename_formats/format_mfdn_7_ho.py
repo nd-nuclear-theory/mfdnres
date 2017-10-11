@@ -1,4 +1,4 @@
-""" format_7.py -- declares descriptor parser
+""" format_7_ho.py -- declares descriptor parser
 
     Language: Python 3
     Mark A. Caprio
@@ -6,7 +6,8 @@
     University of Notre Dame
 
     2/6/17 (pjf): Initiated (based on format_6_ho.py).
-    Last modified 2/6/17.
+    10/10/17 (mac): Generalize filename format to allow for variable code name
+        ("mfdn", "mfdn15", etc.).
 
 """
 
@@ -16,7 +17,8 @@ import re
 import mfdnres.descriptor
 
 def parser(filename):
-    """ Parses results filename in format 7, restricted to the ho basis special case.
+    """Parse results filename in format 7, restricted to the ho basis
+    special case, but allowing for natural orbitals built on this basis.
 
     Args:
         filename (string) : filename (as basename)
@@ -29,7 +31,7 @@ def parser(filename):
     regex = re.compile(
         # prolog
         r"run(?P<run>\w+)"
-        r"\-mfdn"
+        r"\-(?P<code_name>[^\-]+)"
         r"\-(?P<descriptor>"
         # descriptor contents
         r"Z(?P<Z>\d+)\-N(?P<N>\d+)"
@@ -82,6 +84,11 @@ if (__name__ == "__main__"):
     print(info)
 
     filename = r"run0000-mfdn-Z2-N6-Daejeon16-coul1-hw05.000-a_cm20-Nmax02x-Mj0.0-lan500-tol1.0e-06.res"
+    info = mfdnres.descriptor.parse_res_filename(filename,filename_format="format_7_ho")
+    print(filename)
+    print(info)
+
+    filename = r"runpjf0015-mfdn15-Z3-N4-JISP16-coul1-hw20.000-a_cm40-Nmax02-Mj0.5-lan1000-tol1.0e-06-natorb-no0.res"
     info = mfdnres.descriptor.parse_res_filename(filename,filename_format="format_7_ho")
     print(filename)
     print(info)

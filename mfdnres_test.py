@@ -25,8 +25,8 @@ def test_read_results_v14b05():
     results_list = mfdnres.res.read_file(filename,res_format,filename_format,verbose=False)
     results = results_list[0]
     print(filename)
-    print(results.params)
-    print(results.get_levels())
+    print("Parameters:",results.params)
+    print("Levels:",results.get_levels())
     print(results.states[(1/2,1,1)].properties)
     print(results.states[(1/2,1,1)].obo)
     ## print(results.transitions)
@@ -53,8 +53,8 @@ def test_read_results_v14b06():
     results_list = mfdnres.res.read_file(filename,res_format,filename_format,verbose=False)
     results = results_list[0]
     print(filename)
-    print(results.params)
-    print(results.get_levels())
+    print("Parameters:",results.params)
+    print("Levels:",results.get_levels())
     print(results.states[(1/2,0,1)].properties)
     print(results.states[(1/2,0,1)].obo)
 
@@ -67,8 +67,8 @@ def test_read_results_v14b06():
     results_list = mfdnres.res.read_file(filename,res_format,filename_format,verbose=False)
     results = results_list[0]
     print(filename)
-    print(results.params)
-    print(results.get_levels())
+    print("Parameters:",results.params)
+    print("Levels:",results.get_levels())
     print(results.states[(4.0,1,1)].properties)
     print(results.states[(4.0,1,1)].obo)
     ## print(results.transitions)
@@ -80,8 +80,8 @@ def test_read_results_v14b06():
     results_list = mfdnres.res.read_file(filename,res_format,filename_format,verbose=False)
     results = results_list[0]
     print(filename)
-    print(results.params)
-    print(results.get_levels())
+    print("Parameters:",results.params)
+    print("Levels:",results.get_levels())
     print(results.states[(1/2,0,1)].properties)
     print(results.states[(1/2,0,1)].obo)
     ## print(results.transitions)
@@ -89,35 +89,18 @@ def test_read_results_v14b06():
 
 def test_read_results_v15():
     """ Test single-file import for MFDn v15.
-
-pfasano/mfdn/runpjf0015
-runpjf0015-mfdn15-Z3-N4-JISP16-coul1-hw20.000-a_cm40-Nmax02-Mj0.5-lan1000-tol1.0e-06-natorb-no0.res
-
-WIP
     """
 
-    print("test_read_results")
+    print("test_read_results_v15")
+    res_format = "mfdn_v15"
 
-    ## data_dir = mfdnres.res.res_file_directory("mcaprio","mfdn","0355",run_results_are_in_subdir=False)
-    ## filename = os.path.join(data_dir,"run0355-mfdn-Z2-N2-JISP16-1-hw20.000-aL20-Nmax04-MM0-lan500.res") # no M1 moments, no trans
-
-    ## data_dir = mfdnres.res.res_file_directory("mcaprio","mfdn","0363",run_results_are_in_subdir=False)
-    ## filename = os.path.join(data_dir,"run0363-mfdn-Z4-N3-N2LOopt500-0-hw20.000-aL100-Nmax10-MM1-lan1000.res") # dipole moments but not trans
-
-    data_dir = mfdnres.res.res_file_directory("mcaprio","mfdn","0352",run_results_are_in_subdir=False)
-    filename = os.path.join(data_dir,"run0352-mfdn-Z4-N5-JISP16-1-hw20.000-aL100-Nmax10-MM1-lan1000.res") # no M1 moment
-
-    res_format = "mfdn_v14b06"
-
-    results = mfdnres.res.read_file(filename,res_format,verbose=False)[0]
-
+    filename = os.path.join("example","type_specimens","mfdn","v15-h2","runpjf0015-mfdn15-Z3-N4-JISP16-coul1-hw20.000-a_cm40-Nmax04-Mj0.5-lan1000-tol1.0e-06-natorb-no0.res")
+    filename_format="format_7_ho"
+    results_list = mfdnres.res.read_file(filename,res_format,filename_format,verbose=False)
+    results = results_list[0]
     print(filename)
-    print(results.params)
-    print(results.get_levels())
-    print(results.states[(1/2,0,1)].properties)
-    print(results.states[(1/2,0,1)].obo)
-    ## print(results.transitions)
-    print("states {}, moments {}, transitions {}".format(len(results.states),len(results.moments),len(results.transitions)))
+    print("Parameters:",results.params)
+    print("Levels:",results.get_levels())
 
 def test_read_results_spncci():
     """ Test single-file import for spncci.
@@ -133,8 +116,8 @@ def test_read_results_spncci():
     results = results_list[0]
 
     print(filename)
-    print(results.params)
-    print(results.get_levels())
+    print("Parameters:",results.params)
+    print("Levels:",results.get_levels())
     ##print("states {}, moments {}, transitions {}".format(len(results.states),len(results.moments),len(results.transitions)))
 
 
@@ -276,11 +259,11 @@ if (__name__ == "__main__"):
     # basic import tests
     ## test_read_results_v14b05()
     ## test_read_results_v14b06()
-    ## test_read_results_v15()
-    ## test_read_results_spncci()
+    test_read_results_v15()
+    test_read_results_spncci()
 
     # directory slurp test
-    test_directory_slurp()
+    ## test_directory_slurp()
 
     # analysis tests
     ##test_band_file()

@@ -19,74 +19,6 @@ import mfdnres.tools
 import mfdnres.spncci_results_data
 
 ################################################################
-# control code
-################################################################
-
-def is_results_sentinel_section(section):
-    """ (Helper function for res_parser_spncci.)
-    """
-    (section_name,_) = section
-    return (section_name == "RESULTS")
-
-
-def parse_mesh_point(self,sections,section_handlers):
-    """ Parse single mesh point into results object.
-
-    Arguments:
-        self (BaseResultsData): results object to populate
-        sections (list): data for sections to parse, as (section_name,tokenized_lines) tuples
-        section_handlers (dict): dictionary of section handlers
-    """
-
-    for (section_name,tokenized_lines) in sections:
-        if section_name in section_handlers:
-            section_handlers[section_name](self,tokenized_lines)
-
-def res_parser_spncci(in_file,verbose):
-    """ Parse full spncci results file, into list of one or more results objects.
-
-    Arguments:
-        in_file (stream): input file stream (already opened by caller)
-        verbose (bool,optional): enable verbose output
-    """
-
-    # perform high-level parsing into sections
-    res_file_lines = [row for row in in_file]
-    tokenized_lines = mfdnres.tools.split_and_prune_lines(res_file_lines)
-    sections = mfdnres.tools.extracted_sections(tokenized_lines)
-
-    # split out common sections and subsequent groups of results sections
-    grouped_sections = mfdnres.tools.split_when(is_results_sentinel_section,sections)
-    common_sections = list(next(grouped_sections))
-    grouped_results_sections = [list(section_group) for section_group in grouped_sections]
-   
-    if (verbose):
-        print("Section counts")
-        print("  Common sections:",len(common_sections))
-        for results_section_group in grouped_results_sections:
-            print("  Results sections (by group):",len(results_section_group))
-
-    # generate results objects by mesh point
-    mesh_data = []
-    if (grouped_results_sections):
-        # there are results sections: actual mesh, not counting run
-        for results_section_group in grouped_results_sections:
-            full_section_group = common_sections + results_section_group
-            results = mfdnres.spncci_results_data.SpNCCIResultsData()
-            parse_mesh_point(results,full_section_group,section_handlers)
-            mesh_data.append(results)
-    else:
-        # no results sections: counting run
-        results = mfdnres.spncci_results_data.SpNCCIResultsData()
-        parse_mesh_point(results,common_sections,section_handlers)
-        mesh_data.append(results)
-
-    return mesh_data
-
-# register the parser
-mfdnres.res.register_res_format('spncci',res_parser_spncci)
-
-################################################################
 # section handlers
 ################################################################
 
@@ -221,7 +153,7 @@ def parse_decompositions_baby_spncci(self,tokenized_lines):
         ##print(self.decompositions["BabySpNCCI"][(J,gex)][:,0])
 
 def parse_energies(self,tokenized_lines):
-    """ Parse matrices of RMEs.
+    """ Parse energies.
     """
 
     # import energy tabulation
@@ -304,7 +236,74 @@ section_handlers = {
 
 }
 
+################################################################
+# parsing control code
+################################################################
+
+def parse_mesh_point(self,sections,section_handlers):
+    """ Parse single mesh point into results object.
+
+    Arguments:
+        self (ResultsData): results object to populate
+        sections (list): data for sections to parse, as (section_name,tokenized_lines) tuples
+        section_handlers (dict): dictionary of section handlers
+    """
+
+    for (section_name,tokenized_lines) in sections:
+        if section_name in section_handlers:
+            section_handlers[section_name](self,tokenized_lines)
+
+def parser(in_file,verbose):
+    """ Parse full spncci results file, into list of one or more results objects.
+
+    Arguments:
+        in_file (stream): input file stream (already opened by caller)
+        verbose (bool,optional): enable verbose output
+    """
+
+    # perform high-level parsing into sections
+    res_file_lines = [row for row in in_file]
+    tokenized_lines = mfdnres.tools.split_and_prune_lines(res_file_lines)
+    sections = mfdnres.tools.extracted_sections(tokenized_lines)
+
+    # split out common sections and subsequent groups of results sections
+    def is_results_sentinel_section(section):
+        """ Identify mesh point separator "pseudo-section" header.
+
+        (Helper function for res_parser_spncci.)
+        """
+        (section_name,_) = section
+        return (section_name == "RESULTS")
+
+    grouped_sections = mfdnres.tools.split_when(is_results_sentinel_section,sections)
+    common_sections = list(next(grouped_sections))
+    grouped_results_sections = [list(section_group) for section_group in grouped_sections]
+   
+    if (verbose):
+        print("Section counts")
+        print("  Common sections:",len(common_sections))
+        for results_section_group in grouped_results_sections:
+            print("  Results sections (by group):",len(results_section_group))
+
+    # generate results objects by mesh point
+    mesh_data = []
+    if (grouped_results_sections):
+        # there are results sections: actual mesh, not counting run
+        for results_section_group in grouped_results_sections:
+            full_section_group = common_sections + results_section_group
+            results = mfdnres.spncci_results_data.SpNCCIResultsData()
+            parse_mesh_point(results,full_section_group,section_handlers)
+            mesh_data.append(results)
+    else:
+        # no results sections: counting run
+        results = mfdnres.spncci_results_data.SpNCCIResultsData()
+        parse_mesh_point(results,common_sections,section_handlers)
+        mesh_data.append(results)
+
+    return mesh_data
+
+# register the parser
+mfdnres.res.register_res_format('spncci',parser)
 
 if (__name__=="__main__"):
-    #res = res_parser_spncci('type_specimens/runmac0415-Z3-N3-Nsigmamax02-Nmax02.res')
     pass
