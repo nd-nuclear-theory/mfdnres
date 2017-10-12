@@ -2,12 +2,12 @@
 # res import and retrieval
 import mfdnres.res
 from . import res
-import mfdnres.res_formats  # register parsers
+import mfdnres.parsers  # register parsers
 
 # descriptor/filename parsing
 import mfdnres.descriptor
 from . import descriptor
-import mfdnres.filename_formats  # register parsers
+import mfdnres.descriptor_formats  # register parsers
 
 # analysis control
 import mfdnres.analysis

@@ -21,7 +21,7 @@ def test_read_results_v14b05():
     res_format = "mfdn_v14b05"
 
     filename = os.path.join("example","type_specimens","mfdn","v14b05-vxx","MFDn.res.Z4.N5.JISP16.Nmin1.Nm13.hw20.0.La500.St06.tol1e-6") # VXX format, no trans
-    filename_format="format_pm"
+    filename_format="mfdn_format_pm"
     results_list = mfdnres.res.read_file(filename,res_format,filename_format,verbose=False)
     results = results_list[0]
     print(filename)
@@ -49,7 +49,7 @@ def test_read_results_v14b06():
     ## filename = os.path.join(data_dir,"run0363-mfdn-Z4-N3-N2LOopt500-0-hw20.000-aL100-Nmax10-MM1-lan1000.res") # dipole moments but not trans
 
     filename = os.path.join("example","type_specimens","mfdn","v14b06-h2","run0352-mfdn-Z4-N5-JISP16-1-hw20.000-aL100-Nmax10-MM1-lan1000.res") # no M1 moment, filename format 5
-    filename_format="format_5_ho"
+    filename_format="mfdn_format_5_ho"
     results_list = mfdnres.res.read_file(filename,res_format,filename_format,verbose=False)
     results = results_list[0]
     print(filename)
@@ -63,7 +63,7 @@ def test_read_results_v14b06():
     ## print(data.states[(1/2,1,1)].obo)
 
     filename = os.path.join("example","type_specimens","mfdn","v14b06-h2","run0381-mfdn-Z4-N6-N2LOopt500-0-hw20.000-aL100-Nmax07-Mj4.0-lan1500.res")
-    filename_format="format_6_ho"
+    filename_format="mfdn_format_6_ho"
     results_list = mfdnres.res.read_file(filename,res_format,filename_format,verbose=False)
     results = results_list[0]
     print(filename)
@@ -76,7 +76,7 @@ def test_read_results_v14b06():
 
 
     filename = os.path.join("example","type_specimens","mfdn","v14b06-h2","runmac0428-mfdn-Z4-N3-JISP16-coul1-hw20.000-a_cm20-Nmax04-Mj0.5-lan1000-tol1.0e-06.res")
-    filename_format="format_7_ho"
+    filename_format="mfdn_format_7_ho"
     results_list = mfdnres.res.read_file(filename,res_format,filename_format,verbose=False)
     results = results_list[0]
     print(filename)
@@ -95,7 +95,7 @@ def test_read_results_v15():
     res_format = "mfdn_v15"
 
     filename = os.path.join("example","type_specimens","mfdn","v15-h2","runpjf0015-mfdn15-Z3-N4-JISP16-coul1-hw20.000-a_cm40-Nmax04-Mj0.5-lan1000-tol1.0e-06-natorb-no0.res")
-    filename_format="format_7_ho"
+    filename_format="mfdn_format_7_ho"
     results_list = mfdnres.res.read_file(filename,res_format,filename_format,verbose=False)
     results = results_list[0]
     print(filename)
@@ -129,7 +129,7 @@ def test_directory_slurp():
 
     data_dir = mfdnres.res.res_file_directory("mcaprio","mfdn","0352",run_results_are_in_subdir=False)
     res_format = "mfdn_v14b06"
-    filename_format="format_5_ho"
+    filename_format="mfdn_format_5_ho"
 
     # slurp directory
     mesh_data = mfdnres.res.slurp_res_files(data_dir,res_format,filename_format)
@@ -158,7 +158,7 @@ def test_legacy_band_output():
         data,
         filename = r"c:\work\research\data\mfdn\run0352",
         key_fields = ("interaction","Nmax","hw"),
-        descriptor_format="format_5_ho",
+        descriptor_format="mfdn_format_5_ho",
         res_format="mfdn_v14b06",
         verbose=False
     )
@@ -213,7 +213,7 @@ def test_band_output():
         data,
         filename = r"c:\work\research\data\mfdn\run0339",
         key_fields = ("interaction","Nmax","hw"),
-        descriptor_format="format_5_ho",
+        descriptor_format="mfdn_format_5_ho",
         res_format="mfdn_v14b06",
         verbose=False
     )
@@ -241,7 +241,7 @@ def test_am_output():
         data,
         filename = r"c:\work\research\data\mfdn\run0359",
         key_fields = ("interaction","Nmax","hw"),
-        descriptor_format="format_5_ho",
+        descriptor_format="mfdn_format_5_ho",
         res_format="mfdn_v14b06",
         verbose=False
     )

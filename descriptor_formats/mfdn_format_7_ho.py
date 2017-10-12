@@ -1,4 +1,4 @@
-""" format_7_ho.py -- declares descriptor parser
+""" mfdn_format_7_ho.py -- declares descriptor parser
 
     Language: Python 3
     Mark A. Caprio
@@ -74,21 +74,21 @@ def parser(filename):
 
     return info
 
-mfdnres.descriptor.register_filename_format("format_7_ho",parser)
+mfdnres.descriptor.register_filename_format("mfdn_format_7_ho",parser)
 
 if (__name__ == "__main__"):
 
     filename = r"run0000-mfdn-Z2-N6-Daejeon16-coul1-hw05.000-a_cm20-Nmax02-Mj0.0-lan500-tol1.0e-06-natorb-no0.res"
-    info = mfdnres.descriptor.parse_res_filename(filename,filename_format="format_7_ho")
+    info = mfdnres.descriptor.parse_res_filename(filename,filename_format="mfdn_format_7_ho")
     print(filename)
     print(info)
 
     filename = r"run0000-mfdn-Z2-N6-Daejeon16-coul1-hw05.000-a_cm20-Nmax02x-Mj0.0-lan500-tol1.0e-06.res"
-    info = mfdnres.descriptor.parse_res_filename(filename,filename_format="format_7_ho")
+    info = mfdnres.descriptor.parse_res_filename(filename,filename_format="mfdn_format_7_ho")
     print(filename)
     print(info)
 
     filename = r"runpjf0015-mfdn15-Z3-N4-JISP16-coul1-hw20.000-a_cm40-Nmax02-Mj0.5-lan1000-tol1.0e-06-natorb-no0.res"
-    info = mfdnres.descriptor.parse_res_filename(filename,filename_format="format_7_ho")
+    info = mfdnres.descriptor.parse_res_filename(filename,filename_format="mfdn_format_7_ho")
     print(filename)
     print(info)
