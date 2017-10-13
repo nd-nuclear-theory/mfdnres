@@ -1,4 +1,4 @@
-""" res_parser_mfdn_v14b05.py -- provide res file parser for MFDn version 14 beta 05 with VXX input
+""" mfdn_v14b05.py -- provide res file parser for MFDn version 14 beta 05 with VXX input
 
     Language: Python 3
     Mark A. Caprio
@@ -17,16 +17,13 @@
 import re
 
 # intra-package references
-import mfdnres.mfdn_results_data
+import mfdnres.mfdn_results_data_v14
 import mfdnres.tools
 
-def res_parser_mfdn_v14b05(fin,verbose):
-    """ Read result file data into MFDnRunData object.  If any
-    data is duplicative of the old, the new data will overwrite
-    the old. 
+def parser(fin,verbose):
+    """ Read result file data into MFDnResultsData objects.
 
     Args:
-        self (MFDnRunData): instance into which we are reading results
         fin (stream): results file to read
         verbose (bool): verbose output for debugging
 
@@ -36,7 +33,7 @@ def res_parser_mfdn_v14b05(fin,verbose):
     # set up container
     ################################################################
 
-    results = mfdnres.mfdn_results_data.MFDnResultsData()
+    results = mfdnres.mfdn_results_data_v14.MFDnResultsDataV14()
 
     ################################################################
     # read header
@@ -317,7 +314,7 @@ def res_parser_mfdn_v14b05(fin,verbose):
     return mesh_data
 
 # register parser
-mfdnres.res.register_res_format("mfdn_v14b05",res_parser_mfdn_v14b05)
+mfdnres.res.register_res_format("mfdn_v14b05",parser)
 
 ################################################################
 # test code

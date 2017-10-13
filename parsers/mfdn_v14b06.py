@@ -1,18 +1,18 @@
-""" res_parser_mfdn_v14b06.py -- provide res file parser for MFDn version 14 beta 06
+""" mfdn_v14b06.py -- provide res file parser for MFDn version 14 beta 06
 
     Language: Python 3
     Mark A. Caprio
     University of Notre Dame
     5/31/15 (mac): Initiated as part of mfdn_res.py.
     6/5/15 (mac): Extract from mfdn_res.py.
-    10/10/16 (mac): Update to return list of single mesh point.
+    10/10/16 (mac): Update to return list containing single mesh point.
 
 """
 
 import re
 
 # intra-package references
-import mfdnres.mfdn_results_data
+import mfdnres.mfdn_results_data_v14
 import mfdnres.tools
 
 def read_occupations(self,fin):
@@ -81,10 +81,8 @@ def read_occupations(self,fin):
 
     # TODO: continue
 
-def res_parser_mfdn_v14b06(fin,verbose):
-    """ Read result file data into MFDnRunData object.  If any
-    data is duplicative of the old, the new data will overwrite
-    the old.
+def parser(fin,verbose):
+    """ Read result file data into MFDnResultsData objects.
 
     Args:
         fin (stream): results file to read
@@ -96,7 +94,7 @@ def res_parser_mfdn_v14b06(fin,verbose):
     # set up container
     ################################################################
 
-    results = mfdnres.mfdn_results_data.MFDnResultsData()
+    results = mfdnres.mfdn_results_data_v14.MFDnResultsDataV14()
 
     ################################################################
     # read header
@@ -233,8 +231,6 @@ def res_parser_mfdn_v14b06(fin,verbose):
         radii = list(map(float,match.group("radii").split()))
         ##(state.tbo["rp"],state.tbo["rn"],state.tbo["r"]) = radii
         (results.tbo[state.qn]["rp"],results.tbo[state.qn]["rn"],results.tbo[state.qn]["r"]) = radii
-
-
 
     mfdnres.tools.parse_line(fin.readline(),r"")
 
@@ -383,7 +379,7 @@ def res_parser_mfdn_v14b06(fin,verbose):
 
 
 # register parser
-mfdnres.res.register_res_format("mfdn_v14b06",res_parser_mfdn_v14b06)
+mfdnres.res.register_res_format("mfdn_v14b06",parser)
 
 ################################################################
 # test code

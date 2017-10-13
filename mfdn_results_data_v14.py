@@ -1,4 +1,4 @@
-""" mfdn_results_data.py
+""" mfdn_results_data_v14.py
 
     Result storage and access for mfdn runs.
 
@@ -19,11 +19,13 @@ import mfdnres.results_data
 
 
 #################################################
-# MFDnResultsData
+# MFDnResultsDataV14
 #################################################
 
-class MFDnResultsData(mfdnres.results_data.ResultsData):
-    """ Container for MFDn results.
+class MFDnResultsDataV14(mfdnres.results_data.ResultsData):
+    """ Container for MFDn results -- legacy version from original mfdn v14 parsers.
+
+    Deprecated after data hierarchy rethought for spncci parser.
 
     TODO clean up docstring
 
@@ -126,9 +128,12 @@ class MFDnResultsData(mfdnres.results_data.ResultsData):
             and self.orbital_occupations.
         """
         super().__init__()
-        self.decompositions = {}
-        self.observables = {}
-
+        self.states = {}
+        self.properties = {}
+        self.transitions = {}
+        self.tbo = {}
+        self.moments = {}
+        self.orbital_occupations = {}
     ########################################
     # Accessors
     ########################################        

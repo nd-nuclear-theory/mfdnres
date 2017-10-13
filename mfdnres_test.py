@@ -258,8 +258,8 @@ def test_am_output():
 if (__name__ == "__main__"):
 
     # basic import tests
-    ## test_read_results_v14b05()
-    ## test_read_results_v14b06()
+    test_read_results_v14b05()
+    test_read_results_v14b06()
     test_read_results_v15()
     ## test_read_results_spncci()
 

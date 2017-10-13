@@ -21,59 +21,26 @@ import numpy as np
 import mfdnres.am
 import mfdnres.results_data
 
-
-################################################################
-# sorting keys
-#
-# DEPRECATED in favor of keeping keys with analysis files
-################################################################
-
-# standard spncci sorting and tabulation key
-KEY_DESCRIPTOR_NNHW = (("Nsigmamax",int),("Nmax",int),("hw",float))
-
 #################################################
-# SpNCCIResultsData (child of BaseResultsData)
+# SpNCCIResultsData
 #################################################
+
 class SpNCCIResultsData(mfdnres.results_data.ResultsData):
-    """
-        Child of BaseResultsData
-        Attributes:
-            self.params (dictionary):  Container for properties of run.
-                Inherited from BaseRunData.
-                Params holds various properties of the
-                run, but the keys depend on rather it the run is MFDn of SpNCCI.
-                There are only four entries in params for MFDnRunData: hw, Nmin,
-                Nmax, and the tuple (Z, N).  The entries in params for SpNCCIRunData
-                are all the data stored under the headings 'Space', 'Interaction', 
-                and 'Mesh', which are currently nuclide, A, Nsigma0, Nsigmamax,
-                N1v, Nmax, interaction, use_coulomb, and hw.
-            self.energies (dictionary):  Maps from quantum number tuple to energy.
-                Inherited from BaseRunData.
-                The keys are the identifiers for a particualar
-                state and the values are the ground state energy for that state.  For
-                MFDnRunData, the keys are of the form (J, g, n) (or MFDnStateData.qn).  
-                For SpNCCIRunData, they keys are of the form (hw, (J, gex, i)) (or
-                SpNCCIStateData.qn)).  
-            self.spj_listing (list of tuples): List of tuples of the form (J, dim).
-                Stores the information under the SpJ (listing) 
-                data section.  Each tuple has the format (J, dim), where J is a float and dim is
-                an int.
-            self.baby_spncci_listing (list of list):
-            self.decompositions (dictionary):
-            self.observables (dictionary):
+    """ Container for results data for spncci mesh point.
+    
+    TODO: rewrite docstring
 
-        Accessors:
-            get_levels: Accessor for all quantum numbers.
-                Inherited from BaseRunData.
-                Takes no arguments are returns a list of all
-                quantum numbers produced by the run, sorted based on the energy associated with
-                each set of quantum numbers.
-            get_energy: Accessor for energy by quantum number tuple.
-                Inherited from BaseRunData.
-                Takes as an argument a tuple of quantum numbers.
-                The the set of quantum numbers is valid, it returns the energy associated with those
-                quantum numbers.  If the quantum numbers are not valid, it returns None and prints a
-                message to the console.      
+    Attributes:
+        params (dict): (inherited)
+        energies (dict): (inerhited)
+        num_eigenvalues (dict): (inerhited)
+        filename (str): (inerhited)
+        spj_listing (list of tuple): 
+        baby_spncci_listing (list of list):
+        decompositions (dictionary):
+        observables (dictionary):
+
+    Accessors:
        
     """
     ########################################
@@ -87,7 +54,6 @@ class SpNCCIResultsData(mfdnres.results_data.ResultsData):
         """
         super().__init__()
         self.Jgex_values = []
-        self.num_eigenvalues = {}
         self.spj_listing = None
         self.baby_spncci_listing = None
         self.decompositions = {}
@@ -112,7 +78,7 @@ class SpNCCIResultsData(mfdnres.results_data.ResultsData):
         Assumes stored matrices are between (J,g) subspaces in
         canonical order.  Takes care of canonicalization on retrieval.
 
-        Assumes matrix elementrs are in group-theory convention.
+        Assumes matrix elements are in group-theory convention.
 
         Assumes matrices on diagonal sector are completely filled in,
         rather than stored just as upper triangles.
@@ -179,10 +145,7 @@ class SpNCCIResultsData(mfdnres.results_data.ResultsData):
         
         <Jf||op||Ji>_Racah = sqrt(2*Jf+1) * <Jf||op||Ji>_gt
 
-        TODO:
-          - implement bra-ket conjugation flip
-          - fail gracefully with default
-
+        Relies on get_rme_matrix for canonicalization of bra-ket orderz.
 
         """
 
