@@ -22,9 +22,30 @@ import mfdnres.mfdn_results_data
 # section handlers
 ################################################################
 
+# global state :(
+#
+# k_parameter_g (int): parity grade of run (0 for positive parity, 1
+#     for negative parity); required for generating (J,g,n) quantum
+#     number labels
+
+k_parameter_g = None
+
 def parse_params(self,tokenized_lines):
     """
     Parse any section containing key-value pairs to add to params dictionary.
+
+    Includes special handling of some keys:
+
+      - Add derived keys to dictionary:
+
+        "Mj", "hw", "nuclide", "A"
+
+      - Store global state based on key:
+
+        k_parameter_g
+
+    Globals:
+        k_parameter_g (output)
 
     TODO: extract "observables" from numbered TBMEfile entries
     """
@@ -60,6 +81,8 @@ def parse_params(self,tokenized_lines):
         tokenized_lines,conversions
     )
 
+    # do special handling of keys
+
     # augment with float Mj (from TwoMj)
     if ("TwoMj" in key_value_dict):
         key_value_dict["Mj"] = key_value_dict["TwoMj"]/2
@@ -73,11 +96,19 @@ def parse_params(self,tokenized_lines):
         key_value_dict["nuclide"] = (key_value_dict["Nprotons"],key_value_dict["Nneutrons"])
         key_value_dict["A"] = key_value_dict["Nprotons"]+key_value_dict["Nneutrons"]
 
+    # store global parity grade
+    if ("parity" in key_value_dict):
+        global k_parameter_g
+        k_parameter_g = (1-key_value_dict["parity"])//2
+
     # update to params dictionary
     self.params.update(key_value_dict)
 
 def parse_energies(self,tokenized_lines):
     """ Parse energies.
+
+    Globals:
+        k_parameter_g (input)
     """
 
     # import energy tabulation
@@ -96,10 +127,9 @@ def parse_energies(self,tokenized_lines):
     # how do we want to deal with parity label, or lack thereof?
     for entry in table:
         (_,J,n,_,E,_,_,_)=entry
-        ## self.energies[(J,gex,n)]=E
-        ## self.num_eigenvalues[(J,gex)]=self.num_eigenvalues.setdefault((J,gex),0)+1
-        self.energies[(J,n)]=E
-        self.num_eigenvalues[(J,)]=self.num_eigenvalues.setdefault((J,),0)+1
+        g = k_parameter_g
+        self.energies[(J,g,n)]=E
+        self.num_eigenvalues[(J,g)]=self.num_eigenvalues.setdefault((J,g),0)+1
 
 section_handlers = {
     # [CODE]

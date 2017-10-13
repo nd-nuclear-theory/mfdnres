@@ -25,6 +25,7 @@ class ResultsData (object):
     children should be instantiated.
 
     Attributes:
+
         params (dict): Mesh point run parameters, as dictionary of keyword->value.
 
             Ex: For spncci (runmac0420)...
@@ -46,7 +47,8 @@ class ResultsData (object):
         filename (str): Source results filename for this mesh point.
 
     Accessors:
-            get_levels:  Accessor for all quantum numbers.
+
+        get_levels: List of qn tuples for all levels.  Values are sorted by increasing energy eigenvalue.
                 Takes no arguments are returns a list of all quantum numbers produced
                 by the run, sorted based on the energy associated with each set of quantum numbers.
             get_energy:  Accessor for energy by quantum number tuple.
@@ -77,16 +79,13 @@ class ResultsData (object):
     # Accessors
     ########################################        
     def get_levels(self):
-        """
-            Arguments:
-                None.
-            Returned:
-                qn_list (list): A list of quantum numbers sorted by their
-                    associated energy
+        """ Retrieve list of quantum number tuples (J,g,n) for levels, sorted by increasing energy eigenvalue.
 
-            Returns a list of quantum numbers ((J, g, n) for MFDn or (J, gex, i)
-            for SpNCCI), sorted by the ground state energy associated with set of
-             quantum numbers.
+        Note some parsers (legacy) may store (J,gex,n), in which case that is the interpretation of the tuple.
+
+        Returns:
+            (list of tuples): list of quantum numbers
+
         """
         # Makes a list of unsorted quantum number tuples
         raw_qn_list = list(self.energies.keys())
@@ -95,25 +94,25 @@ class ResultsData (object):
         return qn_list
 
     def get_energy(self,qn,default=np.nan):
-        """ Retrieve the energy of level with given quantum numbers.
+        """Retrieve the energy of the level with given quantum numbers.
 
-            Arguments:
-                qn (tuple): A tuple of quantum numbers.
-            Returned:
-                value(varies): The energy for a valid set of quantum numbers.
-                    If the set of quantum numbers is valid, value is set to the
-                    ground state energy associated with the quantum numbers.  If the set of
-                    quantum numbers is not valid, value is set to None. 
+        Returns a default "flag" value if the quantum numbers are not
+        found among the calculate levels.
 
-            Returns the ground state associated with the quantum numbers associated with 'qn', 
-            if they are valid.  If they are not valid, it returns the None, and prints
-            a message to the console.
+        Arguments:
+            qn (tuple): tuple of quantum numbers (J,g,n)
+            default (numeric,optional): default flag value to use
+
+        Returns:
+            value (float): energy eigenvalue, or default if qn not found
+
         """
-        # Check to be sure the quantum numbers supplied are in self.energies
+
         try:
+            ##print("get_energy",self.energies,qn,qn in self.energies)
             value = self.energies[qn]
         except:
-            return default
+            value = default
         return value
 
 #################################################

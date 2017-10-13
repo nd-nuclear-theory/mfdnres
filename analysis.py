@@ -44,7 +44,7 @@ def extract_key(key_fields,mesh_point):
     Arguments:
         key_fields (tuple of str) : tuple of run descriptor keys to
             use to generate key to results
-        mesh_data (list): data for mesh points
+        mesh_data (list of ResultsData): data for mesh points
 
     Returns:
         (tuple): values of given parameters
@@ -91,7 +91,7 @@ def make_results_dict(
     process might be appropriate.
 
     Arguments:
-        mesh_data (list): data for mesh points
+        mesh_data (list of ResultsData): data for mesh points
         key_descriptor (tuple of tuple): dtype descriptor for key
         verbose (bool,optional): verbose output
 
@@ -121,6 +121,43 @@ def make_results_dict(
 
     return results_dict
 
+def selected_mesh_data(
+        mesh_data,selection_dict,
+        verbose=False
+):
+    """Select mesh points with specific values for given paremeters.
+
+    Example key-value specification:
+
+       (("nuclide",(3,4)),("interaction","JISP16"))
+
+    or
+
+        {"nuclide":(3,4),"interaction":"JISP16"}
+
+    Arguments:
+        mesh_data (list of ResultsData): data for mesh points
+        selection_dict (dict): key value pairs for parameter values to select
+        verbose (bool,optional): verbose output
+
+    Returns:
+        (list of ResultsData): selected data for mesh points
+
+    """
+
+    key_value_pairs = selection_dict.items()  # convert to view as iterable of pairs for cleaner debugging
+    if (verbose):
+        print("selection key-value pairs: {}".format(tuple(key_value_pairs)))
+    key_function = make_key_function(key_value_pairs)
+    selected_values = tuple([value for (_,value) in key_value_pairs])
+
+    new_mesh_data = [
+        mesh_point
+        for mesh_point in mesh_data
+        if (key_function(mesh_point) == selected_values)
+    ]
+    return new_mesh_data
+
 def sorted_mesh_data(
         mesh_data,key_descriptor,
         verbose=False
@@ -138,7 +175,7 @@ def sorted_mesh_data(
         mesh_data = mfdnres.analysis.sorted_mesh_data(mesh_data,mfdnres.spncci.KEY_DESCRIPTOR_NNHW)
 
     Arguments:
-        mesh_data (list): data for mesh points
+        mesh_data (list of ResultsData): data for mesh points
         key_descriptor (tuple of tuple): dtype descriptor for key
         verbose (bool,optional): verbose output
 
@@ -178,7 +215,7 @@ def make_energy_table(mesh_data,key_descriptor,qn):
         param1 param2 ... E
 
     Arguments:
-        mesh_data (list): data for mesh points
+        mesh_data (list of ResultsData): data for mesh points
         key_descriptor (tuple of tuple): dtype descriptor for key
         qn (tuple): quantum numbers (J,g,n) of level to retrieve
     
@@ -207,7 +244,7 @@ def make_radius_table(mesh_data,key_descriptor,radius_type,qn):
     See docstring for make_energy_table for sorting and tabulation conventions.
 
     Arguments:
-        mesh_data (list): data for mesh points
+        mesh_data (list of ResultsData): data for mesh points
         key_descriptor (tuple of tuple): dtype descriptor for key
         qn (tuple): quantum numbers (J,g,n) of level to retrieve
     
@@ -236,7 +273,7 @@ def make_rme_table(mesh_data,key_descriptor,observable,qnf,qni):
         Nsigmamax Nmax hw RME
 
     Arguments:
-        mesh_data (list): data for mesh points
+        mesh_data (list of ResultsData): data for mesh points
         key_descriptor (tuple of tuple): dtype descriptor for key
         observable_name (str): key naming observable
         qnf, qni (tuple): quantum numbers (J,g,n) of final and initial levels
@@ -266,7 +303,7 @@ def make_rtp_table(mesh_data,key_descriptor,observable,qnf,qni):
         Nsigmamax Nmax hw RTP
 
     Arguments:
-        mesh_data (list): data for mesh points
+        mesh_data (list of ResultsData): data for mesh points
         key_descriptor (tuple of tuple): dtype descriptor for key
         observable_name (str): key naming observable
         qnf, qni (tuple): quantum numbers (J,g,n) of final and initial levels

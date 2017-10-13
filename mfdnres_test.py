@@ -101,6 +101,7 @@ def test_read_results_v15():
     print(filename)
     print("Parameters:",results.params)
     print("Levels:",results.get_levels())
+    print("Energies:",results.energies)
 
 def test_read_results_spncci():
     """ Test single-file import for spncci.
@@ -260,7 +261,7 @@ if (__name__ == "__main__"):
     ## test_read_results_v14b05()
     ## test_read_results_v14b06()
     test_read_results_v15()
-    test_read_results_spncci()
+    ## test_read_results_spncci()
 
     # directory slurp test
     ## test_directory_slurp()
