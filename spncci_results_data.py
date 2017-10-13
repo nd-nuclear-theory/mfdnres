@@ -30,11 +30,13 @@ class SpNCCIResultsData(mfdnres.results_data.ResultsData):
     
     TODO: rewrite docstring
 
+    Inherited attributes:
+        params (dict)
+        energies (dict)
+        num_eigenvalues (dict)
+        filename (str)
+
     Attributes:
-        params (dict): (inherited)
-        energies (dict): (inerhited)
-        num_eigenvalues (dict): (inerhited)
-        filename (str): (inerhited)
         spj_listing (list of tuple): 
         baby_spncci_listing (list of list):
         decompositions (dictionary):

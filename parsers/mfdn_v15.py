@@ -19,16 +19,53 @@ import mfdnres.mfdn_results_data
 
 
 ################################################################
-# section handlers
+# global state :(
 ################################################################
 
-# global state :(
-#
 # k_parameter_g (int): parity grade of run (0 for positive parity, 1
 #     for negative parity); required for generating (J,g,n) quantum
 #     number labels
 
 k_parameter_g = None
+
+################################################################
+# parsing utility
+################################################################
+
+def split_mfdn_results_line(tokenized_line):
+    """ Recover qn and numerical data from standard MFDn output line.
+
+    The isospin field T is discarded.
+
+    Standard line format:
+        # Seq    J    n      T        <data>
+            1   1.5   1   0.500      0.7949      0.1272      0.7793E-01
+
+    This line would yield (assuming g=1 for illustration):
+        (
+            (1.5, 1, 1),
+            np.array([ 0.7949   0.1272   0.07793])
+        )
+
+    Arguments:
+        tokenized_line (list of str): tokens in line
+
+    Globals:
+        k_parameter_g (input)
+
+    Returns:
+        qn (tuple): (J,g,n)
+        data (np.array): floating point data as np vector
+    """
+    qn = (float(tokenized_line[1]),k_parameter_g,int(tokenized_line[2]))
+    data_iterable = list(map(float,tokenized_line[4:]))
+    data = np.array(data_iterable,dtype=float)
+    return (qn,data)
+
+
+################################################################
+# section handlers
+################################################################
 
 def parse_params(self,tokenized_lines):
     """
@@ -122,14 +159,89 @@ def parse_energies(self,tokenized_lines):
         ]
         )
 
+    # set up container for native-calculated isospins
+    self.native_static_properties["T"] = {}
+
     # sort energies into energies dictionary
-    #
-    # how do we want to deal with parity label, or lack thereof?
     for entry in table:
-        (_,J,n,_,E,_,_,_)=entry
+
+        # retrieve entry
+        (_,J,n,T,E,_,_,_)=entry
         g = k_parameter_g
-        self.energies[(J,g,n)]=E
-        self.num_eigenvalues[(J,g)]=self.num_eigenvalues.setdefault((J,g),0)+1
+        qn = (J,g,n)
+        Jg_pair = (J,g)
+
+        # store data from entry
+        self.energies[qn] = E
+        self.num_eigenvalues[Jg_pair] = self.num_eigenvalues.setdefault(Jg_pair,0)+1
+        self.native_static_properties["T"][qn] = T
+
+def parse_decompositions_Nex(self,tokenized_lines):
+    """Parse Nex decomposition.
+
+    Unstable feature: Note only alternate Nex values are output by
+    MFDn (assuming Nstep=2).  Currently, these only these values are
+    stored, verbatim, with no zero padding for the missing values.
+    Beware this behavior is different from the spncci parser, for
+    which all Nex values (step 1) are interleaved, so that the vector
+    index is Nex.  Consider interleaving 0 values here to make this
+    true for MFDn parser as well.
+
+    """
+    self.decompositions["Nex"] = {}
+    for tokenized_line in tokenized_lines:
+        (qn,data) = split_mfdn_results_line(tokenized_line)
+        self.decompositions["Nex"][qn]=data
+
+def parse_generic_static_properties(self,tokenized_lines,container,property_names):
+    """Parse generic moments given list of property names for the data columns.
+
+    Arguments:
+        ...
+        container (dict): dictionary to which properties should be added
+        property_names (list of str): names for these properties
+    """
+
+    for property_name in property_names:
+        container[property_name] = {}
+
+    for tokenized_line in tokenized_lines:
+        (qn,data) = split_mfdn_results_line(tokenized_line)
+        for property_index in range(len(property_names)):
+            property_name = property_names[property_index]
+            container[property_name][qn]=data[property_index]
+
+def parse_M1_moments(self,tokenized_lines):
+    """Parse M1 moments.
+    """
+    property_names = ["M1mu","M1lp","M1ln","M1sp","M1sn"]
+    parse_generic_static_properties(self,tokenized_lines,self.native_static_properties,property_names)
+
+def parse_E2_moments(self,tokenized_lines):
+    """Parse E2 moments.
+    """
+    property_names = ["E2p","E2n"]
+    parse_generic_static_properties(self,tokenized_lines,self.native_static_properties,property_names)
+
+def parse_angular_momenta(self,tokenized_lines):
+    """Parse angular momenta.
+    """
+    property_names = ["L","S","Sp","Sn","J"]
+    parse_generic_static_properties(self,tokenized_lines,self.native_static_properties,property_names)
+
+def parse_radii(self,tokenized_lines):
+    """Parse radii.
+    """
+    property_names = ["rp","rn","r"]
+    parse_generic_static_properties(self,tokenized_lines,self.two_body_static_observables,property_names)
+
+def parse_other_tbo(self,tokenized_lines):
+    """Parse other two-body observables.  (WIP)
+    """
+    for tokenized_line in tokenized_lines:
+        (qn,data) = split_mfdn_results_line(tokenized_line)
+        # TODO
+        pass
 
 section_handlers = {
     # [CODE]
@@ -141,9 +253,13 @@ section_handlers = {
     "Observables" : parse_params,
     # RESULTS
     "Energies" : parse_energies,
-    ## "Decompositions: Nex" : parse_decompositions_Nex,
-    ## "Decompositions: BabySpNCCI" : parse_decompositions_baby_spncci,
-    ## "Observable RMEs" : parse_observable_rmes
+    "Oscillator quanta" : parse_decompositions_Nex,
+    "M1 moments" : parse_M1_moments,
+    "E2 moments" : parse_E2_moments,
+    "Angular momenta" : parse_angular_momenta,
+    "Relative radii" : parse_radii,
+    "Other 2-body observables" : parse_other_tbo
+
 }
 
 ################################################################

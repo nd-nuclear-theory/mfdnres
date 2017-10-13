@@ -102,6 +102,9 @@ def test_read_results_v15():
     print("Parameters:",results.params)
     print("Levels:",results.get_levels())
     print("Energies:",results.energies)
+    print("Isospins:",results.native_static_properties["T"])
+    print("Decompositions (Nex):",results.decompositions["Nex"])
+    print("Radii:",results.two_body_static_observables["r"])
 
 def test_read_results_spncci():
     """ Test single-file import for spncci.
@@ -258,8 +261,8 @@ def test_am_output():
 if (__name__ == "__main__"):
 
     # basic import tests
-    test_read_results_v14b05()
-    test_read_results_v14b06()
+    ## test_read_results_v14b05()
+    ## test_read_results_v14b06()
     test_read_results_v15()
     ## test_read_results_spncci()
 
