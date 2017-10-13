@@ -48,27 +48,15 @@ class ResultsData (object):
 
     Accessors:
 
-        get_levels: List of qn tuples for all levels.  Values are sorted by increasing energy eigenvalue.
-                Takes no arguments are returns a list of all quantum numbers produced
-                by the run, sorted based on the energy associated with each set of quantum numbers.
-            get_energy:  Accessor for energy by quantum number tuple.
-                Takes as an argument a tuple of quantum numbers.  The the set of quantum numbers
-                is valid, it returns the energy associated with those quantum numbers.  If the quantum
-                numbers are not valid, it returns None and prints a message to the console.        
-        Methods:
+        TODO
 
     """
+
     ########################################
     # Initializer
     ########################################
     def __init__ (self):
         """
-            Arguments:
-                None.
-            Returned:
-                None.
-
-            Initializes self.params, self.energies, self.states, and self.properties.  
         """
         self.params = {}
         self.energies = {}

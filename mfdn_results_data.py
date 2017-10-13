@@ -48,7 +48,7 @@ class MFDnResultsData(mfdnres.results_data.ResultsData):
 
               "Nex": decomposition in excitation quanta
 
-        properties (dict): native-calculated static properties
+        native_static_properties (dict): native-calculated static properties
 
             Mapping: property_name -> qn -> value
 

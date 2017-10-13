@@ -119,18 +119,6 @@ def read_file(filename,res_format,filename_format=None,verbose=False):
 
     """
 
-    # temporary special-case trap for legacy parsers
-    #
-    # These parsers populated a single MFDnRunData object.  Now
-    # all parsers should return a list of results data objects.
-        
-    ## if (res_format == 'mfdn_v14b05'):
-    ##     with open(filename, 'rt') as fin:
-    ##         data = MFDnRunData()
-    ##         res_format_parser[res_format](data, fin, verbose=verbose)
-    ##         full_data = [data]
-    ##     return full_data
-
     # parse results filename for any supplementary run parameters
     if (filename_format is None):
         info_from_filename = {}

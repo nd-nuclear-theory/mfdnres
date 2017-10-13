@@ -280,7 +280,7 @@ def parse_mesh_point(self,sections,section_handlers):
             section_handlers[section_name](self,tokenized_lines)
 
 def parser(in_file,verbose):
-    """ Parse full spncci results file, into list of one or more results objects.
+    """ Parse full results file.
 
     Arguments:
         in_file (stream): input file stream (already opened by caller)

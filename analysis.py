@@ -129,11 +129,11 @@ def selected_mesh_data(
 
     Example key-value specification:
 
-       (("nuclide",(3,4)),("interaction","JISP16"))
-
-    or
-
         {"nuclide":(3,4),"interaction":"JISP16"}
+
+    which is then interpreted as
+
+       (("nuclide",(3,4)),("interaction","JISP16"))
 
     Arguments:
         mesh_data (list of ResultsData): data for mesh points
