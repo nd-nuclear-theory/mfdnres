@@ -121,7 +121,7 @@ def parser(fin,verbose):
 
         # set up state instance
         # initialize new state
-        state = mfdnres.mfdn_results_data.MFDnStateData(qn,T,E)
+        state = mfdnres.mfdn_results_data_v14.MFDnStateData(qn,T,E)
         # save state to working list for this res file
         state_list.append(state)
         # save lookup information (by sequence number) for processing transitions below
