@@ -246,6 +246,7 @@ def make_radius_table(mesh_data,key_descriptor,radius_type,qn):
     Arguments:
         mesh_data (list of ResultsData): data for mesh points
         key_descriptor (tuple of tuple): dtype descriptor for key
+        radus_type (str): radius type code (rp/rn/r)
         qn (tuple): quantum numbers (J,g,n) of level to retrieve
     
     Returns:
