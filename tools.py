@@ -66,18 +66,39 @@ def parse_line(line,pattern,strict=True):
 #       - ["[section]"]: Section header, where <section> denotes an
 #         arbitrary string.
 
-def is_active_line(tokens):
-    """ Identify nonempty, noncomment line.
+def split_and_prune_lines(lines):
+    """Split input lines into tokenized lines, suppressing comment
+    (beginning with hash token) or empty lines.
 
-    Helper function for file parsing.
+    Tokenization is by whitespace, i.e., with split.
+
+    The tokenized lines are returned as tuples rather than lists to
+    support downstream processing.  For instance, structured array
+    creation with np.array requires the entries to be tuples.
 
     Arguments:
-        (list of str): tokenized line
+       (iterable of str): input lines
 
     Returns:
-        (bool)
+       (iterator of tuple of str): split and filtered lines
+
     """
-    return bool(tokens) and (tokens[0]!="#")
+    
+    def is_active_line(tokens):
+        """ Identify nonempty, noncomment line.
+
+        Helper function for file parsing.
+
+        Arguments:
+            (list of str): tokenized line
+
+        Returns:
+            (bool)
+        """
+        return bool(tokens) and (tokens[0]!="#")
+
+    tokenized_lines = map(lambda s : tuple(s.split()),lines)
+    return filter(is_active_line,tokenized_lines)
 
 section_header_regex = re.compile(r"\[(.*)\]")
 
@@ -109,29 +130,7 @@ def extract_section_name(tokens):
         return section_header_regex.match(spliced_line).group(1)  # or just chop off the bracket on each end...
     else:
         return None
-    
-
-def split_and_prune_lines(lines):
-    """Split input lines into tokenized lines, suppressing comment
-    (beginning with hash token) or empty lines.
-
-    Tokenization is by whitespace, i.e., with split.
-
-    The tokenized lines are returned as tuples rather than lists to
-    support downstream processing.  For instance, structured array
-    creation with np.array requires the entries to be tuples.
-
-    Arguments:
-       (iterable of str): input lines
-
-    Returns:
-       (iterator of tuple of str): split and filtered lines
-
-    """
-    
-    tokenized_lines = map(lambda s : tuple(s.split()),lines)
-    return filter(is_active_line,tokenized_lines)
-
+  
 def extracted_sections(tokenized_lines):
     """Provide iterator yielding succesive sections from given tokenized lines.
 
