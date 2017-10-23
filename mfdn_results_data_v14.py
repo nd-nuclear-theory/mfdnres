@@ -8,6 +8,7 @@
     University of Notre Dame
 
     10/6/17 (mac): Extract MFDnResultsData from res.py.
+    10/23/17 (mac): Add get_radius accessor.
 """
 
 import math
@@ -113,6 +114,7 @@ class MFDnResultsDataV14(mfdnres.results_data.ResultsData):
             transition probability (RTP) of transition operator, regardless of which direction
             it was calculated in the data set.
     """
+
     ########################################
     # Initializer
     ########################################
@@ -134,9 +136,11 @@ class MFDnResultsDataV14(mfdnres.results_data.ResultsData):
         self.tbo = {}
         self.moments = {}
         self.orbital_occupations = {}
+
     ########################################
     # Accessors
     ########################################        
+
     def get_property(self,qn,property):
         """
             Arguments:
@@ -221,6 +225,32 @@ class MFDnResultsDataV14(mfdnres.results_data.ResultsData):
             value = None
         return value
 
+    def get_radius(self,radius_type,qn,default=np.nan):
+        """Retrieve rms radius value.
+
+        This is a special case of get_tbo, provided for compatibility
+        with the results_data classes for other codes (mfdn_v15,
+        spncci, ...).  We use the value from "Radii" two-body
+        observable calculation (not the one-body radius also reported
+        by MFDn in oscillator runs).
+
+        Arguments:
+           radius_type (str): radius type rp/rn/r
+           qn (tuple): quantum numbers for state
+           default (float,optional): default value to return for missing radius
+
+        Returns
+           (float): rms radius
+
+        """
+
+        # extract labels
+        (J,gex,n) = qn
+
+        rms_radius = self.get_tbo(qn,radius_type)
+
+        return rms_radius
+
     def get_orbital_occupation (self, qn, inner=None):
         """
             Arguments:
@@ -263,10 +293,6 @@ class MFDnResultsDataV14(mfdnres.results_data.ResultsData):
                 value = None
         return value
 
-
-    ########################################
-    # Methods                              #
-    ######################################## 
     def has_rme(self,qnf,qni,op,Mj):
         """
             Arguments:

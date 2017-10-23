@@ -8,6 +8,7 @@
     University of Notre Dame
 
     10/6/17 (mac): Extract MFDnResultsData from res.py.
+    10/23/17 (mac): Add get_radius accessor.
 """
 
 import math
@@ -77,6 +78,7 @@ class MFDnResultsData(mfdnres.results_data.ResultsData):
                 
 
     """
+
     ########################################
     # Initializer
     ########################################
@@ -96,6 +98,35 @@ class MFDnResultsData(mfdnres.results_data.ResultsData):
         self.decompositions = {}
         self.native_static_properties = {}
         self.two_body_static_observables = {}
+
+
+    ########################################
+    # Accessors
+    ########################################        
+
+    def get_radius(self,radius_type,qn,default=np.nan):
+        """Retrieve rms radius value.
+
+        We use the value from two-body "Relative radii" calculation
+        (not the one-body radius reported by MFDn in oscillator runs,
+        if it still even does that in v15).
+
+        Arguments:
+           radius_type (str): radius type rp/rn/r
+           qn (tuple): quantum numbers for state
+           default (float,optional): default value to return for missing radius
+
+        Returns
+           (float): rms radius
+
+        """
+
+        # extract labels
+        (J,gex,n) = qn
+
+        rms_radius = self.two_body_static_observables[radius_type][qn]
+
+        return rms_radius
 
 #################################################
 # test code

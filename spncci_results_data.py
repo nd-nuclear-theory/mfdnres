@@ -110,8 +110,18 @@ class SpNCCIResultsData(mfdnres.results_data.ResultsData):
         return matrix
 
     def get_radius(self,radius_type,qn,default=np.nan):
-        """
-        Note: Raw gt-convention RME is intrinsic squared radius, i.e., summed over particles.
+        """Retrieve rms radius value.
+
+        Note: Raw group-theory convention RME from spncci is intrinsic
+        squared radius, i.e., summed over particles.
+
+        Arguments:
+           radius_type (str): radius type rp/rn/r
+           qn (tuple): quantum numbers for state
+           default (float,optional): default value to return for missing radius
+
+        Returns:
+           (float): rms radius
 
         """
 
