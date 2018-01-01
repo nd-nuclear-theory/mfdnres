@@ -64,7 +64,7 @@ def parser(filename):
 
     match = regex.match(filename)
     if (match == None):
-        raise ValueError("bad form for MFDn results filename")
+        raise ValueError("bad form for MFDn results filename: " + filename)
     info = match.groupdict()
 
     # convert fields
