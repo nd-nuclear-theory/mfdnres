@@ -15,15 +15,17 @@ import math
 
 import numpy as np
 
-import mfdnres.am
-import mfdnres.results_data
+from . import (
+    am,
+    results_data,
+    )
 
 
 #################################################
 # MFDnResultsDataV14
 #################################################
 
-class MFDnResultsDataV14(mfdnres.results_data.ResultsData):
+class MFDnResultsDataV14(results_data.ResultsData):
     """ Container for MFDn results -- legacy version from original mfdn v14 parsers.
 
     Deprecated after data hierarchy rethought for spncci parser.
@@ -47,7 +49,7 @@ class MFDnResultsDataV14(mfdnres.results_data.ResultsData):
         self.properties (nested dictionary):  Maps from quantum number to properties dictionary.
             The outer key is the quantum number tuple of the form (J, g, n).
             The inner dictionary are the properties of the state specified by the key.
-            The properties stored are J, g, n, and T.  
+            The properties stored are J, g, n, and T.
         self.transition (dictionary): Maps from (qn_final, qn_initial, type, Mj) to transition
             reduced matrix elements.
             The keys are tuples of the form (qn_final, qn_initial, type, Mj), where the
@@ -61,7 +63,7 @@ class MFDnResultsDataV14(mfdnres.results_data.ResultsData):
             The main keys are quanum number tuples of the form (J, g, n).  The inner
             dictionaries contain the keys 'rp', 'rn', and 'r', as well as any other
             observables specified in the 'Other 2-body observables' section. The name of
-            these observables are found as the file names for the TBME files. 
+            these observables are found as the file names for the TBME files.
         self.moments (dictionary): Maps from (qn, type) to a list of moments.
             The keys are of the form ((J, g, n), type).  Type has three possible values:
             'M1EM', 'M1', or 'E2'.  The values of the dictionaries are the moments, as
@@ -78,27 +80,27 @@ class MFDnResultsDataV14(mfdnres.results_data.ResultsData):
             and the property needed as a string.  If the set of quantum numbers and the property
             are both valid entries in the dictionary, the method returns the value.  Otherwise,
             it returns None and prints a message to the console.
-        get_moment: Accessor for moments data by the tuple (qn, type). 
+        get_moment: Accessor for moments data by the tuple (qn, type).
             Takes as arguments a set of quantum numbers and a type of moment, formatted
             as a string, called category.   If the tuple (qn, category) specifies a valid entry
             in the dictioanry self.moments, then the moments associated with that entry are
-            returned.  If the tuple (qn, category) is not a valid entry, then None is returned. 
-        get_tbo: Accessor two body operator data by quantum number tuple and operator name. 
-            Takes as arguments a set of quantum numbers and an operator, formatted as a 
-            string.  If the arguments qn and op are both valied entries in the 
+            returned.  If the tuple (qn, category) is not a valid entry, then None is returned.
+        get_tbo: Accessor two body operator data by quantum number tuple and operator name.
+            Takes as arguments a set of quantum numbers and an operator, formatted as a
+            string.  If the arguments qn and op are both valied entries in the
             dictionary self.tbo, then this method returns the value associated with that entry.
             If either qn or op is invalid, the method returns None and prints a message to the
             console.
-        get_orbital_occupation:  Accessor for (np, nn) tuple by (J, g, n) and (n, l, j).  
+        get_orbital_occupation:  Accessor for (np, nn) tuple by (J, g, n) and (n, l, j).
             It takes as arguments qn and inner.  qn is a set of quantum
-            numbers.  inner can be a tuple of (n, l, j) or has a default value of None.               
+            numbers.  inner can be a tuple of (n, l, j) or has a default value of None.
             If only one argument, qn, is supplied, this method returns the dictionary
             associated with that set of quantum numbers.  If both qn and inner are specified,
             this method returns the value in the inner dictionary specified by both the
             (J, g, n) tuple and the (n, l, j) tuple.  If either qn or inner is an invalid
             entry, None is returned.
     Methods:
-        has_rme:  Checks for reduced matrix element of transition operator.  
+        has_rme:  Checks for reduced matrix element of transition operator.
             Takes as arguments two sets of quantum numbers, the final and inital states of
             the transition, the type of transition as a string, and MJ.  The value returned
             indicates whether or not reduced matrix element (RME) of transition operator is
@@ -108,7 +110,7 @@ class MFDnResultsDataV14(mfdnres.results_data.ResultsData):
             the transition, the type of transition as a string, and MJ.  Retrieves reduced
             matrix element (RME) of transition operator, regardless of which direction it was
             calculated in the data set.
-        get_rtp: Accessor for the reduced transition probability of transition operator. 
+        get_rtp: Accessor for the reduced transition probability of transition operator.
             Takes as arguments two sets of quantum numbers, the final and inital states of
             the transition, the type of transition as a string, and MJ. Retrieves reduced
             transition probability (RTP) of transition operator, regardless of which direction
@@ -139,7 +141,7 @@ class MFDnResultsDataV14(mfdnres.results_data.ResultsData):
 
     ########################################
     # Accessors
-    ########################################        
+    ########################################
 
     def get_property(self,qn,property):
         """
@@ -150,13 +152,13 @@ class MFDnResultsDataV14(mfdnres.results_data.ResultsData):
                 value (varies):  The value of the property, given a valid qn and
                     property string.
                     The property specified by the argument 'propery', associated
-                    with the set of quantum numbers specified by the argument 'qn'.  If a 
+                    with the set of quantum numbers specified by the argument 'qn'.  If a
                     invalid entry is specifed by the arguments, value is set to None.
 
             Returns the value of the property, sepcified by the argument 'property', that is
             associated with the set of quantum numbers that are specified by the argument 'qn'.
             There are checks to make sure both 'property' and 'qn' are entries in the dictionaries.
-            If either argument is not an entry, a message is printed to the console, and the 
+            If either argument is not an entry, a message is printed to the console, and the
             value of value is set to None.
 
         """
@@ -181,14 +183,14 @@ class MFDnResultsDataV14(mfdnres.results_data.ResultsData):
                     Values are either 'M1EM', 'M1', or 'E2'.
             Returned:
                 value (varies): Moments data, given valid qn and category.
-                    If the tuple of the form (qn, category) is a valid entry 
+                    If the tuple of the form (qn, category) is a valid entry
                     in self.moments, then value is set to the moments associated with the
-                    (qn, tuple) pair.  If the tuple (qn, category) is invalid, value is set 
+                    (qn, tuple) pair.  If the tuple (qn, category) is invalid, value is set
                     to None.
 
-            If the tuple (qn, category) specifies a valid entry in the dictioanry self.moments, 
+            If the tuple (qn, category) specifies a valid entry in the dictioanry self.moments,
             then the moments associated with that entry are returned.  If the tuple (qn, category)
-            is not a valid entry, then None is returned. 
+            is not a valid entry, then None is returned.
         """
         if (qn, category) in self.moments:
             value = self.moments[(qn, category)]
@@ -263,7 +265,7 @@ class MFDnResultsDataV14(mfdnres.results_data.ResultsData):
             Returned:
                 value (varies): (np, nn) if (n, l,j) and/or (J, g, n) are valid.
                     If inner and/or qn are both valid (depending on of the default value of
-                    inner is used or not), value is set to the entry in the dictionary specified by the 
+                    inner is used or not), value is set to the entry in the dictionary specified by the
                     arguments.  If at least on of the arguments are invalid, value is set to None.
 
             If only one argument, qn, is supplied, this method returns the dictionary associated with
@@ -300,7 +302,7 @@ class MFDnResultsDataV14(mfdnres.results_data.ResultsData):
                     represents the final state of the transition.
                 qni (tuple): A set of quantum numbers in the form (J, g, n) that
                     represents the initial state of the tranistion.
-                op (string):  Specifies the operator.  
+                op (string):  Specifies the operator.
                     Should be set to either 'M1' or 'E2'.
                 Mj (float): (ADD DESCRIPTION HERE)
             Returned:
@@ -371,7 +373,7 @@ class MFDnResultsDataV14(mfdnres.results_data.ResultsData):
                 values = default*np.ones(2)
 
         return values
- 
+
     def get_rtp(self,qnf,qni,op,Mj,default=np.nan):
         """
             Arguments:
@@ -384,7 +386,7 @@ class MFDnResultsDataV14(mfdnres.results_data.ResultsData):
                 Mj (float): (ADD DESCRIPTION HERE)
                 default (float):  The value to be returned if elements are undefiend.
             Returned:
-                values (numpy vector):  The values of the reduced transition probabilities 
+                values (numpy vector):  The values of the reduced transition probabilities
                     for the different components of the operator specified in the arguments.
 
             Retrieves reduced transition probability (RTP) of transition
@@ -392,7 +394,7 @@ class MFDnResultsDataV14(mfdnres.results_data.ResultsData):
             the data set.
 
             Obtains RTP
-  
+
                B(op;Ji->Jf) = (2Ji+1)^(-1) |<Jf||op||Ji>|^2
 
             from RME provided by get_rme.
@@ -407,7 +409,7 @@ class MFDnResultsDataV14(mfdnres.results_data.ResultsData):
         values = 1/(2*Ji+1)*self.get_rme(qnf,qni,op,Mj)**2
 
         return values
- 
+
 
 ##################################################
 # MFDnStateData storage object

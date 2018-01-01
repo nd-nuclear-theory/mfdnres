@@ -15,8 +15,11 @@ import itertools
 
 import numpy as np
 
-import mfdnres.tools
-import mfdnres.spncci_results_data
+from .. import (
+    spncci_results_data,
+    res,
+    tools,
+    )
 
 ################################################################
 # section handlers
@@ -30,21 +33,21 @@ def parse_params(self,tokenized_lines):
     # extract key-value pairs
     conversions = {
         # Space
-        "nuclide" : mfdnres.tools.tuple_of(int),  # use tuple so parameter is hashable when used as analysis key
-        "A" : mfdnres.tools.singleton_of(int),
-        "Nsigma" : mfdnres.tools.singleton_of(float),
-        "Nsigmamax" : mfdnres.tools.singleton_of(int),
-        "N1v" : mfdnres.tools.singleton_of(int),
-        "Nmax" : mfdnres.tools.singleton_of(int),
+        "nuclide" : tools.tuple_of(int),  # use tuple so parameter is hashable when used as analysis key
+        "A" : tools.singleton_of(int),
+        "Nsigma" : tools.singleton_of(float),
+        "Nsigmamax" : tools.singleton_of(int),
+        "N1v" : tools.singleton_of(int),
+        "Nmax" : tools.singleton_of(int),
         # Interaction
-        "interaction" : mfdnres.tools.singleton_of(str),
-        "use_coulomb" : mfdnres.tools.singleton_of(mfdnres.tools.bool_from_str),
+        "interaction" : tools.singleton_of(str),
+        "use_coulomb" : tools.singleton_of(tools.bool_from_str),
         # Relative observables
-        "observable_names" : mfdnres.tools.list_of(str),
+        "observable_names" : tools.list_of(str),
         # Calculation
-        "hw" : mfdnres.tools.singleton_of(float)
+        "hw" : tools.singleton_of(float)
     }
-    key_value_dict = mfdnres.tools.extract_key_value_pairs(
+    key_value_dict = tools.extract_key_value_pairs(
         tokenized_lines,conversions
     )
 
@@ -69,16 +72,16 @@ def parse_observables(self,tokenized_lines):
 
     These are to be renamed in future spncci runs!
     """
-    
+
     #trap unfortunate overload of Observables section name
     if (tokenized_lines[0][0]!="filenames"):
         parse_observable_rmes(self,tokenized_lines)
         return
 
     conversions = {
-        "filenames" : mfdnres.tools.list_of(str)
+        "filenames" : tools.list_of(str)
     }
-    key_value_dict = mfdnres.tools.extract_key_value_pairs(
+    key_value_dict = tools.extract_key_value_pairs(
         tokenized_lines,conversions
     )
     self.params["observable_names"] = key_value_dict["filenames"]
@@ -88,7 +91,7 @@ def parse_spj_listing(self,tokenized_lines):
     """ Parse matrices of RMEs.
 
     Future: May be adding gex quantum number.
-    
+
     Warning: Hard-coded gex=0.
     """
 
@@ -192,8 +195,8 @@ def parse_observable_rmes(self,tokenized_lines):
 
         # determine canonicalization
         Jg_pair = ((J_bra,gex_bra),(J_ket,gex_ket))
-        (Jg_pair_canonical,flipped,canonicalization_factor) = mfdnres.tools.canonicalize_Jg_pair(
-            Jg_pair,mfdnres.tools.RMEConvention.kGroupTheory
+        (Jg_pair_canonical,flipped,canonicalization_factor) = tools.canonicalize_Jg_pair(
+            Jg_pair,tools.RMEConvention.kGroupTheory
         )
 
         # prepare matrix key
@@ -216,7 +219,7 @@ def parse_observable_rmes(self,tokenized_lines):
 
         # attempt to read next header
         observable_matrix_header = next(tokenized_lines_iterator,None)
-    
+
 
 section_handlers = {
     # PARAMETERS
@@ -263,8 +266,8 @@ def parser(in_file,verbose):
 
     # perform high-level parsing into sections
     res_file_lines = [row for row in in_file]
-    tokenized_lines = mfdnres.tools.split_and_prune_lines(res_file_lines)
-    sections = mfdnres.tools.extracted_sections(tokenized_lines)
+    tokenized_lines = tools.split_and_prune_lines(res_file_lines)
+    sections = tools.extracted_sections(tokenized_lines)
 
     # split out common sections and subsequent groups of results sections
     def is_results_sentinel_section(section):
@@ -275,10 +278,10 @@ def parser(in_file,verbose):
         (section_name,_) = section
         return (section_name == "RESULTS")
 
-    grouped_sections = mfdnres.tools.split_when(is_results_sentinel_section,sections)
+    grouped_sections = tools.split_when(is_results_sentinel_section,sections)
     common_sections = list(next(grouped_sections))
     grouped_results_sections = [list(section_group) for section_group in grouped_sections]
-   
+
     if (verbose):
         print("Section counts")
         print("  Common sections:",len(common_sections))
@@ -291,19 +294,19 @@ def parser(in_file,verbose):
         # there are results sections: actual mesh, not counting run
         for results_section_group in grouped_results_sections:
             full_section_group = common_sections + results_section_group
-            results = mfdnres.spncci_results_data.SpNCCIResultsData()
+            results = spncci_results_data.SpNCCIResultsData()
             parse_mesh_point(results,full_section_group,section_handlers)
             mesh_data.append(results)
     else:
         # no results sections: counting run
-        results = mfdnres.spncci_results_data.SpNCCIResultsData()
+        results = spncci_results_data.SpNCCIResultsData()
         parse_mesh_point(results,common_sections,section_handlers)
         mesh_data.append(results)
 
     return mesh_data
 
 # register the parser
-mfdnres.res.register_res_format('spncci',parser)
+res.register_res_format('spncci',parser)
 
 if (__name__=="__main__"):
     pass

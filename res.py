@@ -28,7 +28,7 @@ import os
 import numpy as np
 
 #intra-packages references
-import mfdnres.descriptor
+from . import descriptor
 
 ################################################################
 # filename utility
@@ -123,7 +123,7 @@ def read_file(filename,res_format,filename_format=None,verbose=False):
     if (filename_format is None):
         info_from_filename = {}
     else:
-        info_from_filename = mfdnres.descriptor.parse_res_filename(filename,filename_format)
+        info_from_filename = descriptor.parse_res_filename(filename,filename_format)
 
     # parse results file contents for run parameters and data
     with open(filename,'rt') as fin:
@@ -151,7 +151,7 @@ def slurp_res_files(
 
     The results will be a list of results data objects, one for
     each mesh point within the results file.
-    
+
     Arguments:
         res_directory_list (str or list of str): directory or list of directories
             containing files to import

@@ -18,16 +18,19 @@ import math
 
 import numpy as np
 
-import mfdnres.am
-import mfdnres.results_data
+from . import (
+    am,
+    results_data,
+    tools,
+    )
 
 #################################################
 # SpNCCIResultsData
 #################################################
 
-class SpNCCIResultsData(mfdnres.results_data.ResultsData):
+class SpNCCIResultsData(results_data.ResultsData):
     """ Container for results data for spncci mesh point.
-    
+
     TODO: rewrite docstring
 
     Inherited attributes:
@@ -37,20 +40,20 @@ class SpNCCIResultsData(mfdnres.results_data.ResultsData):
         filename (str)
 
     Attributes:
-        spj_listing (list of tuple): 
+        spj_listing (list of tuple):
         baby_spncci_listing (list of list):
         decompositions (dictionary):
         observables (dictionary):
 
     Accessors:
-       
+
     """
     ########################################
     # Initializer
     ########################################
     def __init__ (self):
         """Initialize attributes as empty containers or None.
-        
+
         Note: Attributes from parent type (params, energies) are implicitly
         initialized by calling the parent class's __init__.
         """
@@ -63,7 +66,7 @@ class SpNCCIResultsData(mfdnres.results_data.ResultsData):
 
     ########################################
     # Accessors
-    ########################################        
+    ########################################
 
     def get_baby_spncci_subspace_label(self,baby_spncci_subspace_index,label):
         """
@@ -90,12 +93,12 @@ class SpNCCIResultsData(mfdnres.results_data.ResultsData):
         """
 
         # determine canonicalization
-        (Jg_pair_canonical,flipped,canonicalization_factor) = mfdnres.tools.canonicalize_Jg_pair(
-            Jg_pair,mfdnres.tools.RMEConvention.kGroupTheory
+        (Jg_pair_canonical,flipped,canonicalization_factor) = tools.canonicalize_Jg_pair(
+            Jg_pair,tools.RMEConvention.kGroupTheory
         )
         if (verbose):
             print("Jg_pair_canonical {} flipped {} canonicalization_factor {}".format(Jg_pair_canonical,flipped,canonicalization_factor))
-        
+
         # retrieve underlying matrix
         key = (observable,Jg_pair_canonical)
         try:
@@ -154,7 +157,7 @@ class SpNCCIResultsData(mfdnres.results_data.ResultsData):
     def get_rme(self,observable,qn_pair,default=np.nan,verbose=False):
         """
 
-        
+
         <Jf||op||Ji>_Racah = sqrt(2*Jf+1) * <Jf||op||Ji>_gt
 
         Relies on get_rme_matrix for canonicalization of bra-ket orderz.
@@ -185,7 +188,7 @@ class SpNCCIResultsData(mfdnres.results_data.ResultsData):
 
     def get_rtp(self,observable,qn_pair,default=np.nan):
         """
-        """ 
+        """
 
         # extract labels
         (qn_bra,qn_ket) = qn_pair
@@ -193,7 +196,7 @@ class SpNCCIResultsData(mfdnres.results_data.ResultsData):
         (J_ket,gex_ket,n_ket) = qn_ket
 
         # retrieve underlying rme
-        try: 
+        try:
             rme = self.get_rme(observable,qn_pair)
         except:
             return default
@@ -205,7 +208,7 @@ class SpNCCIResultsData(mfdnres.results_data.ResultsData):
 
     def get_decomposition(self,decomposition_type,qn):
         """
-        """ 
+        """
 
         # extract labels
         (J,gex,n) = qn

@@ -8,13 +8,13 @@
     6/5/15 (mac): Restructure as subpackage.
     7/3/15 (mac): Rewrite as parser function.  Add fields fci_flag and Mj.
     Last modified 7/3/15.
-    
+
 """
 
 import re
 
 # intra-package references
-import mfdnres.descriptor
+from .. import descriptor
 
 def parser(filename):
     """ Parses results filename in format 5, restricted to the ho basis special case.
@@ -74,11 +74,12 @@ def parser(filename):
 
     return info
 
-mfdnres.descriptor.register_filename_format("mfdn_format_5_ho",parser)
+
+descriptor.register_filename_format("mfdn_format_5_ho", parser)
 
 if (__name__ == "__main__"):
 
     filename = r"run0352-mfdn-Z4-N5-JISP16-1-hw20.000-aL100-Nmax10-MM1-lan1000.res"
-    info = mfdnres.descriptor.parse_res_filename(filename,filename_format="mfdn_format_5_ho")
+    info = descriptor.parse_res_filename(filename, filename_format="mfdn_format_5_ho")
     print(filename)
     print(info)

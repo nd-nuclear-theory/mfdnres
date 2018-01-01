@@ -14,8 +14,11 @@ import itertools
 
 import numpy as np
 
-import mfdnres.tools
-import mfdnres.mfdn_results_data
+from .. import (
+    mfdn_results_data,
+    res,
+    tools,
+    )
 
 
 ################################################################
@@ -90,31 +93,31 @@ def parse_params(self,tokenized_lines):
     # extract key-value pairs
     conversions = {
         # MFDn -- only selected numerical fields
-        "ndiags" : mfdnres.tools.singleton_of(int),
-        "MPIranks" : mfdnres.tools.singleton_of(int),
-        "OMPthreads" : mfdnres.tools.singleton_of(int),
+        "ndiags" : tools.singleton_of(int),
+        "MPIranks" : tools.singleton_of(int),
+        "OMPthreads" : tools.singleton_of(int),
         # Basis
-        "Nprotons" : mfdnres.tools.singleton_of(int),
-        "Nneutrons" : mfdnres.tools.singleton_of(int),
-        "TwoMj" : mfdnres.tools.singleton_of(int),
-        "parity" : mfdnres.tools.singleton_of(int),
-        "Nmin" : mfdnres.tools.singleton_of(int),
-        "Nmax" : mfdnres.tools.singleton_of(int),
-        "DeltaN" : mfdnres.tools.singleton_of(int),
-        "WTmax" : mfdnres.tools.singleton_of(float),
+        "Nprotons" : tools.singleton_of(int),
+        "Nneutrons" : tools.singleton_of(int),
+        "TwoMj" : tools.singleton_of(int),
+        "parity" : tools.singleton_of(int),
+        "Nmin" : tools.singleton_of(int),
+        "Nmax" : tools.singleton_of(int),
+        "DeltaN" : tools.singleton_of(int),
+        "WTmax" : tools.singleton_of(float),
         # Many-body matrix
-        "dimension" : mfdnres.tools.singleton_of(int),
-        "numnonzero" : mfdnres.tools.singleton_of(int),
+        "dimension" : tools.singleton_of(int),
+        "numnonzero" : tools.singleton_of(int),
         # Interaction
-        "Hrank" : mfdnres.tools.singleton_of(int),
-        "hbomeg" : mfdnres.tools.singleton_of(float),
-        "fmass" : mfdnres.tools.singleton_of(float),
+        "Hrank" : tools.singleton_of(int),
+        "hbomeg" : tools.singleton_of(float),
+        "fmass" : tools.singleton_of(float),
         # Observables
-        "numTBops" : mfdnres.tools.singleton_of(int),
+        "numTBops" : tools.singleton_of(int),
         # Calculation
-        "hw" : mfdnres.tools.singleton_of(float)
+        "hw" : tools.singleton_of(float)
     }
-    key_value_dict = mfdnres.tools.extract_key_value_pairs(
+    key_value_dict = tools.extract_key_value_pairs(
         tokenized_lines,conversions
     )
 
@@ -289,11 +292,11 @@ def parser(in_file,verbose):
 
     # perform high-level parsing into sections
     res_file_lines = [row for row in in_file]
-    tokenized_lines = mfdnres.tools.split_and_prune_lines(res_file_lines)
-    sections = mfdnres.tools.extracted_sections(tokenized_lines)
+    tokenized_lines = tools.split_and_prune_lines(res_file_lines)
+    sections = tools.extracted_sections(tokenized_lines)
 
     # set up container
-    results = mfdnres.mfdn_results_data.MFDnResultsData()
+    results = mfdn_results_data.MFDnResultsData()
 
     # parse sections
     parse_mesh_point(results,sections,section_handlers)
@@ -303,7 +306,7 @@ def parser(in_file,verbose):
     return mesh_data
 
 # register the parser
-mfdnres.res.register_res_format('mfdn_v15',parser)
+res.register_res_format('mfdn_v15',parser)
 
 
 if (__name__=="__main__"):

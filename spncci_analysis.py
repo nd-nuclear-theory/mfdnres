@@ -12,39 +12,39 @@
         Returns a nested dictionary.  The outer keys of the dictionar
         are tuples of (Nmax, Nsigmamax).  The inner keys are h-bar omega
         values.  Each h-bar omega value maps to an instance of
-        SpNCCIResultsData.  
+        SpNCCIResultsData.
     e_vs_hw: creates a table and graph of energy versus h-bar omega.  Takes
         as arguments a dictionary made from spncci_slurp, a filename for the
         outputted table, and a filename for the outputted graph.  Returns nothing.
         Produces a table where the lines have the format 'Nmax  Nsigmamax  hw  E',
         a saves the table to the filename specified in the arguments.  This table
-        has a header line beginning with a '#', denoting what the columns in the 
+        has a header line beginning with a '#', denoting what the columns in the
         table are.  This method also produces a graph, with energy on the y-axis,
         and h-bar omega on the x-axis.  Different series on the graph are denoted
-        in the legend by Nmax and Nsigmamax.  The graph is both displayed and 
+        in the legend by Nmax and Nsigmamax.  The graph is both displayed and
         automatically saved to the filename specified in the arguments.
 """
 # Allows for all files in a directory to be imported
 import glob
 # Imports the parser
-import mfdnres.res
+from . import res
 # Allows for graphing
 ##import matplotlib.pyplot as plt
 
 def spncci_slurp (directory):
     """
         Arguments:
-            directory (string): Location of the SpNCCI results files. 
+            directory (string): Location of the SpNCCI results files.
                 Should be of the form '/location/of/files/*.res'
         Returned:
-            data (nested dictionary): Maps from (Nmax, Nsigmamax) to hw to 
+            data (nested dictionary): Maps from (Nmax, Nsigmamax) to hw to
                 SpNCCIResultsData instance.  The outer keys of the dictionary
-                are tuples of the form (Nmax, Nsigmamax).  The inner keys are 
+                are tuples of the form (Nmax, Nsigmamax).  The inner keys are
                 h-bar omega values.  Each h-bar omega value maps to its correspionding
                 instance of SpNCCIResultsData.
 
         Takes all the SpNCCI results files from a specified directory and parses them into
-        a dictionary for later analysis.  This dictionary is returned at the end of the 
+        a dictionary for later analysis.  This dictionary is returned at the end of the
         method.
     """
     # imports all the files from the specified directory
@@ -54,7 +54,7 @@ def spncci_slurp (directory):
     for fle in files:
         # instances is a list of all the SpNCCIMeshPoint instances created from a single results
         # file
-        instances = mfdnres.res.read_file(fle, res_format='spncci', verbose=True)
+        instances = res.read_file(fle, res_format='spncci', verbose=True)
         # Assuming all instances of SpNCCIMeshPoint data from the same results file will have
         # identical values fo Nmax and Nsigmamax
         Nmax = instances[0].params['Nmax']
@@ -78,8 +78,8 @@ def e_vs_hw(mesh_data,output_file_name):
         Takes the parsed data from spncci_slurp and created a table and a graph of
         energy versus h-bar omega.  Each line of the table has the form 'Nmax  Nsigmamax
         hw  energy'.  There is a header line at the beginning of the table file, identified
-        by a preceding '#', that denotes the columns.  The table is automatically saved to the 
-        supplied filename.  The graph created has energy on the y-axis and h-bar omega on the 
+        by a preceding '#', that denotes the columns.  The table is automatically saved to the
+        supplied filename.  The graph created has energy on the y-axis and h-bar omega on the
         x-axis.  Each series of the graph is identified in the legend by Nmax and Nsigmamax.  The
         graph is both displayed and automatically saved to the supplied filename.
     """
@@ -102,4 +102,3 @@ def e_vs_hw(mesh_data,output_file_name):
 
     # Creates the table
     res.tools.write_lines(output_file_name,output_lines)
-

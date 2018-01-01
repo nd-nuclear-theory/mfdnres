@@ -15,15 +15,17 @@ import math
 
 import numpy as np
 
-import mfdnres.am
-import mfdnres.results_data
+from . import (
+    am,
+    results_data,
+    )
 
 
 #################################################
 # MFDnResultsData
 #################################################
 
-class MFDnResultsData(mfdnres.results_data.ResultsData):
+class MFDnResultsData(results_data.ResultsData):
     """Container for MFDn results.
 
     TODO clean up docstring
@@ -75,7 +77,7 @@ class MFDnResultsData(mfdnres.results_data.ResultsData):
                 others taken from TBME filenames, e.g.,
 
                     "TBMEfile(2) = tbme-Trel.bin" -> observable name "Trel"
-                
+
 
     """
 
@@ -102,7 +104,7 @@ class MFDnResultsData(mfdnres.results_data.ResultsData):
 
     ########################################
     # Accessors
-    ########################################        
+    ########################################
 
     def get_radius(self,radius_type,qn,default=np.nan):
         """Retrieve rms radius value.

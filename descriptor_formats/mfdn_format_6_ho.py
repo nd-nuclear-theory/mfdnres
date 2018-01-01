@@ -12,7 +12,7 @@
 import re
 
 # intra-package references
-import mfdnres.descriptor
+from .. import descriptor
 
 def parser(filename):
     """ Parses results filename in format 6, restricted to the ho basis special case.
@@ -67,11 +67,12 @@ def parser(filename):
 
     return info
 
-mfdnres.descriptor.register_filename_format("mfdn_format_6_ho",parser)
+
+descriptor.register_filename_format("mfdn_format_6_ho", parser)
 
 if (__name__ == "__main__"):
 
     filename = r"run0376-mfdn-Z4-N6-JISP16-1-hw15.000-aL100-Nmax04-Mj0.0-lan1500.res"
-    info = mfdnres.descriptor.parse_res_filename(filename,filename_format="mfdn_format_6_ho")
+    info = descriptor.parse_res_filename(filename, filename_format="mfdn_format_6_ho")
     print(filename)
     print(info)

@@ -192,7 +192,7 @@ def sorted_mesh_data(
         for key in sorted(results_dict.keys())
         ]
     return new_mesh_data
-    
+
 
 ################################################################
 # tabulation functions -- observable vs. parameters
@@ -218,12 +218,12 @@ def make_energy_table(mesh_data,key_descriptor,qn):
         mesh_data (list of ResultsData): data for mesh points
         key_descriptor (tuple of tuple): dtype descriptor for key
         qn (tuple): quantum numbers (J,g,n) of level to retrieve
-    
+
     Returns:
        (array): data table
 
     """
-    
+
     # tabulate values
     key_function = make_key_function(key_descriptor)
     table_data = [
@@ -248,11 +248,11 @@ def make_radius_table(mesh_data,key_descriptor,radius_type,qn):
         key_descriptor (tuple of tuple): dtype descriptor for key
         radus_type (str): radius type code (rp/rn/r)
         qn (tuple): quantum numbers (J,g,n) of level to retrieve
-    
+
     Returns:
-       (array): data table 
+       (array): data table
     """
-    
+
     # tabulate values
     key_function = make_key_function(key_descriptor)
     table_data = [
@@ -278,11 +278,11 @@ def make_rme_table(mesh_data,key_descriptor,observable,qnf,qni):
         key_descriptor (tuple of tuple): dtype descriptor for key
         observable_name (str): key naming observable
         qnf, qni (tuple): quantum numbers (J,g,n) of final and initial levels
-    
+
     Returns:
        (array): data table
     """
-    
+
     # tabulate values
     key_function = make_key_function(key_descriptor)
     table_data = [
@@ -308,12 +308,12 @@ def make_rtp_table(mesh_data,key_descriptor,observable,qnf,qni):
         key_descriptor (tuple of tuple): dtype descriptor for key
         observable_name (str): key naming observable
         qnf, qni (tuple): quantum numbers (J,g,n) of final and initial levels
-    
+
     Returns:
        (array): data table
     """
-    
-    
+
+
     # tabulate values
     key_function = make_key_function(key_descriptor)
     table_data = [
@@ -345,7 +345,7 @@ def make_level_table(mesh_point,levels=None,energy_cutoff=None):
         mesh_point (BaseResultsData): data for mesh point
         levels (list of tuples): levels to include or None for all (default: None)
         energy_cutoff (float,optional): energy cutoff to limit output size
-    
+
     Returns:
        (array): data table
 
@@ -357,7 +357,7 @@ def make_level_table(mesh_point,levels=None,energy_cutoff=None):
 
 
     """
-    
+
     # determine list of levels to use
     if (levels is None):
         levels = mesh_point.get_levels()
@@ -498,7 +498,7 @@ def write_radii_table(results,filename,levels=None):
 ################################################################
 # LEGACY -- output tabulation: angular momentum
 ################################################################
- 
+
 def write_level_am_table(results,filename,levels=None,default=np.nan):
     """LEGACY  -- Writes basic level data.
 
