@@ -6,6 +6,7 @@
     5/31/15 (mac): Initiated as part of mfdn_res.py.
     6/5/15 (mac): Extract from mfdn_res.py.
     10/10/16 (mac): Update to return list containing single mesh point.
+    04/27/18 (mac): Rename parameter Mj to M.
 
 """
 
@@ -198,9 +199,9 @@ def parser(fin,verbose):
         results.energies[state.qn] = E
 
 
-    # extract poor man's Mj
-    # needed below when we store transitions (it would be better if Mj were stated in MFDn res file)
-    Mj = min([state.properties["J"] for state in state_list])
+    # extract poor man's M
+    # needed below when we store transitions (it would be better if M were stated in MFDn res file)
+    M = min([state.properties["J"] for state in state_list])
 
     # amplitude group
     tools.parse_line(fin.readline(),r"Seq    J    NP  n    T        Eabs  \(amp\(N\)\)\^2 for N=")
@@ -345,7 +346,7 @@ def parser(fin,verbose):
             match = tools.parse_line(line,r"(?P<seq>\S+)\s+(?P<J>\S+)\s+(?P<g>\S+)\s+(?P<n>\S+)\s+(?P<T>\S+)\s+(?P<me>.*)")
             seqi = int(match.group("seq"))
             me_values = list(map(float,match.group("me").split()))
-            results.transitions[(state_lookup[seqf],state_lookup[seqi],"GT",Mj)] = me_values[0:2]
+            results.transitions[(state_lookup[seqf],state_lookup[seqi],"GT",M)] = me_values[0:2]
 
             # read ahead
             line=fin.readline().strip()
@@ -358,7 +359,7 @@ def parser(fin,verbose):
             match = tools.parse_line(line,r"(?P<seq>\S+)\s+(?P<J>\S+)\s+(?P<g>\S+)\s+(?P<n>\S+)\s+(?P<T>\S+)\s+(?P<Eabs>\S+)\s+(?P<me>.*)")
             seqi = int(match.group("seq"))
             me_values = list(map(float,match.group("me").split()))
-            results.transitions[(state_lookup[seqf],state_lookup[seqi],"M1",Mj)] = me_values[0:4]
+            results.transitions[(state_lookup[seqf],state_lookup[seqi],"M1",M)] = me_values[0:4]
 
             # read ahead
             line=fin.readline().strip()
@@ -371,7 +372,7 @@ def parser(fin,verbose):
             match = tools.parse_line(line,r"(?P<seq>\S+)\s+(?P<J>\S+)\s+(?P<g>\S+)\s+(?P<n>\S+)\s+(?P<T>\S+)\s+(?P<Eabs>\S+)\s+(?P<me>.*)")
             seqi = int(match.group("seq"))
             me_values = list(map(float,match.group("me").split()))
-            results.transitions[(state_lookup[seqf],state_lookup[seqi],"E2",Mj)] = me_values[0:2]
+            results.transitions[(state_lookup[seqf],state_lookup[seqi],"E2",M)] = me_values[0:2]
 
             # read ahead
             line=fin.readline().strip()

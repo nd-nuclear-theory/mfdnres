@@ -1,9 +1,12 @@
 """ mfdn_scan.py
 
-   Example convergence analysis of MFDn runs.
+    Example convergence analysis of MFDn runs.
 
-   10/12/17 (mac): Created, based on analysis/spncci:convergence_analysis.py.
-   10/23/17 (mac): Add radius scan example.
+    Mark A. Caprio
+    University of Notre Dame
+
+    10/12/17 (mac): Created, based on analysis/spncci:convergence_analysis.py.
+    10/23/17 (mac): Add radius scan example.
 
 """
 

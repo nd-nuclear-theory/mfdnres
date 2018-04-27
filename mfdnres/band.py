@@ -4,8 +4,9 @@
     Mark A. Caprio
     University of Notre Dame
 
-    7/30/17 (mac): Extract band analysis functions from analysis.py (originated
+    07/30/17 (mac): Extract band analysis functions from analysis.py (originated
          6/2/15) to band.py.
+    04/27/18 (mac): Rename parameter Mj to M.
 """
 
 import math
@@ -27,8 +28,8 @@ class BandDefinition(object):
         levels (list of tuple): list of (J,g,n) quantum numbers
 
         [trans]
-        Mj (dict): dictionary mapping J -> Mj
-        signs (dict): dictionary mapping (J,Mj) -> sigma
+        M (dict): dictionary mapping J -> M
+        signs (dict): dictionary mapping (J,M) -> sigma
 
         [fit]
         J_list_energy (list of float): J values to use for energies in energy fit
@@ -48,7 +49,7 @@ class BandDefinition(object):
     dictionary to look up states by J).  However, code can be written
     which does not rely on this property (e.g., for compiling a list
     of transitions from a set of levels, for a "network diagram", one
-    might only make use of the attributes levels and Mj).
+    might only make use of the attributes levels and M).
 
     """
 
@@ -73,7 +74,7 @@ class BandDefinition(object):
                 4.5 0 2
 
             [trans]
-            Mj =
+            M =
                 0.5 0.5
                 1.5 0.5
                 2.5 0.5
@@ -125,18 +126,18 @@ class BandDefinition(object):
                     qn = (float(entries[0]),int(entries[1]),int(entries[2]))
                     self.levels.append(qn)
 
-        self.Mj = {}
+        self.M = {}
         self.signs = {}
         if (config.has_section("trans")):
 
-            # read band member Mj values for transitions
-            if (config.has_option("trans","Mj")):
-                Mj_string = config["trans"]["Mj"]
-                Mj_string_lines = Mj_string.strip().split("\n")
-                for line in Mj_string_lines:
+            # read band member M values for transitions
+            if (config.has_option("trans","M")):
+                M_string = config["trans"]["M"]
+                M_string_lines = M_string.strip().split("\n")
+                for line in M_string_lines:
                     entries = line.split()
-                    (J, Mj) = (float(entries[0]),float(entries[1]))
-                    self.Mj[J] = Mj
+                    (J, M) = (float(entries[0]),float(entries[1]))
+                    self.M[J] = M
 
             # read band member signs
             if (config.has_option("trans","signs")):
@@ -144,8 +145,8 @@ class BandDefinition(object):
                 signs_string_lines = signs_string.strip().split("\n")
                 for line in signs_string_lines:
                     entries = line.split()
-                    (J,Mj,sigma) = (float(entries[0]),float(entries[1]),float(entries[2]))
-                    self.signs[(J,Mj)] = sigma
+                    (J,M,sigma) = (float(entries[0]),float(entries[1]),float(entries[2]))
+                    self.signs[(J,M)] = sigma
 
         # read fit parameters
         self.J_list_energy = []
@@ -229,7 +230,7 @@ def write_band_table(results,filename,band,fields=None,default=np.nan):
     lower-J state served as a reference state in the MFDn
     calculation).
 
-    Hint: If all the transitions come out as missing, have you set the correct Mj value?
+    Hint: If all the transitions come out as missing, have you set the correct M value?
 
     Args:
         results (MFDnRunData): results object containing the levels
@@ -289,14 +290,14 @@ def write_band_table(results,filename,band,fields=None,default=np.nan):
                 Jf = Ji-dJ
                 qni = qn
                 values = default*np.ones(entries)
-                if ((Jf in band.members) and (Ji in band.Mj)):
-                    # final level and appropriate Mj calculation are defined
-                    Mj = band.Mj[Ji]
+                if ((Jf in band.members) and (Ji in band.M)):
+                    # final level and appropriate M calculation are defined
+                    M = band.M[Ji]
                     qnf = band.members[Jf]
-                    values = results.get_rme(qnf,qni,op,Mj,default=default)
-                    if ((Ji,Mj) in band.signs) and ((Jf,Mj) in band.signs):
-                        # phases are defined for these states at the required Mj
-                        values *= band.signs[(Ji,Mj)]*band.signs[(Jf,Mj)]
+                    values = results.get_rme(qnf,qni,op,M,default=default)
+                    if ((Ji,M) in band.signs) and ((Jf,M) in band.signs):
+                        # phases are defined for these states at the required M
+                        values *= band.signs[(Ji,M)]*band.signs[(Jf,M)]
                 line += (entries*value_format).format(*values)
 
         # finalize line
@@ -335,7 +336,7 @@ def write_network_table(results,filename,band,energy_cutoff=None):
         results (MFDnRunData): results object containing the levels
         filename (str): output filename
         band (BandDefinition): band providing set of initial levels
-           (and Mj values)
+           (and M values)
         energy_cutoff (float,optional): energy cutoff to limit output size
 
     """
@@ -352,7 +353,7 @@ def write_network_table(results,filename,band,energy_cutoff=None):
 
             # test for transition to include in tabulation
             #   -- J-descending
-            #   -- Mj defined for initial level
+            #   -- M defined for initial level
             #   -- transition available in calculations
             (Ji,gexi,ni) = qni
             (Jf,gex,nf) = qnf
@@ -362,8 +363,8 @@ def write_network_table(results,filename,band,energy_cutoff=None):
             
             # MFDn:
             ## op = "E2"
-            ## Mj = band.Mj.get(Ji,None)
-            ## available = results.get_rme(qnf,qni,op,Mj)
+            ## M = band.M.get(Ji,None)
+            ## available = results.get_rme(qnf,qni,op,M)
 
             # retrieve value
             rme = results.get_rme("Qintr",(qnf,qni))
@@ -392,7 +393,7 @@ def write_network_table(results,filename,band,energy_cutoff=None):
             )
 
             # value data
-            ## values = np.abs(results.get_rme(qnf,qni,op,Mj))
+            ## values = np.abs(results.get_rme(qnf,qni,op,M))
             ## entries = 2
             values = (rme,rme)
             line += (2*value_format).format(*values)
@@ -562,9 +563,9 @@ def band_fit_M1(results,band,verbose=False):
         A_trans.append(f_trans(K,J))
         Ji = J
         Jf = J - 1
-        Mj = band.Mj[Ji]
-        values = np.array(results.get_rme(band.members[Jf],band.members[Ji],"M1",Mj))
-        values *= band.signs[(Ji,Mj)]*band.signs[(Jf,Mj)]
+        M = band.M[Ji]
+        values = np.array(results.get_rme(band.members[Jf],band.members[Ji],"M1",M))
+        values *= band.signs[(Ji,M)]*band.signs[(Jf,M)]
         b_trans.append(values)
 
     # combine moment and transition arrays

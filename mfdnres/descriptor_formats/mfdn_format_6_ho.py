@@ -4,8 +4,8 @@
     Mark A. Caprio
     University of Notre Dame
 
-    7/3/15 (mac): Initiated (based on format_5_ho.py).
-    Last modified 7/6/15.
+    07/03/15 (mac): Initiated (based on format_5_ho.py).
+    04/27/18 (mac): Rename parameter Mj to M.
 
 """
 
@@ -36,7 +36,7 @@ def parser(filename):
         r"\-hw(?P<hw>[\d\.]+)"
         r"\-aL(?P<lawson>[\d\.]+)"
         r"\-Nmax(?P<Nmax>\d+)(?P<mixed_parity_flag>x?)(?P<fci_flag>\-fci)?"
-        r"\-Mj(?P<Mj>[\d\.]+)"
+        r"\-Mj(?P<M>[\d\.]+)"
         r"\-lan(?P<lanczos>\d+)"
         # epilog
         r").res"
@@ -51,7 +51,7 @@ def parser(filename):
         "Nmax" : int,
         "mixed_parity_flag" : (lambda s  :  (s=="x")),
         "fci_flag" : (lambda s  :  (s=="-fci")),
-        "Mj" : float,
+        "M" : float,
         "lanczos" : int
         }
 

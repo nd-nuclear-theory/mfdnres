@@ -11,8 +11,8 @@ decimal and as field separator.
     Mark A. Caprio
     University of Notre Dame
 
-    7/26/15 (mac): Initiated (based on format_5_ho.py).
-    Last modified 7/26/15.
+    07/26/15 (mac): Initiated (based on format_5_ho.py).
+    04/27/18 (mac): Rename parameter Mj to M.
 
 """
 
@@ -35,7 +35,7 @@ def parser(filename):
     """
 
     regex = re.compile(
-        ## r"\-Mj(?P<Mj>[\d\.]+)"  # TODO Mj
+        ## r"\-Mj(?P<M>[\d\.]+)"  # TODO Mj
         # prolog
         r"MFDn\.res"
         r"\.(?P<descriptor>"
