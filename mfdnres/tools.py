@@ -12,7 +12,7 @@
     7/14/17 (mac): Add canonicalization tools for (J,g) subspace pairs.
     9/17/17 (mac): Add bool_from_str.
     10/10/17 (mac): Gracefully ignore null key-value lines.
-    
+
 """
 
 import enum
@@ -51,7 +51,7 @@ def parse_line(line,pattern,strict=True):
         print("Expected:",pattern)
         print("Read:",in_str)
         raise(ValueError("unexpected string"))
-    
+
     return match
 
 ################################################################
@@ -60,7 +60,7 @@ def parse_line(line,pattern,strict=True):
 
 #    After tokenization on whitespace, the following special line
 #    types are recognized:
-#    
+#
 #       - []: Empty line -- ignored.
 #       - ["#",...]: Comment line -- ignored.
 #       - ["[section]"]: Section header, where <section> denotes an
@@ -83,7 +83,7 @@ def split_and_prune_lines(lines):
        (iterator of tuple of str): split and filtered lines
 
     """
-    
+
     def is_active_line(tokens):
         """ Identify nonempty, noncomment line.
 
@@ -106,7 +106,7 @@ def extract_section_name(tokens):
     """ Identify header line and (if header line) extract section name.
 
     Helper function for file parsing.
-    
+
     Sections names can contain whitespace, but whitespace will be regularized
     to single spacing, as an artifact of tokenization followed by rejoining.
 
@@ -130,7 +130,7 @@ def extract_section_name(tokens):
         return section_header_regex.match(spliced_line).group(1)  # or just chop off the bracket on each end...
     else:
         return None
-  
+
 def extracted_sections(tokenized_lines):
     """Provide iterator yielding succesive sections from given tokenized lines.
 
@@ -141,7 +141,7 @@ def extracted_sections(tokenized_lines):
         [('A', [['a', 'b'], ['c']]), ('D', []), ('E', [])]
 
     """
-    
+
     # convert lines to iterator
     #
     # This ensures that the lines are represented as an iterator, not
@@ -158,7 +158,7 @@ def extracted_sections(tokenized_lines):
     #
     # Termination is when section_name==None.
     while (section_name):
-        
+
         # accumulate non-header lines
         #
         # Note: We could almost use itertools.takewhile with
@@ -208,7 +208,7 @@ def bool_from_str(s):
 
     return bool(int(s))
 
-    
+
 def singleton_of(conversion):
 
     """Generate conversion function to convert a single-entry list of
@@ -223,7 +223,7 @@ def singleton_of(conversion):
 
     Arguments:
         conversion (function): type converstion function for single entry
-    
+
     Returns:
         (function): function extract such entry
 
@@ -249,7 +249,7 @@ def list_of(conversion):
 
     Arguments:
         conversion (function): type converstion function for single entry
-    
+
     Returns:
         (function): function to convert list of such entries
 
@@ -271,7 +271,7 @@ def tuple_of(conversion):
 
     Arguments:
         conversion (function): type converstion function for single entry
-    
+
     Returns:
         (function): function to convert list of such entries
 
@@ -283,7 +283,7 @@ def tuple_of(conversion):
 
 def extract_key_value_pairs(tokenized_lines,conversions):
     """ Parse tokenized lines as key-value pairs.
-    
+
     A valid key-value line is of the form:
 
        [<key>,"=",<v1>,...]
@@ -310,9 +310,12 @@ def extract_key_value_pairs(tokenized_lines,conversions):
         (dict): key value pairs obtained through given conversions
     """
 
+    # regexp for Fortran array-like output
+    array_regexp = re.compile(r'([a-zA-Z0-9]+)\([0-9\*]\)')
+
     results = dict()
     for tokenized_line in tokenized_lines:
-        
+
         # skip "null" key-value line
         null_line = (len(tokenized_line)==2) and (tokenized_line[1]=="=")
         if (null_line):
@@ -326,10 +329,19 @@ def extract_key_value_pairs(tokenized_lines,conversions):
         # extract line parts
         key = tokenized_line[0]
         value_strings = tokenized_line[2:]
-        
+
         # convert and store value
         if (key in conversions):
             results[key] = conversions[key](value_strings)
+        else:
+            # try to handle array types
+            match = array_regexp.match(key)
+            if match and (match.group(1) in conversions):
+                key = match.group(1)
+                if key in results:
+                    results[key] += [conversions[key](value_strings)]
+                else:
+                    results[key] = [conversions[key](value_strings)]
 
     return results
 
@@ -370,7 +382,7 @@ def split_when(sentinel_condition,data):
     #
     # [...,(False,<group iterator>),(True,<group iterator>,...]
     grouped_data=itertools.groupby(data,key=sentinel_condition)
-    
+
     # generate subsequences
     for (is_sentinel,group_iterator) in grouped_data:
         if (not is_sentinel):
@@ -393,9 +405,9 @@ def write_lines(filename,lines):
     with open(filename, 'wt') as out_file:
         out_file.write(output_string)
 
-def write_table(out_filename,format_descriptor,data,verbose=False):
+def write_table(out_filename,format_descriptor,data,verbose=False,header=""):
     """Write output tabulation to file.
-    
+
     Data may be in any form accessible by double indexing as
     data[row][col], e.g., a simple list of lists or a numpy array.
 
@@ -425,7 +437,7 @@ def value_range(x1,x2,dx,epsilon=0.00001):
     contrast to Python's range, which is limited to integers and has an "<" upper bound.
 
     Borrowed from mcscript package.
-    
+
     Limitations: Currently assumes dx is positive.  Upper cutoff is
     slightly fuzzy due to use of epsilon in floating point comparison.
 
@@ -528,25 +540,25 @@ def canonicalize_Jg_pair(Jg_pair,rme_convention):
 ##     phase/normalization factor from canonicalization, assuming
 ##     operator has spherical-harmonic-like conjugation properties (M1,
 ##     E2, etc.).
-## 
+##
 ##     See canonicalization_prescription for phase conventions.
-## 
+##
 ##     Arguments:
 ##        Jgn_pair (tuple): ((J_bra,g_bra,n_bra),(J_ket,g_ket,n_ket))
 ##        rme_convention (RMEPhaseConvention): phase and normalization convention on RMEs
-## 
+##
 ##     Returns:
 ##         phase (float): canonicalization phase
 ##         (Jgn_bra',Jgn_ket') (tuple): canonicalized (J,g,n) pair
-## 
+##
 ##     """
-## 
+##
 ##     (Jgn_bra,Jgn_ket) = Jgn_pair
 ##     (J_bra,g_bra,_)=Jg_bra
 ##     (J_ket,g_ket_)=Jg_ket
 ##     Jg_bra = (J_bra,g_bra)
 ##     Jg_ket = (J_ket,g_ket)
-## 
+##
 ##     if (Jg_bra <= Jg_ket):
 ##         # canonical
 ##         Jgn_pair_canonical = (Jgn_bra,Jgn_ket)
@@ -559,7 +571,7 @@ def canonicalize_Jg_pair(Jg_pair,rme_convention):
 ##         canonicalization_factor = (-1)**(J_ket-J_bra)
 ##         if (rme_convention==RMEConvention.kGroupTheory):
 ##             canonicalization_factor *= math.sqrt((2*J_bra+1)/(2*J_ket+1))
-## 
+##
 ##     return (Jgn_pair_canonical,flipped,canonicalization_factor)
 
 
@@ -591,7 +603,7 @@ if (__name__=="__main__"):
     tokenized_lines = split_and_prune_lines(test_lines)
     results = extract_key_value_pairs(tokenized_lines,conversions)
     print("Key-value pairs:",results)
-    
+
     # test key-value conversions again with "bad" data
     if (False):
         test_lines = ["a = 1 2","b = 1 2 3","c = 42"]
@@ -616,4 +628,3 @@ if (__name__=="__main__"):
     Jg_pair = ((0,0),(2,0))
     (Jg_pair_canonical,flipped,canonicalization_factor) = canonicalize_Jg_pair(Jg_pair,RMEConvention.kGroupTheory)
     print("{} -> {} flipped {} canonicalization_factor {}".format(Jg_pair,Jg_pair_canonical,flipped,canonicalization_factor))
-

@@ -55,6 +55,7 @@ def parser(filename):
     conversions = {
         "Z" : int,
         "N" : int,
+        "interaction" : str,
         "hw" : float,
         "Nmax" : int,
         ##"Mj" : float,

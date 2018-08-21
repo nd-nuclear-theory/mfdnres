@@ -115,6 +115,7 @@ def parse_params(self,tokenized_lines):
         "fmass" : tools.singleton_of(float),
         # Observables
         "numTBops" : tools.singleton_of(int),
+        "TBMEfile" : tools.singleton_of(str),
         # Calculation
         "hw" : tools.singleton_of(float)
     }
@@ -141,6 +142,9 @@ def parse_params(self,tokenized_lines):
     if ("parity" in key_value_dict):
         global k_parameter_g
         k_parameter_g = (1-key_value_dict["parity"])//2
+
+    if ("TBMEfile" in key_value_dict):
+        key_value_dict["tbo_names"] = [filename.replace('.bin', '').replace('tbme-', '') for filename in key_value_dict["TBMEfile"]]
 
     # update to params dictionary
     self.params.update(key_value_dict)
@@ -240,12 +244,11 @@ def parse_radii(self,tokenized_lines):
     parse_generic_static_properties(self,tokenized_lines,self.two_body_static_observables,property_names)
 
 def parse_other_tbo(self,tokenized_lines):
-    """Parse other two-body observables.  (WIP)
+    """Parse other two-body observables.
     """
-    for tokenized_line in tokenized_lines:
-        (qn,data) = split_mfdn_results_line(tokenized_line)
-        # TODO
-        pass
+    property_names = self.params["tbo_names"][1:]
+    parse_generic_static_properties(self,tokenized_lines,self.two_body_static_observables,property_names)
+
 
 section_handlers = {
     # [CODE]

@@ -126,7 +126,7 @@ class MFDnResultsData(results_data.ResultsData):
         # extract labels
         (J,gex,n) = qn
 
-        rms_radius = self.two_body_static_observables[radius_type][qn]
+        rms_radius = self.two_body_static_observables.get(radius_type, {}).get(qn, default)
 
         return rms_radius
 

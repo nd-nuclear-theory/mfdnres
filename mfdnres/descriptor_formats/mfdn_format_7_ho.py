@@ -39,11 +39,13 @@ def parser(filename):
         r"\-(?P<interaction>[^\-]+)\-coul(?P<coulomb>\d)"
         r"\-hw(?P<hw>[\d\.]+)"
         r"\-a_cm(?P<lawson>[\d\.]+)"
-        r"\-Nmax(?P<Nmax>\d+)(?P<mixed_parity_flag>x)?(?P<fci_flag>\-fci)?"
+        r"\-Nmax(?P<Nmax>\d+)"
+        r"(\-Ncutob(?P<Ncut>\d+))?"
+        r"(?P<mixed_parity_flag>x)?(?P<fci_flag>\-fci)?"
         r"\-Mj(?P<M>[\d\.]+)"
         r"\-lan(?P<lanczos>\d+)"
         r"\-tol(?P<tolerance>\d+\.\d+[eE][+-]\d+)"
-        r"((?P<natural_orbital_flag>\-natorb)\-no(?P<natural_orbital_iteration>\d+))?"
+        r"((?P<natural_orbital_flag>\-natorb)?\-no(?P<natural_orbital_iteration>\d+))?"
         # epilog
         r").res"
     )
@@ -51,10 +53,12 @@ def parser(filename):
     conversions = {
         "Z" : int,
         "N" : int,
+        "interaction" : str,
         "coulomb" : int,
         "hw" : float,
         "lawson" : float,
         "Nmax" : int,
+        "Ncut" : (lambda i  :  int(i) if (i is not None) else None),
         "mixed_parity_flag" : (lambda s  :  (s=="x")),
         "fci_flag" : (lambda s  :  (s=="-fci")),
         "M" : float,

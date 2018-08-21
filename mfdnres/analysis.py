@@ -11,6 +11,7 @@
       arrays of data rather than writing to file.
     7/11/17 (mac): Pull out extrapolation function to remove scipy dependence.
     7/30/17 (mac): Pull out band analysis functions to band.py.
+    6/01/18 (pjf): Add reference state option for energy table generation.
 """
 
 import math
@@ -198,7 +199,7 @@ def sorted_mesh_data(
 # tabulation functions -- observable vs. parameters
 ################################################################
 
-def make_energy_table(mesh_data,key_descriptor,qn):
+def make_energy_table(mesh_data,key_descriptor,qn,qn_ref=None):
 
     """Generate energy tabulation.
 
@@ -211,6 +212,10 @@ def make_energy_table(mesh_data,key_descriptor,qn):
     consolidated to make the key values unique, or else the table will
     contain duplicate entries.
 
+    A set of reference quantum numbers may optionally be provided; the
+    table will contain the energy difference between the state qn and
+    the state qn_ref.
+
     Data format:
         param1 param2 ... E
 
@@ -218,6 +223,8 @@ def make_energy_table(mesh_data,key_descriptor,qn):
         mesh_data (list of ResultsData): data for mesh points
         key_descriptor (tuple of tuple): dtype descriptor for key
         qn (tuple): quantum numbers (J,g,n) of level to retrieve
+        qn_ref (tuple, optional): quantum numbers (J,g,n) of reference
+            energy level
 
     Returns:
        (array): data table
@@ -226,10 +233,15 @@ def make_energy_table(mesh_data,key_descriptor,qn):
 
     # tabulate values
     key_function = make_key_function(key_descriptor)
-    table_data = [
-        key_function(mesh_point) + (mesh_point.get_energy(qn),)
-        for mesh_point in mesh_data
-    ]
+    table_data = []
+    for mesh_point in mesh_data:
+        # get reference energy
+        ref_energy = 0.
+        if qn_ref:
+            ref_energy = mesh_point.get_energy(qn_ref)
+        table_data += [
+            key_function(mesh_point) + (mesh_point.get_energy(qn)-ref_energy,)
+        ]
 
     # convert to structured array
     table = np.array(
