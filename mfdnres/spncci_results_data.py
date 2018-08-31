@@ -44,6 +44,8 @@ class SpNCCIResultsData(results_data.ResultsData):
         baby_spncci_listing (list of list):
         decompositions (dictionary):
         observables (dictionary):
+          (observable,(Jg_bra,Jg_ket)) -> matrix
+          observable (str): observable identifier
 
     Accessors:
 
