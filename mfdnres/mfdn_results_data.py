@@ -9,6 +9,7 @@
 
     10/6/17 (mac): Extract MFDnResultsData from res.py.
     10/23/17 (mac): Add get_radius accessor.
+    09/06/18 (pjf): Add native_transition_properties attribute.
 """
 
 import math
@@ -78,6 +79,10 @@ class MFDnResultsData(results_data.ResultsData):
 
                     "TBMEfile(2) = tbme-Trel.bin" -> observable name "Trel"
 
+        native_transition_properties (dict): MFDn-native transitions
+
+            observable_name -> (qnf,qni) -> value
+
 
     """
 
@@ -100,6 +105,7 @@ class MFDnResultsData(results_data.ResultsData):
         self.decompositions = {}
         self.native_static_properties = {}
         self.two_body_static_observables = {}
+        self.native_transition_properties = {}
 
 
     ########################################

@@ -7,7 +7,8 @@
     Mark A. Caprio
     University of Notre Dame
 
-    10/6/17 (mac): Created, from res_parser_spncci.py
+    10/06/17 (mac): Created, from res_parser_spncci.py
+    09/06/18 (pjf): Added initial built-in transition extraction.
 """
 
 import itertools
@@ -248,6 +249,33 @@ def parse_other_tbo(self,tokenized_lines):
     property_names = self.params["tbo_names"][1:]
     parse_generic_static_properties(self,tokenized_lines,self.two_body_static_observables,property_names)
 
+def parse_transitions(self, tokenized_lines):
+    """Parse native transition output.
+    """
+    transition_classes = {
+        "GT": ["GTi(Z+1,N-1)", "GTi(Z-1,N+1)", "GTf(Z+1,N-1)", "GTf(Z-1,N+1)"],
+        "M1": ["M1", "Dl(p)", "Dl(n)", "Ds(p)", "Ds(n)"],
+        "E2": ["E2(p)", "E2(n)"],
+    }
+
+    for tokenized_line in tokenized_lines:
+        qnf = (float(tokenized_line[1]), k_parameter_g, int(tokenized_line[2]))
+        transition_class = tokenized_line[3]
+        qni = (float(tokenized_line[5]), k_parameter_g, int(tokenized_line[6]))
+        data_iterable = list(map(float, tokenized_line[7:]))
+        data = np.array(data_iterable, dtype=float)
+
+        # only store canonical pair
+        (Jgn_pair_canonical, flipped, canonicalization_factor) = tools.canonicalize_Jgn_pair(
+            (qnf, qni), tools.RMEConvention.kAngularMomentum
+        )
+
+        # break out each component as a separate transition type
+        transition_types = transition_classes[transition_class]
+        for (transition_type, value) in zip(transition_types, data):
+            transition_dict = self.native_transition_properties.setdefault(transition_type, dict())
+            transition_dict[Jgn_pair_canonical] = canonicalization_factor*value
+
 
 section_handlers = {
     # [CODE]
@@ -264,7 +292,8 @@ section_handlers = {
     "E2 moments" : parse_E2_moments,
     "Angular momenta" : parse_angular_momenta,
     "Relative radii" : parse_radii,
-    "Other 2-body observables" : parse_other_tbo
+    "Other 2-body observables" : parse_other_tbo,
+    "Transitions": parse_transitions,
 
 }
 

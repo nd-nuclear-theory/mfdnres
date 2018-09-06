@@ -535,44 +535,43 @@ def canonicalize_Jg_pair(Jg_pair,rme_convention):
 
     return (Jg_pair_canonical,flipped,canonicalization_factor)
 
-## def canonicalize_Jgn_pair(Jgn_pair,rme_convention):
-##     """Put state labels in canonical order, and provide
-##     phase/normalization factor from canonicalization, assuming
-##     operator has spherical-harmonic-like conjugation properties (M1,
-##     E2, etc.).
-##
-##     See canonicalization_prescription for phase conventions.
-##
-##     Arguments:
-##        Jgn_pair (tuple): ((J_bra,g_bra,n_bra),(J_ket,g_ket,n_ket))
-##        rme_convention (RMEPhaseConvention): phase and normalization convention on RMEs
-##
-##     Returns:
-##         phase (float): canonicalization phase
-##         (Jgn_bra',Jgn_ket') (tuple): canonicalized (J,g,n) pair
-##
-##     """
-##
-##     (Jgn_bra,Jgn_ket) = Jgn_pair
-##     (J_bra,g_bra,_)=Jg_bra
-##     (J_ket,g_ket_)=Jg_ket
-##     Jg_bra = (J_bra,g_bra)
-##     Jg_ket = (J_ket,g_ket)
-##
-##     if (Jg_bra <= Jg_ket):
-##         # canonical
-##         Jgn_pair_canonical = (Jgn_bra,Jgn_ket)
-##         flipped = False
-##         canonicalization_factor = 1.
-##     else:
-##         # non-canonical
-##         Jgn_pair_canonical = (Jgn_ket,Jgn_bra)
-##         flipped = True
-##         canonicalization_factor = (-1)**(J_ket-J_bra)
-##         if (rme_convention==RMEConvention.kGroupTheory):
-##             canonicalization_factor *= math.sqrt((2*J_bra+1)/(2*J_ket+1))
-##
-##     return (Jgn_pair_canonical,flipped,canonicalization_factor)
+
+def canonicalize_Jgn_pair(Jgn_pair,rme_convention):
+    """Put state labels in canonical order, and provide
+    phase/normalization factor from canonicalization, assuming
+    operator has spherical-harmonic-like conjugation properties (M1,
+    E2, etc.).
+
+    See canonicalization_prescription for phase conventions.
+
+    Arguments:
+       Jgn_pair (tuple): ((J_bra,g_bra,n_bra),(J_ket,g_ket,n_ket))
+       rme_convention (RMEPhaseConvention): phase and normalization convention on RMEs
+
+    Returns:
+        phase (float): canonicalization phase
+        (Jgn_bra',Jgn_ket') (tuple): canonicalized (J,g,n) pair
+
+    """
+
+    (Jgn_bra, Jgn_ket) = Jgn_pair
+    (J_bra, g_bra, _) = Jgn_bra
+    (J_ket, g_ket, _) = Jgn_ket
+    Jg_bra = (J_bra, g_bra)
+    Jg_ket = (J_ket, g_ket)
+
+    (flipped, canonicalization_factor) = canonicalization_prescription_Jg(
+        (Jg_bra, Jg_ket), rme_convention
+        )
+
+    if (flipped):
+        # non-canonical
+        Jgn_pair_canonical = tuple(reversed(Jgn_pair))
+    else:
+        # canonical
+        Jgn_pair_canonical = Jgn_pair
+
+    return (Jgn_pair_canonical, flipped, canonicalization_factor)
 
 
 ################################################################
