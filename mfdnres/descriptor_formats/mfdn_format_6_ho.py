@@ -6,6 +6,7 @@
 
     07/03/15 (mac): Initiated (based on format_5_ho.py).
     04/27/18 (mac): Rename parameter Mj to M.
+    09/06/18 (pjf): Allow hyphens in interaction name.
 
 """
 
@@ -32,7 +33,7 @@ def parser(filename):
         r"\-(?P<descriptor>"
         # descriptor conents
         r"Z(?P<Z>\d+)\-N(?P<N>\d+)"
-        r"\-(?P<interaction>[^\-]+)\-(?P<coulomb>\d)"
+        r"\-(?P<interaction>.+)\-(?P<coulomb>\d)"
         r"\-hw(?P<hw>[\d\.]+)"
         r"\-aL(?P<lawson>[\d\.]+)"
         r"\-Nmax(?P<Nmax>\d+)(?P<mixed_parity_flag>x?)(?P<fci_flag>\-fci)?"

@@ -4,7 +4,8 @@
     Patrick J. Fasano
     University of Notre Dame
 
-    3/18/18 (pjf): Initiated (based on mfdn_format_7_ho.py).
+    03/18/18 (pjf): Initiated (based on mfdn_format_7_ho.py).
+    09/06/18 (pjf): Allow hyphens in interaction name.
 
 """
 
@@ -40,7 +41,7 @@ def parser(filename):
         r"\-(?P<descriptor>"
         # descriptor contents
         r"Z(?P<Z>\d+)\-N(?P<N>\d+)"
-        r"\-(?P<interaction>[^\-]+)\-coul(?P<coulomb>\d)"
+        r"\-(?P<interaction>.+)\-coul(?P<coulomb>\d)"
         r"\-hw(?P<hw>[\d\.]+)"
         r"\-a_cm(?P<lawson>[\d\.]+)"
         r"\-an(?P<n_coeff>\d+\.\d{3})"

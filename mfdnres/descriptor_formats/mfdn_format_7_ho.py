@@ -10,6 +10,7 @@
         ("mfdn", "mfdn15", etc.).
     04/27/18 (mac): Rename parameter Mj to M.
     09/06/18 (pjf): Allow negative M.
+    09/06/18 (pjf): Allow hyphens in interaction name.
 
 """
 
@@ -37,7 +38,7 @@ def parser(filename):
         r"\-(?P<descriptor>"
         # descriptor contents
         r"Z(?P<Z>\d+)\-N(?P<N>\d+)"
-        r"\-(?P<interaction>[^\-]+)\-coul(?P<coulomb>\d)"
+        r"\-(?P<interaction>.+)\-coul(?P<coulomb>\d)"
         r"\-hw(?P<hw>[\d\.]+)"
         r"\-a_cm(?P<lawson>[\d\.]+)"
         r"\-Nmax(?P<Nmax>\d+)"
