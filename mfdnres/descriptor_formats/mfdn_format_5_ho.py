@@ -4,10 +4,10 @@
     Mark A. Caprio
     University of Notre Dame
 
-    6/2/15 (mac): Initiated (as mfdn_descriptor.py).
-    6/5/15 (mac): Restructure as subpackage.
-    7/3/15 (mac): Rewrite as parser function.  Add fields fci_flag and Mj.
-    Last modified 7/3/15.
+    06/02/15 (mac): Initiated (as mfdn_descriptor.py).
+    06/05/15 (mac): Restructure as subpackage.
+    07/03/15 (mac): Rewrite as parser function.  Add fields fci_flag and Mj.
+    04/27/18 (mac): Rename parameter Mj to M.
 
 """
 
@@ -69,8 +69,8 @@ def parser(filename):
         conversion = conversions[key]
         info[key] = conversion(info[key])
 
-    # replace MM with Mj
-    info["Mj"] = info["MM"]/2
+    # replace MM with M
+    info["M"] = info["MM"]/2
     del info["MM"]
 
     return info

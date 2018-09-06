@@ -8,6 +8,7 @@
     University of Notre Dame
 
     10/06/17 (mac): Created, from res_parser_spncci.py
+    04/27/18 (mac): Rename parameter Mj to M.
     09/06/18 (pjf): Added initial built-in transition extraction.
 """
 
@@ -79,7 +80,7 @@ def parse_params(self,tokenized_lines):
 
       - Add derived keys to dictionary:
 
-        "Mj", "hw", "nuclide", "A"
+        "M", "hw", "nuclide", "A"
 
       - Store global state based on key:
 
@@ -100,7 +101,7 @@ def parse_params(self,tokenized_lines):
         # Basis
         "Nprotons" : tools.singleton_of(int),
         "Nneutrons" : tools.singleton_of(int),
-        "TwoMj" : tools.singleton_of(int),
+        "TwoM" : tools.singleton_of(int),
         "parity" : tools.singleton_of(int),
         "Nmin" : tools.singleton_of(int),
         "Nmax" : tools.singleton_of(int),
@@ -125,9 +126,9 @@ def parse_params(self,tokenized_lines):
 
     # do special handling of keys
 
-    # augment with float Mj (from TwoMj)
-    if ("TwoMj" in key_value_dict):
-        key_value_dict["Mj"] = key_value_dict["TwoMj"]/2
+    # augment with float M (from TwoM)
+    if ("TwoM" in key_value_dict):
+        key_value_dict["M"] = key_value_dict["TwoM"]/2
 
     # augment with alias hw (from hbomeg)
     if ("hbomeg" in key_value_dict):

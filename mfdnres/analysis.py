@@ -12,6 +12,8 @@
     7/11/17 (mac): Pull out extrapolation function to remove scipy dependence.
     7/30/17 (mac): Pull out band analysis functions to band.py.
     6/01/18 (pjf): Add reference state option for energy table generation.
+    9/25/18 (mac): Remove deprecated write_xxx_table functions.  Update dosctrings.
+
 """
 
 import math
@@ -280,9 +282,12 @@ def make_radius_table(mesh_data,key_descriptor,radius_type,qn):
     return table
 
 def make_rme_table(mesh_data,key_descriptor,observable,qnf,qni):
-    """ Generate RME tabulation.
+    """ Generate reduced matrix element (RME) tabulation.
 
     Data format:
+        <key> RME
+    where actual label columns depend up on key_descriptor, e.g.:
+        Nmax hw RME
         Nsigmamax Nmax hw RME
 
     Arguments:
@@ -310,9 +315,12 @@ def make_rme_table(mesh_data,key_descriptor,observable,qnf,qni):
     return table
 
 def make_rtp_table(mesh_data,key_descriptor,observable,qnf,qni):
-    """ Generate RTP tabulation.
+    """ Generate reduced transition probability (RTP) tabulation.
 
     Data format:
+        <key> RTP
+    where actual label columns depend up on key_descriptor, e.g.:
+        Nmax hw RTP
         Nsigmamax Nmax hw RTP
 
     Arguments:
@@ -388,7 +396,6 @@ def make_level_table(mesh_point,levels=None,energy_cutoff=None):
      )
     return table
 
-
 ################################################################
 # calculate effective angular momentum
 ################################################################
@@ -405,159 +412,6 @@ def effective_am(J_sqr):
 
     J = (math.sqrt(4*J_sqr+1)-1)/2
     return J
-
-
-################################################################
-################################################################
-# LEGACY output table writing functions
-################################################################
-################################################################
-#
-# The following LEGACY functions actual *write* tables.  Instead, new
-# functions should just *return* tables.
-#
-# They also include MFDn-specific assumptions, such as the presence of
-# the isospin label, and use the deprecated get_property accessor.
-
-################################################################
-# LEGACY -- output tabulation: basic levels
-################################################################
-
-def write_level_table(results,filename,levels=None):
-    """Writes basic level data.
-
-        "seq"=0 J gex n T Eabs
-
-    The field seq is included for historical reasons but written as a
-    dummy zero.
-
-    Args:
-        results (MFDnRunData): results object containing the levels
-        filename (str): output filename
-        levels (list of tuples): levels to include or None for all (default: None)
-
-    """
-
-    # determine list of levels to use
-    if (levels is None):
-        levels = results.levels
-
-    # assemble lines
-    lines = []
-    for qn in levels:
-        line = (
-            "{:1d} {:6.3f} {:1d} {:2d} {:6.3f} {:8.3f}"
-            "\n"
-        ).format(
-            0,
-            results.get_property(qn,"J"),
-            results.get_property(qn,"g"),
-            results.get_property(qn,"n"),
-            results.get_property(qn,"T"),
-            results.get_energy(qn)
-        )
-        lines.append(line)
-
-    # write to file
-    with open(filename,"wt") as fout:
-        fout.writelines(lines)
-
-################################################################
-# LEGACY -- output tabulation: radii
-################################################################
-
-def write_radii_table(results,filename,levels=None):
-    """ LEGACY -- Writes radius data.
-
-        "seq"=0 J gex n T rp rn r
-
-    The field seq is included for historical reasons but written as a
-    dummy zero.
-
-    Args:
-        results (MFDnRunData): results object containing the levels
-        filename (str): output filename
-        levels (list of tuples): levels to include or None for all (default: None)
-
-    """
-
-    # determine list of levels to use
-    if (levels is None):
-        levels = results.levels
-
-    # assemble lines
-    lines = []
-    for qn in levels:
-        line = (
-            "{:1d} {:6.3f} {:1d} {:2d} {:6.3f} {:8.3f} {:8.3f} {:8.3f}"
-            "\n"
-        ).format(
-            0,
-            results.get_property(qn,"J"),
-            results.get_property(qn,"g"),
-            results.get_property(qn,"n"),
-            results.get_property(qn,"T"),
-            results.get_tbo(qn,"rp"),
-            results.get_tbo(qn,"rn"),
-            results.get_tbo(qn,"r")
-        )
-        lines.append(line)
-
-    # write to file
-    with open(filename,"wt") as fout:
-        fout.writelines(lines)
-
-################################################################
-# LEGACY -- output tabulation: angular momentum
-################################################################
-
-def write_level_am_table(results,filename,levels=None,default=np.nan):
-    """LEGACY  -- Writes basic level data.
-
-        seq J gex n T Eabs
-
-    The field seq is included for historical reasons but written as a
-    dummy zero.
-
-    Args:
-        results (MFDnRunData): results object containing the levels
-        filename (str): output filename
-        levels (list of tuples): levels to include or None for all (default: None)
-        default (float): value to use for missing numerical entries (default: np.nan)
-
-    """
-
-    # determine list of levels to use
-    if (levels is None):
-        levels = results.levels
-
-    # assemble lines
-    lines = []
-    for qn in levels:
-        # basic properties
-        line = ("{:1d} {:6.3f} {:1d} {:2d} {:6.3f} {:8.3f}").format(
-            0,
-            results.get_property(qn,"J"),
-            results.get_property(qn,"g"),
-            results.get_property(qn,"n"),
-            results.get_property(qn,"T"),
-            results.get_energy(qn)
-        )
-
-        # angular momenta
-        tbo = results.tbo[qn]
-        value_sqr_list = [tbo.get("L2",default),tbo.get("Sp2",default),tbo.get("Sn2",default),tbo.get("S2",default)]
-        value_list = list(map(effective_am,value_sqr_list))
-        value_format = " {:6.3f}"
-        line += (4*value_format).format(*value_list)
-
-        # finalize line
-        line += "\n"
-        lines.append(line)
-
-    # write to file
-    with open(filename,"wt") as fout:
-        fout.writelines(lines)
 
 if (__name__ == "__main__"):
     pass

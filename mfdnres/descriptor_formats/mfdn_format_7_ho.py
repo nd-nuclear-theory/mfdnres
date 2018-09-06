@@ -5,9 +5,10 @@
     Patrick J. Fasano
     University of Notre Dame
 
-    2/6/17 (pjf): Initiated (based on format_6_ho.py).
+    02/06/17 (pjf): Initiated (based on format_6_ho.py).
     10/10/17 (mac): Generalize filename format to allow for variable code name
         ("mfdn", "mfdn15", etc.).
+    04/27/18 (mac): Rename parameter Mj to M.
     09/06/18 (pjf): Allow negative M.
 
 """
@@ -42,7 +43,7 @@ def parser(filename):
         r"\-Nmax(?P<Nmax>\d+)"
         r"(\-Ncutob(?P<Ncut>\d+))?"
         r"(?P<mixed_parity_flag>x)?(?P<fci_flag>\-fci)?"
-        r"\-Mj(?P<Mj>-?[\d\.]+)"
+        r"\-Mj(?P<M>-?[\d\.]+)"
         r"\-lan(?P<lanczos>\d+)"
         r"\-tol(?P<tolerance>\d+\.\d+[eE][+-]\d+)"
         r"((?P<natural_orbital_flag>\-natorb)?\-no(?P<natural_orbital_iteration>\d+))?"
@@ -61,7 +62,7 @@ def parser(filename):
         "Ncut" : (lambda i  :  int(i) if (i is not None) else None),
         "mixed_parity_flag" : (lambda s  :  (s=="x")),
         "fci_flag" : (lambda s  :  (s=="-fci")),
-        "Mj" : float,
+        "M" : float,
         "lanczos" : int,
         "natural_orbital_flag" : (lambda s  :  (s=="-natorb")),
         "natural_orbital_iteration" : (lambda i  :  int(i) if (i is not None) else None)
