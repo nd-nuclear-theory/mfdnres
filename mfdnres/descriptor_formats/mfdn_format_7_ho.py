@@ -8,6 +8,7 @@
     2/6/17 (pjf): Initiated (based on format_6_ho.py).
     10/10/17 (mac): Generalize filename format to allow for variable code name
         ("mfdn", "mfdn15", etc.).
+    09/06/18 (pjf): Allow negative M.
 
 """
 
@@ -41,7 +42,7 @@ def parser(filename):
         r"\-Nmax(?P<Nmax>\d+)"
         r"(\-Ncutob(?P<Ncut>\d+))?"
         r"(?P<mixed_parity_flag>x)?(?P<fci_flag>\-fci)?"
-        r"\-Mj(?P<Mj>[\d\.]+)"
+        r"\-Mj(?P<Mj>-?[\d\.]+)"
         r"\-lan(?P<lanczos>\d+)"
         r"\-tol(?P<tolerance>\d+\.\d+[eE][+-]\d+)"
         r"((?P<natural_orbital_flag>\-natorb)?\-no(?P<natural_orbital_iteration>\d+))?"
