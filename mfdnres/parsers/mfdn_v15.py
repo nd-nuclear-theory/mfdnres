@@ -255,8 +255,8 @@ def parse_transitions(self, tokenized_lines):
     """
     transition_classes = {
         "GT": ["GTi(Z+1,N-1)", "GTi(Z-1,N+1)", "GTf(Z+1,N-1)", "GTf(Z-1,N+1)"],
-        "M1": ["M1", "Dl(p)", "Dl(n)", "Ds(p)", "Ds(n)"],
-        "E2": ["E2(p)", "E2(n)"],
+        "M1": ["M1", "Dlp", "Dln", "Dsp", "Dsn"],
+        "E2": ["E2p", "E2n"],
     }
 
     for tokenized_line in tokenized_lines:

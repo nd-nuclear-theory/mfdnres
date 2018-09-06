@@ -9,7 +9,9 @@
 
     10/6/17 (mac): Extract MFDnResultsData from res.py.
     10/23/17 (mac): Add get_radius accessor.
-    09/06/18 (pjf): Add native_transition_properties attribute.
+    09/06/18 (pjf):
+        + Add native_transition_properties attribute.
+        + Implement get_rme() and get_rtp().
 """
 
 import math
@@ -19,6 +21,7 @@ import numpy as np
 from . import (
     am,
     results_data,
+    tools,
     )
 
 
@@ -145,16 +148,21 @@ class MFDnResultsData(results_data.ResultsData):
 
         """
 
+        # canonicalize labels
+        (qn_pair_canonical, flipped, canonicalization_factor) = tools.canonicalize_Jgn_pair(
+            qn_pair, tools.RMEConvention.kAngularMomentum
+        )
+
         # extract labels
-        (qn_bra,qn_ket) = qn_pair
+        (qn_bra,qn_ket) = qn_pair_canonical
         (J_bra,g_bra,n_bra) = qn_bra
         (J_ket,g_ket,n_ket) = qn_ket
 
         # retrieve underlying rme
         try:
-            # TODO write actual retrieval code
-            rme = 0.
-        except:
+            rme = (canonicalization_factor
+                * self.native_transition_properties[observable][qn_pair_canonical])
+        except KeyError:
             return default
 
         return rme
@@ -171,14 +179,14 @@ class MFDnResultsData(results_data.ResultsData):
         # retrieve underlying rme
         try:
             rme = self.get_rme(observable,qn_pair)
-        except:
+        except KeyError:
             return default
 
         # derive final value from rme
         rtp = 1/(2*J_ket+1)*rme**2
 
         return rtp
- 
+
 #################################################
 # test code
 #################################################
