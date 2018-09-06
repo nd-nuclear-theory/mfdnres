@@ -348,7 +348,7 @@ def write_network_table(results,filename,band,energy_cutoff=None):
     for qni in band.levels:
 
         # loop over all final states in results
-        for qnf in results.get_levels():
+        for qnf in results.levels:
 
             # test for transition to include in tabulation
             #   -- J-descending
@@ -359,7 +359,7 @@ def write_network_table(results,filename,band,energy_cutoff=None):
             allowed_sense = (Jf < Ji)
             if (not allowed_sense):
                 continue
-            
+
             # MFDn:
             ## op = "E2"
             ## Mj = band.Mj.get(Ji,None)

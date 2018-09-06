@@ -26,7 +26,7 @@ def test_read_results_v14b05():
     results = results_list[0]
     print(filename)
     print("Parameters:",results.params)
-    print("Levels:",results.get_levels())
+    print("Levels:",results.levels)
     print(results.states[(1/2,1,1)].properties)
     print(results.states[(1/2,1,1)].obo)
     ## print(results.transitions)
@@ -54,7 +54,7 @@ def test_read_results_v14b06():
     results = results_list[0]
     print(filename)
     print("Parameters:",results.params)
-    print("Levels:",results.get_levels())
+    print("Levels:",results.levels)
     print(results.states[(1/2,0,1)].properties)
     print(results.states[(1/2,0,1)].obo)
 
@@ -68,7 +68,7 @@ def test_read_results_v14b06():
     results = results_list[0]
     print(filename)
     print("Parameters:",results.params)
-    print("Levels:",results.get_levels())
+    print("Levels:",results.levels)
     print(results.states[(4.0,1,1)].properties)
     print(results.states[(4.0,1,1)].obo)
     ## print(results.transitions)
@@ -81,7 +81,7 @@ def test_read_results_v14b06():
     results = results_list[0]
     print(filename)
     print("Parameters:",results.params)
-    print("Levels:",results.get_levels())
+    print("Levels:",results.levels)
     print(results.states[(1/2,0,1)].properties)
     print(results.states[(1/2,0,1)].obo)
     ## print(results.transitions)
@@ -100,7 +100,7 @@ def test_read_results_v15():
     results = results_list[0]
     print(filename)
     print("Parameters:",results.params)
-    print("Levels:",results.get_levels())
+    print("Levels:",results.levels)
     print("Energies:",results.energies)
     print("Isospins:",results.native_static_properties["T"])
     print("Decompositions (Nex):",results.decompositions["Nex"])
@@ -121,7 +121,7 @@ def test_read_results_spncci():
 
     print(filename)
     print("Parameters:",results.params)
-    print("Levels:",results.get_levels())
+    print("Levels:",results.levels)
     ##print("states {}, moments {}, transitions {}".format(len(results.states),len(results.moments),len(results.transitions)))
 
 

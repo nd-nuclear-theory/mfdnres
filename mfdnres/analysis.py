@@ -372,7 +372,7 @@ def make_level_table(mesh_point,levels=None,energy_cutoff=None):
 
     # determine list of levels to use
     if (levels is None):
-        levels = mesh_point.get_levels()
+        levels = mesh_point.levels
 
     # tabulate values
     table_data = [
@@ -440,7 +440,7 @@ def write_level_table(results,filename,levels=None):
 
     # determine list of levels to use
     if (levels is None):
-        levels = results.get_levels()
+        levels = results.levels
 
     # assemble lines
     lines = []
@@ -483,7 +483,7 @@ def write_radii_table(results,filename,levels=None):
 
     # determine list of levels to use
     if (levels is None):
-        levels = results.get_levels()
+        levels = results.levels
 
     # assemble lines
     lines = []
@@ -529,7 +529,7 @@ def write_level_am_table(results,filename,levels=None,default=np.nan):
 
     # determine list of levels to use
     if (levels is None):
-        levels = results.get_levels()
+        levels = results.levels
 
     # assemble lines
     lines = []

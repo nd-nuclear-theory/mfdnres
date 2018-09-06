@@ -8,6 +8,7 @@
     University of Notre Dame
 
     10/10/17 (mac): Extracted from res.py.
+    09/06/18 (pjf): Replace get_levels() with levels property.
 """
 
 import numpy as np
@@ -46,6 +47,11 @@ class ResultsData (object):
 
         filename (str): Source results filename for this mesh point.
 
+    Properties:
+
+        levels (dict): list of quantum number tuples (J,g,n)
+
+
     Accessors:
 
         TODO
@@ -55,7 +61,7 @@ class ResultsData (object):
     ########################################
     # Initializer
     ########################################
-    def __init__ (self):
+    def __init__(self):
         """
         """
         self.params = {}
@@ -65,9 +71,10 @@ class ResultsData (object):
 
     ########################################
     # Accessors
-    ########################################        
-    def get_levels(self):
-        """ Retrieve list of quantum number tuples (J,g,n) for levels, sorted by increasing energy eigenvalue.
+    ########################################
+    @property
+    def levels(self):
+        """List of quantum number tuples (J,g,n) for levels, sorted by increasing energy eigenvalue.
 
         Note some parsers (legacy) may store (J,gex,n), in which case that is the interpretation of the tuple.
 
@@ -78,8 +85,20 @@ class ResultsData (object):
         # Makes a list of unsorted quantum number tuples
         raw_qn_list = list(self.energies.keys())
         # Sorts the quantum numbers based on their associated energy
-        qn_list = sorted(raw_qn_list,key=(lambda qn : self.energies[qn]))
+        qn_list = sorted(raw_qn_list, key=(lambda qn: self.energies[qn]))
         return qn_list
+
+    def get_levels(self):
+        """DEPRECATED -- Retrieve list of quantum number tuples (J,g,n) for levels, sorted by increasing energy eigenvalue.
+
+        Note some parsers (legacy) may store (J,gex,n), in which case that is the interpretation of the tuple.
+
+        Returns:
+            (list of tuples): list of quantum numbers
+
+        """
+        raise DeprecationWarning("accessor get_levels() is deprecated; use property instead")
+        return self.levels
 
     def get_energy(self,qn,default=np.nan):
         """Retrieve the energy of the level with given quantum numbers.
@@ -95,13 +114,7 @@ class ResultsData (object):
             value (float): energy eigenvalue, or default if qn not found
 
         """
-
-        try:
-            ##print("get_energy",self.energies,qn,qn in self.energies)
-            value = self.energies[qn]
-        except:
-            value = default
-        return value
+        return self.energies.get(qn, default)
 
 #################################################
 # test code
