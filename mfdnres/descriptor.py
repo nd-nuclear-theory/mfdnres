@@ -7,7 +7,7 @@
     mandatory fields:
 
         "run" (str): run name (may be null)
-        "descriptor" (str): the part of the filename which 
+        "descriptor" (str): the part of the filename which
              describes the run parameters
         "Z", "N" (int): proton and neutron numbers
 
@@ -22,7 +22,7 @@
         "Z" : 4
         "N" : 3
         "interaction" : "JISP16"
-        ...   
+        ...
 
     The wrapper parse_res_filename will add the field "nuclide" as a
     tuple of int, e.g.,
@@ -33,8 +33,9 @@
     Mark A. Caprio
     University of Notre Dame
 
-    6/2/15 (mac): Initiated (as mfdn_descriptor.py).
-    6/5/15 (mac): Restructure as part of package.
+    06/02/15 (mac): Initiated (as mfdn_descriptor.py).
+    06/05/15 (mac): Restructure as part of package.
+    09/06/18 (pjf): Include filename in returned info.
 
 """
 
@@ -59,7 +60,7 @@ def register_filename_format(format_name,parser):
 
     filename_format_parser[format_name] = parser
 
-    
+
 ################################################################
 # wrapper function
 ################################################################
@@ -85,12 +86,11 @@ def parse_res_filename(filename,filename_format):
     info = parser(basename)
 
     # define nuclide tuple
+    info["filename"] = filename
     info["nuclide"] = (info["Z"],info["N"])
 
     return info
-        
+
 
 if (__name__ == "__main__"):
     pass
-
-
