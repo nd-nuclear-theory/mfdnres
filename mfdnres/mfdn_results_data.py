@@ -130,6 +130,49 @@ class MFDnResultsData(results_data.ResultsData):
 
         return rms_radius
 
+
+    def get_rme(self,observable,qn_pair,default=np.nan,verbose=False):
+        """Retrieve reduced matrix element (RME).
+
+        Returns RME in Edmonds convention, as common for spectroscopic data
+        analysis in the shell model community.
+
+        """
+
+        # extract labels
+        (qn_bra,qn_ket) = qn_pair
+        (J_bra,g_bra,n_bra) = qn_bra
+        (J_ket,g_ket,n_ket) = qn_ket
+
+        # retrieve underlying rme
+        try:
+            # TODO write actual retrieval code
+            rme = 0.
+        except:
+            return default
+
+        return rme
+
+    def get_rtp(self,observable,qn_pair,default=np.nan):
+        """ Retrieve reduced transition probability (RTP).
+        """
+
+        # extract labels
+        (qn_bra,qn_ket) = qn_pair
+        (J_bra,g_bra,n_bra) = qn_bra
+        (J_ket,g_ket,n_ket) = qn_ket
+
+        # retrieve underlying rme
+        try:
+            rme = self.get_rme(observable,qn_pair)
+        except:
+            return default
+
+        # derive final value from rme
+        rtp = 1/(2*J_ket+1)*rme**2
+
+        return rtp
+ 
 #################################################
 # test code
 #################################################

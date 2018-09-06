@@ -50,6 +50,7 @@ class SpNCCIResultsData(results_data.ResultsData):
     Accessors:
 
     """
+
     ########################################
     # Initializer
     ########################################
@@ -155,14 +156,15 @@ class SpNCCIResultsData(results_data.ResultsData):
 
         return rms_radius
 
-
     def get_rme(self,observable,qn_pair,default=np.nan,verbose=False):
-        """
+        """Retrieve reduced matrix element (RME).
 
+        Returns RME in Edmonds convention, as common for spectroscopic data
+        analysis in the shell model community.
 
         <Jf||op||Ji>_Racah = sqrt(2*Jf+1) * <Jf||op||Ji>_gt
 
-        Relies on get_rme_matrix for canonicalization of bra-ket orderz.
+        Relies on get_rme_matrix for canonicalization of bra-ket order.
 
         """
 
@@ -189,7 +191,7 @@ class SpNCCIResultsData(results_data.ResultsData):
         return rme_racah
 
     def get_rtp(self,observable,qn_pair,default=np.nan):
-        """
+        """ Retrieve reduced transition probability (RTP).
         """
 
         # extract labels
