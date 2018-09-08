@@ -4,15 +4,18 @@
     Mark A. Caprio
     University of Notre Dame
 
-    6/2/15 (mac): Initiated (as mfdn_analysis.py).
-    6/5/15 (mac): Restructure as subpackage.
-    7/7/17 (mac): Remove obsolete import_res_files.
-    7/8/17 (mac): Start adding new tabulation functions which return
-      arrays of data rather than writing to file.
-    7/11/17 (mac): Pull out extrapolation function to remove scipy dependence.
-    7/30/17 (mac): Pull out band analysis functions to band.py.
-    6/01/18 (pjf): Add reference state option for energy table generation.
-    9/25/18 (mac): Remove deprecated write_xxx_table functions.  Update dosctrings.
+    06/02/15 (mac): Initiated (as mfdn_analysis.py).
+    06/05/15 (mac): Restructure as subpackage.
+    07/07/17 (mac): Remove obsolete import_res_files.
+    07/08/17 (mac): Start adding new tabulation functions which return
+        arrays of data rather than writing to file.
+    07/11/17 (mac): Pull out extrapolation function to remove scipy dependence.
+    07/30/17 (mac): Pull out band analysis functions to band.py.
+    06/01/18 (pjf): Add reference state option for energy table generation.
+    09/05/18 (mac): Remove deprecated write_xxx_table functions.  Update dosctrings.
+    09/08/18 (mac):
+        - Add floor2 arithmetic function for odd-even truncation comparisons.
+        - Add energy difference tabulation function.
 
 """
 
@@ -27,6 +30,22 @@ import numpy as np
 
 # electromagnetic g factors (glp,gln,gsp,gsn)
 MU_EM = np.array([1,0,5.586,-3.826])
+
+################################################################
+# arithmetic helper functions
+################################################################
+
+def floor2(i):
+    """Find greatest even integer less than or equal to given integer.
+
+    Arguments:
+        i (int): starting integer
+
+    Returns:
+        (int): greatest even integer
+    """
+    
+    return i - (i%2)
 
 ################################################################
 # consolidate data into dictionary
@@ -249,6 +268,76 @@ def make_energy_table(mesh_data,key_descriptor,qn,qn_ref=None):
     table = np.array(
         table_data,
         dtype = list(key_descriptor)+[("E",float)]
+     )
+    return table
+
+def make_energy_difference_table(mesh_data_pair,key_descriptor,qn_pair,key_list=None):
+
+    """Generate energy tabulation.
+
+    The key descriptor is used to provide the parameter columns of the
+    tabulation (and may in general be different from the key which was
+    used for sorting the data, e.g., it might add additional parameter
+    columns).
+
+    It is expected that the mesh data have already consolidated to make the key
+    values unique.  Only key tuples which are present in both sets of mesh data
+    are retained.
+
+    Results are then sorted by key tuple.
+
+    Differences are taken as (E1-E2), i.e., the second data set is the reference
+    data set.
+
+    Data format:
+        param1 param2 ... E
+
+    Arguments:
+        mesh_data_pair (list of ResultsData): pair of data sets
+        key_descriptor (tuple of tuple): dtype descriptor for key
+        qn_pair (tuple): pair of quantum numbers (J,g,n) of levels of interest
+        key_list (list of tuple, optional): key list for data points; defaults to
+            common keys from the two data sets
+
+    Returns:
+       (array): data table
+
+    """
+
+    # unpack arguments
+    (mesh_data1,mesh_data2) = mesh_data_pair
+    (qn1,qn2) = qn_pair
+
+    # process results into dictionaries
+    results_dict1 = make_results_dict(mesh_data1,key_descriptor)
+    results_dict2 = make_results_dict(mesh_data2,key_descriptor)
+
+    # find common keys
+    # FUTURE: factor out this operation
+    if (key_list is not None):
+        common_key_list = key_list
+    else:
+        common_key_set = set(results_dict1.keys()).intersection(set(results_dict2.keys()))
+        common_key_list = sorted(list(common_key_set))
+    ## print("Common keys: {}".format(common_key_list))
+
+    # tabulate values
+    key_function = make_key_function(key_descriptor)
+    table_data = []
+    for key in common_key_list:
+        mesh_point1 = results_dict1[key]
+        mesh_point2 = results_dict2[key]
+        value1 = mesh_point1.get_energy(qn1)
+        value2 = mesh_point1.get_energy(qn2)
+        value = value1-value2
+        table_data += [
+            key + (value,)
+        ]
+
+    # convert to structured array
+    table = np.array(
+        table_data,
+        dtype = list(key_descriptor)+[("value",float)]
      )
     return table
 
