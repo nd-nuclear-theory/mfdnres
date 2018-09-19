@@ -16,6 +16,7 @@
     09/08/18 (mac):
         - Add floor2 arithmetic function for odd-even truncation comparisons.
         - Add energy difference tabulation function.
+    09/18/18 (mac): Add dictionary helper functions common_keys and operate_dictionaries.
 
 """
 
@@ -46,6 +47,56 @@ def floor2(i):
     """
     
     return i - (i%2)
+
+################################################################
+# dictionary helper functions
+################################################################
+
+def common_keys(dictionary_list):
+    """ Identify keys common to a set of dictionaries.
+
+    Arguments:
+        dictionary_list (list of dict): dictionaries to analyze
+
+    Returns:
+        (list): sorted list of common keys
+    """
+
+    # find intersection of key sets
+    common_key_set = None
+    for current_dictionary in dictionary_list:
+        current_key_set = set(current_dictionary.keys())
+        if (common_key_set is None):
+            # prime the intersection with initial key set
+            common_key_set = current_key_set
+        else:
+            # find intersection with current key set
+            common_key_set &= current_key_set
+
+    # convert key set into a sorted list
+    common_key_list = sorted(list(common_key_set))
+    ## print("Common keys: {}".format(common_key_list))
+
+    return common_key_list
+
+def operate_dictionaries(dict1,dict2,op):
+    """ Perform binary operation on common entries of two dictionaries.
+
+    Note: Common operations are provided by the operator library.
+
+    Arguments:
+        dict1 (dict): dictionary providing operand 1
+        dict2 (dict): dictionary providing operand 2
+        op (callable): binary operator
+
+    Returns:
+        (dict): results dictionary
+    """
+    
+    results = dict()
+    for key in common_keys((dict1,dict2)):
+        results[key] = op(dict1[key],dict2[key])
+    return results
 
 ################################################################
 # consolidate data into dictionary
@@ -215,7 +266,6 @@ def sorted_mesh_data(
         ]
     return new_mesh_data
 
-
 ################################################################
 # tabulation functions -- observable vs. parameters
 ################################################################
@@ -313,12 +363,10 @@ def make_energy_difference_table(mesh_data_pair,key_descriptor,qn_pair,key_list=
     results_dict2 = make_results_dict(mesh_data2,key_descriptor)
 
     # find common keys
-    # FUTURE: factor out this operation
     if (key_list is not None):
         common_key_list = key_list
     else:
-        common_key_set = set(results_dict1.keys()).intersection(set(results_dict2.keys()))
-        common_key_list = sorted(list(common_key_set))
+        common_key_list = common_keys([results_dict1,results_dict2])
     ## print("Common keys: {}".format(common_key_list))
 
     # tabulate values
