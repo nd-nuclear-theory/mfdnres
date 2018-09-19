@@ -12,6 +12,7 @@
     7/14/17 (mac): Add canonicalization tools for (J,g) subspace pairs.
     9/17/17 (mac): Add bool_from_str.
     10/10/17 (mac): Gracefully ignore null key-value lines.
+    09/18/18 (mac): Redefine RMEConvention enum to use Edmonds vs. Rose terminology.
 
 """
 
@@ -456,8 +457,9 @@ def value_range(x1,x2,dx,epsilon=0.00001):
 ################################################################
 
 class RMEConvention(enum.Enum):
-    kAngularMomentum = 0
-    kGroupTheory = 1
+    # preferred names
+    kEdmonds = 0
+    kRose = 1
 
 def canonicalization_prescription_Jg(Jg_pair,rme_convention):
     """Provide phase/normalization factor from canonicalization, assuming
@@ -474,7 +476,7 @@ def canonicalization_prescription_Jg(Jg_pair,rme_convention):
 
     Arguments:
        Jg_pair (tuple): ((J_bra,g_bra),(J_ket,g_ket))
-       rme_convention (RMEPhaseConvention): phase and normalization convention on RMEs
+       rme_convention (RMEConvention): phase and normalization convention on RMEs
 
     Returns:
         flipped (bool): whether or not flip necessary to canonicalize
@@ -497,7 +499,7 @@ def canonicalization_prescription_Jg(Jg_pair,rme_convention):
         (J_ket,_)=Jg_bra  # note swap
         flipped = True
         canonicalization_factor = (-1)**(J_ket-J_bra)
-        if (rme_convention==RMEConvention.kGroupTheory):
+        if (rme_convention==RMEConvention.kRose):
             canonicalization_factor *= math.sqrt((2*J_bra+1)/(2*J_ket+1))
 
     return (flipped,canonicalization_factor)
@@ -622,8 +624,8 @@ if (__name__=="__main__"):
     # test canonicalization
     print("Canonicalization")
     Jg_pair = ((2,0),(0,0))
-    (Jg_pair_canonical,flipped,canonicalization_factor) = canonicalize_Jg_pair(Jg_pair,RMEConvention.kGroupTheory)
+    (Jg_pair_canonical,flipped,canonicalization_factor) = canonicalize_Jg_pair(Jg_pair,RMEConvention.kRose)
     print("{} -> {} flipped {} canonicalization_factor {}".format(Jg_pair,Jg_pair_canonical,flipped,canonicalization_factor))
     Jg_pair = ((0,0),(2,0))
-    (Jg_pair_canonical,flipped,canonicalization_factor) = canonicalize_Jg_pair(Jg_pair,RMEConvention.kGroupTheory)
+    (Jg_pair_canonical,flipped,canonicalization_factor) = canonicalize_Jg_pair(Jg_pair,RMEConvention.kRose)
     print("{} -> {} flipped {} canonicalization_factor {}".format(Jg_pair,Jg_pair_canonical,flipped,canonicalization_factor))

@@ -268,7 +268,7 @@ def parse_transitions(self, tokenized_lines):
 
         # only store canonical pair
         (Jgn_pair_canonical, flipped, canonicalization_factor) = tools.canonicalize_Jgn_pair(
-            (qnf, qni), tools.RMEConvention.kAngularMomentum
+            (qnf, qni), tools.RMEConvention.kEdmonds
         )
 
         # break out each component as a separate transition type

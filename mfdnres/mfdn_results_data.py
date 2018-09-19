@@ -150,7 +150,7 @@ class MFDnResultsData(results_data.ResultsData):
 
         # canonicalize labels
         (qn_pair_canonical, flipped, canonicalization_factor) = tools.canonicalize_Jgn_pair(
-            qn_pair, tools.RMEConvention.kAngularMomentum
+            qn_pair, tools.RMEConvention.kEdmonds
         )
 
         # extract labels

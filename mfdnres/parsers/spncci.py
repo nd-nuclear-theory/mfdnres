@@ -196,7 +196,7 @@ def parse_observable_rmes(self,tokenized_lines):
         # determine canonicalization
         Jg_pair = ((J_bra,gex_bra),(J_ket,gex_ket))
         (Jg_pair_canonical,flipped,canonicalization_factor) = tools.canonicalize_Jg_pair(
-            Jg_pair,tools.RMEConvention.kGroupTheory
+            Jg_pair,tools.RMEConvention.kRose
         )
 
         # prepare matrix key

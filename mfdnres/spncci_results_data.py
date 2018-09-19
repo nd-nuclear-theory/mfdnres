@@ -86,7 +86,7 @@ class SpNCCIResultsData(results_data.ResultsData):
         Assumes stored matrices are between (J,g) subspaces in
         canonical order.  Takes care of canonicalization on retrieval.
 
-        Assumes matrix elements are in group-theory convention.
+        Assumes matrix elements are in group-theory (Rose) convention.
 
         Assumes matrices on diagonal sector are completely filled in,
         rather than stored just as upper triangles.
@@ -97,7 +97,7 @@ class SpNCCIResultsData(results_data.ResultsData):
 
         # determine canonicalization
         (Jg_pair_canonical,flipped,canonicalization_factor) = tools.canonicalize_Jg_pair(
-            Jg_pair,tools.RMEConvention.kGroupTheory
+            Jg_pair,tools.RMEConvention.kRose
         )
         if (verbose):
             print("Jg_pair_canonical {} flipped {} canonicalization_factor {}".format(Jg_pair_canonical,flipped,canonicalization_factor))
