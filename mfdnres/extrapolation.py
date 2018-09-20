@@ -17,7 +17,7 @@ import glob
 import numpy as np
 
 # intra-package references
-import mfdnres.nonlinear
+from . import nonlinear
 
 ################################################################
 # extrapolation
@@ -67,7 +67,7 @@ def extrapolate_energies_exp(Nmax_values,E_values,c2_guess=0.3,verbose=False):
 
     # do nonlinear fit
     c_guess = np.array([c0_guess,c1_guess,c2_guess])
-    fit = mfdnres.nonlinear.fit(nonlinear.model_exp,Nmax_values,E_values,c_guess)
+    fit = nonlinear.fit(nonlinear.model_exp,Nmax_values,E_values,c_guess)
     if (verbose):
         print("Nonlinear fit returns:",fit)
     (c_values,_) = fit

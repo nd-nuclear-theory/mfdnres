@@ -35,7 +35,8 @@ def model_line(x_values,params):
     """
 
     (c0,c1) = params
-    y_values = c0 + c1*x_values
+    x_vec = np.array(x_values,dtype=float)  # force to numpy float array to avoid type error surprises
+    y_values = c0 + c1*float(x_vec)
     return y_values
 
 def model_exp(x_values,params):
@@ -52,7 +53,14 @@ def model_exp(x_values,params):
     """
 
     (c0,c1,c2) = params
-    y_values = c0 + c1*np.exp(-c2*x_values)
+
+    # Debugging: Must force x_values to float.  If use x_values argument inside
+    # exponential, this may come as a list of int, which, after np broadcast,
+    # gives rise to a type error:
+    #
+    # TypeError: 'numpy.float64' object cannot be interpreted as an integer
+    x_vec = np.array(x_values,dtype=float)  # force to numpy float array to avoid type error surprises
+    y_values = c0 + c1*np.exp(-c2*x_vec)
     return y_values
 
 ################################################################
