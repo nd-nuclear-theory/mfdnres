@@ -126,8 +126,12 @@ def read_file(filename,res_format,filename_format=None,verbose=False):
         info_from_filename = descriptor.parse_res_filename(filename,filename_format)
 
     # parse results file contents for run parameters and data
+    if (verbose):
+        print("  read_file: filename {}".format(filename))
     with open(filename,'rt') as fin:
         results_list = res_format_parser[res_format](fin,verbose=verbose)
+    if (verbose):
+        print("  read_file: mesh points {:d}".format(len(results_list)))
 
     # augment parameters with those obtained from filename
     #
@@ -170,27 +174,28 @@ def slurp_res_files(
     # process argument: upgrade single directory to list
     if (type(res_directory_list) == str):
         res_directory_list = [res_directory_list]
+    if (verbose):
+        print("  slurp_res_files: directory list {}".format(res_directory_list))
 
     # accumulate mesh points
     mesh_data = []
     for res_directory in res_directory_list:
         full_glob_pattern = os.path.join(res_directory,glob_pattern)
         if (verbose):
-            print("Searching for {}...".format(full_glob_pattern))
+            print("  slurp_res_files: searching for files {}...".format(full_glob_pattern))
         res_filename_list = glob.glob(full_glob_pattern)
 
         # accumulate parsed data from different res files
         for res_filename in res_filename_list:
-            if (verbose):
-                print("Reading {}...".format(res_filename))
             new_mesh_data = read_file(
                 res_filename,
                 res_format=res_format,filename_format=filename_format,
-                verbose=verbose
+                verbose=False  # disabled file-by-file verbosity
             )
-            if (verbose):
-                print("  {:d} mesh points".format(len(new_mesh_data)))
             mesh_data += new_mesh_data
+
+    if (verbose):
+        print("  slurp_res_files: extracted mesh points {}".format(len(mesh_data)))
 
     return mesh_data
 

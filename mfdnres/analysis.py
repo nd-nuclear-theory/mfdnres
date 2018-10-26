@@ -17,6 +17,7 @@
         - Add floor2 arithmetic function for odd-even truncation comparisons.
         - Add energy difference tabulation function.
     09/18/18 (mac): Add dictionary helper functions common_keys and operate_dictionaries.
+    09/29/18 (mac): Add sorting and pruning of nan values to energy tabulation.
 
 """
 
@@ -181,7 +182,7 @@ def make_results_dict(
         # make key
         key = key_function(mesh_point)
         if (verbose):
-            print("  filename {} key {}".format(mesh_point.filename,key))
+            print("  make_results_dict: filename {} key {}".format(mesh_point.filename,key))
 
         # store data point
         if (key not in results_dict):
@@ -218,17 +219,21 @@ def selected_mesh_data(
 
     """
 
+    # set up key extraction and selection
     key_value_pairs = selection_dict.items()  # convert to view as iterable of pairs for cleaner debugging
-    if (verbose):
-        print("selection key-value pairs: {}".format(tuple(key_value_pairs)))
     key_function = make_key_function(key_value_pairs)
     selected_values = tuple([value for (_,value) in key_value_pairs])
+    if (verbose):
+        print("  selected_mesh_data: selection key-value pairs {}".format(tuple(key_value_pairs)))
 
+    # select submesh
     new_mesh_data = [
         mesh_point
         for mesh_point in mesh_data
         if (key_function(mesh_point) == selected_values)
     ]
+    if (verbose):
+        print("  selected_mesh_data: selected mesh points {}".format(len(new_mesh_data)))
     return new_mesh_data
 
 def sorted_mesh_data(
@@ -270,8 +275,7 @@ def sorted_mesh_data(
 # tabulation functions -- observable vs. parameters
 ################################################################
 
-def make_energy_table(mesh_data,key_descriptor,qn,qn_ref=None):
-
+def make_energy_table(mesh_data,key_descriptor,qn,key_list=None,prune=False):
     """Generate energy tabulation.
 
     The key descriptor is used to provide the parameter columns of the
@@ -279,50 +283,59 @@ def make_energy_table(mesh_data,key_descriptor,qn,qn_ref=None):
     used for sorting the data, e.g., it might add additional parameter
     columns).
 
-    It is expected that the mesh data have already been sorted and
-    consolidated to make the key values unique, or else the table will
-    contain duplicate entries.
+    It is expected that the mesh data have already been consolidated to make the
+    key values unique.  Only key tuples which are present in both sets of mesh
+    data are retained.
 
-    A set of reference quantum numbers may optionally be provided; the
-    table will contain the energy difference between the state qn and
-    the state qn_ref.
+    Results are then sorted by key tuple.
 
     Data format:
         param1 param2 ... E
 
     Arguments:
-        mesh_data (list of ResultsData): data for mesh points
+        mesh_data (list of ResultsData): data set
         key_descriptor (tuple of tuple): dtype descriptor for key
-        qn (tuple): quantum numbers (J,g,n) of level to retrieve
-        qn_ref (tuple, optional): quantum numbers (J,g,n) of reference
-            energy level
+        qn (tuple): quantum number (J,g,n) of level of interest
+        key_list (list of tuple, optional): key list for data points; defaults to
+            keys for which qn found
+        prune (bool, optional): whether or not to prune nan values from table
 
     Returns:
        (array): data table
 
     """
 
+    # process results into dictionaries
+    results_dict = make_results_dict(mesh_data,key_descriptor)
+
+    # find common keys
+    if (key_list is not None):
+        common_key_list = key_list
+    else:
+        common_key_list = common_keys([results_dict])
+    ## print("Common keys: {}".format(common_key_list))
+
     # tabulate values
     key_function = make_key_function(key_descriptor)
     table_data = []
-    for mesh_point in mesh_data:
-        # get reference energy
-        ref_energy = 0.
-        if qn_ref:
-            ref_energy = mesh_point.get_energy(qn_ref)
+    for key in common_key_list:
+        mesh_point = results_dict[key]
+        value = mesh_point.get_energy(qn)
+        if (prune and np.isnan(value)):
+            continue
         table_data += [
-            key_function(mesh_point) + (mesh_point.get_energy(qn)-ref_energy,)
+            key + (value,)
         ]
 
     # convert to structured array
     table = np.array(
         table_data,
-        dtype = list(key_descriptor)+[("E",float)]
+        dtype = list(key_descriptor)+[("value",float)]
      )
     return table
 
-def make_energy_difference_table(mesh_data_pair,key_descriptor,qn_pair,key_list=None):
 
+def make_energy_difference_table(mesh_data_pair,key_descriptor,qn_pair,key_list=None,prune=False):
     """Generate energy tabulation.
 
     The key descriptor is used to provide the parameter columns of the
@@ -330,9 +343,9 @@ def make_energy_difference_table(mesh_data_pair,key_descriptor,qn_pair,key_list=
     used for sorting the data, e.g., it might add additional parameter
     columns).
 
-    It is expected that the mesh data have already consolidated to make the key
-    values unique.  Only key tuples which are present in both sets of mesh data
-    are retained.
+    It is expected that the mesh data have already been consolidated to make the
+    key values unique.  Only key tuples which are present in both sets of mesh
+    data are retained.
 
     Results are then sorted by key tuple.
 
@@ -348,6 +361,7 @@ def make_energy_difference_table(mesh_data_pair,key_descriptor,qn_pair,key_list=
         qn_pair (tuple): pair of quantum numbers (J,g,n) of levels of interest
         key_list (list of tuple, optional): key list for data points; defaults to
             common keys from the two data sets
+        prune (bool, optional): whether or not to prune nan values from table
 
     Returns:
        (array): data table
@@ -378,6 +392,8 @@ def make_energy_difference_table(mesh_data_pair,key_descriptor,qn_pair,key_list=
         value1 = mesh_point1.get_energy(qn1)
         value2 = mesh_point1.get_energy(qn2)
         value = value1-value2
+        if (prune and np.isnan(value)):
+            continue
         table_data += [
             key + (value,)
         ]

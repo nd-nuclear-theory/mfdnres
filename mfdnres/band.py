@@ -241,7 +241,7 @@ def write_band_table(results,filename,band,fields=None,default=np.nan):
 
     """
 
-    # resolve special values of fields agument
+    # resolve special values of fields argument
     if (fields is None):
         fields = {"E2_moments","M1_moments","E2_transitions_dJ1","E2_transitions_dJ2","M1_transitions_dJ1"}
 
@@ -315,11 +315,9 @@ def write_band_table(results,filename,band,fields=None,default=np.nan):
 def write_network_table(results,filename,band,energy_cutoff=None):
     """Writes table of E2 RMEs
 
-    Currently adapted for spncci use.  Must generalize to recover MFDn
-    use.
-
-    WARNING: currently puts mass Q operator in place of both proton
-    and neutron operators
+    WARNING: Currently adapted for spncci use.  Must generalize to recover MFDn
+    use.  Currently puts mass Q operator in place of both proton and neutron
+    operators.
 
     Data format:
 
