@@ -4,9 +4,12 @@
     Mark A. Caprio
     University of Notre Dame
 
-    07/30/17 (mac): Extract band analysis functions from analysis.py (originated
+    - 07/30/17 (mac): Extract band analysis functions from analysis.py (originated
          6/2/15) to band.py.
-    04/27/18 (mac): Rename parameter Mj to M.
+    - 04/27/18 (mac): Rename parameter Mj to M.
+    - 10/26/18 (mac): Update band energy fitting to accommodate mfdnres mesh reorganization.
+        + Update configuration file format (need M value for energy retrieval, need band parity).
+        + Revise energy fitting to take energies as dictionary.
 """
 
 import math
@@ -25,10 +28,11 @@ class BandDefinition(object):
 
         [band]
         K (float): K quantum number
+        g (int): parity grade [P=(-)^g]
         levels (list of tuple): list of (J,g,n) quantum numbers
+        M (dict): dictionary mapping J -> M
 
         [trans]
-        M (dict): dictionary mapping J -> M
         signs (dict): dictionary mapping (J,M) -> sigma
 
         [fit]
@@ -62,24 +66,30 @@ class BandDefinition(object):
 
         Configuration files follow Python configparser syntax.
 
+        Changes for 2017-2018 mfdnres restucturing: Move M listing from [trans]
+        to [band].  Add parity field to [band] and remove parity from level qn.
+        Wave function signs may move out of trans section, as well, when return
+        to transition analysis with preprocessor-based transition handling.
+
         Example band configuration file contents:
 
             [band]
             K = 0.5
+            g = 1
             levels =
-                0.5 0 1
-                1.5 0 1
-                2.5 0 1
-                3.5 0 1
-                4.5 0 2
-
-            [trans]
+                0.5 1 1
+                1.5 1 1
+                2.5 1 1
+                3.5 1 1
+                4.5 1 2
             M =
                 0.5 0.5
                 1.5 0.5
                 2.5 0.5
                 3.5 0.5
                 4.5 0.5
+
+            [trans]
             signs =
                 0.5 0.5 +1
                 1.5 0.5 +1
@@ -108,14 +118,21 @@ class BandDefinition(object):
         config = configparser.ConfigParser()
         config.read_file(open(filename))
 
-        # read band
+        # read band composition parameters
         self.K = None
+        self.g = None
         self.levels = []
+        self.M = {}
+
         if (config.has_section("band")):
 
             # parse K
             if (config.has_option("band","K")):
                 self.K = float(config["band"]["K"])
+
+            # parse parity
+            if (config.has_option("band","g")):
+                self.g = int(config["band"]["g"])
 
             # parse multiline list of levels
             if (config.has_option("band","levels")):
@@ -126,18 +143,18 @@ class BandDefinition(object):
                     qn = (float(entries[0]),int(entries[1]),int(entries[2]))
                     self.levels.append(qn)
 
-        self.M = {}
-        self.signs = {}
-        if (config.has_section("trans")):
-
-            # read band member M values for transitions
-            if (config.has_option("trans","M")):
-                M_string = config["trans"]["M"]
+            # read band member M values for level energies
+            if (config.has_option("band","M")):
+                M_string = config["band"]["M"]
                 M_string_lines = M_string.strip().split("\n")
                 for line in M_string_lines:
                     entries = line.split()
                     (J, M) = (float(entries[0]),float(entries[1]))
                     self.M[J] = M
+
+        # read transition parameters
+        self.signs = {}
+        if (config.has_section("trans")):
 
             # read band member signs
             if (config.has_option("trans","signs")):
@@ -200,7 +217,7 @@ class BandDefinition(object):
 # output tabulation: in-band moment and transition data
 ################################################################
 
-def write_band_table(results,filename,band,fields=None,default=np.nan):
+def write_band_table(results,filename,band_definition,fields=None,default=np.nan):
     """Writes level energy, moment, and in-band transition data.
 
     With default arguments, recovers behavior of write_level_table.
@@ -235,7 +252,7 @@ def write_band_table(results,filename,band,fields=None,default=np.nan):
     Args:
         results (MFDnRunData): results object containing the levels
         filename (str): output filename
-        band (BandDefinition): band definition
+        band_definition (BandDefinition): band definition
         fields (set of str): fields to include, else all fields written if None (default: None)
         default (float): value to use for missing numerical entries (default: np.nan)
 
@@ -248,10 +265,10 @@ def write_band_table(results,filename,band,fields=None,default=np.nan):
     # assemble table lines
     value_format = " {:9.4f}"  # format string for numerical values
     lines = []
-    for J in band.J_values:
+    for J in band_definition.J_values:
 
         # determine level
-        qn = band.members[J]
+        qn = band_definition.members[J]
 
         # initial state data
         line = "{:1d} {:6.3f} {:1d} {:2d} {:6.3f} {:8.3f}".format(
@@ -290,14 +307,14 @@ def write_band_table(results,filename,band,fields=None,default=np.nan):
                 Jf = Ji-dJ
                 qni = qn
                 values = default*np.ones(entries)
-                if ((Jf in band.members) and (Ji in band.M)):
+                if ((Jf in band_definition.members) and (Ji in band_definition.M)):
                     # final level and appropriate M calculation are defined
-                    M = band.M[Ji]
-                    qnf = band.members[Jf]
+                    M = band_definition.M[Ji]
+                    qnf = band_definition.members[Jf]
                     values = results.get_rme(qnf,qni,op,M,default=default)
-                    if ((Ji,M) in band.signs) and ((Jf,M) in band.signs):
+                    if ((Ji,M) in band_definition.signs) and ((Jf,M) in band_definition.signs):
                         # phases are defined for these states at the required M
-                        values *= band.signs[(Ji,M)]*band.signs[(Jf,M)]
+                        values *= band_definition.signs[(Ji,M)]*band_definition.signs[(Jf,M)]
                 line += (entries*value_format).format(*values)
 
         # finalize line
@@ -312,7 +329,7 @@ def write_band_table(results,filename,band,fields=None,default=np.nan):
 # output tabulation: RME network from band members
 ################################################################
 
-def write_network_table(results,filename,band,energy_cutoff=None):
+def write_network_table(results,filename,band_definition,energy_cutoff=None):
     """Writes table of E2 RMEs
 
     WARNING: Currently adapted for spncci use.  Must generalize to recover MFDn
@@ -333,7 +350,7 @@ def write_network_table(results,filename,band,energy_cutoff=None):
     Args:
         results (MFDnRunData): results object containing the levels
         filename (str): output filename
-        band (BandDefinition): band providing set of initial levels
+        band_definition (BandDefinition): band providing set of initial levels
            (and M values)
         energy_cutoff (float,optional): energy cutoff to limit output size
 
@@ -344,7 +361,7 @@ def write_network_table(results,filename,band,energy_cutoff=None):
     lines = []
 
     # loop over initial states in band
-    for qni in band.levels:
+    for qni in band_definition.levels:
 
         # loop over all final states in results
         for qnf in results.levels:
@@ -361,7 +378,7 @@ def write_network_table(results,filename,band,energy_cutoff=None):
 
             # MFDn:
             ## op = "E2"
-            ## M = band.M.get(Ji,None)
+            ## M = band_definition.M.get(Ji,None)
             ## available = results.get_rme(qnf,qni,op,M)
 
             # retrieve value
@@ -409,14 +426,12 @@ def write_network_table(results,filename,band,energy_cutoff=None):
 # band fitting
 ################################################################
 
-def band_fit_energy(results,band,verbose=False):
-    """Fits band energies.
+def band_fit_energy(band_definition,level_energy_dict,verbose=False):
+    """Obtain band energy parameters, by fitting band energies.
 
     Args:
-        results (MFDnRunData): results object
-        band (BandDefinition): band definition
-        extrapolation (string, optional): keyword for stored energy extrapolation
-            to retrieve (or None to use the unextrapolated energy)
+        band_definition (BandDefinition): band providing set of initial levels
+        level_energy_dict (dict): level energies, as mapping J->energy
 
     Returns:
         (np.array 1x3): band energy parameters (E0,A,a)
@@ -425,25 +440,25 @@ def band_fit_energy(results,band,verbose=False):
 
     # construct energy vector
     b = np.array([
-        results.get_energy(band.members[J])
-        for J in band.J_list_energy
+        level_energy_dict[J]
+        for J in band_definition.J_list_energy
     ])
     if (verbose):
-        print("J:",band.J_list_energy)
-        print("Members:",band.members)
+        print("J:",band_definition.J_list_energy)
+        print("Members:",band_definition.members)
         print("Energies:",b)
 
     # construct coefficient matrix
-    K = band.K
+    K = band_definition.K
     if (K == 0.5):
         A = np.array([
             [1,J*(J+1),(-1)**(J+1/2)*(J+1/2)]
-            for J in band.J_list_energy
+            for J in band_definition.J_list_energy
         ])
     else:
         A = np.array([
             [1,J*(J+1)]
-            for J in band.J_list_energy
+            for J in band_definition.J_list_energy
         ])
 
     # solve system
@@ -461,21 +476,23 @@ def band_fit_energy(results,band,verbose=False):
 
     return parameters
 
-def band_fit_E2(results,band):
+def band_fit_E2(results,band_definition):
     """Extracts band E2 moments for normalization.
+
+    CAVEAT: Requires updating to properly handle mesh with distinct M values.
 
     Args:
         results (MFDnRunData): results object
-        band (BandDefinition): band definition
+        band_definition (BandDefinition): band definition
 
     Returns:
         ((np.array 1x2)): band intrinsic quadrupole moments (Q0p,Q0n)
 
     """
 
-    K = band.K
-    J = band.J_Q
-    qn = band.members[J]
+    K = band_definition.K
+    J = band_definition.J_Q
+    qn = band_definition.members[J]
 
     factor = (3*K**2-J*(J+1))/((J+1)*(2*J+3))
     if (factor == 0):
@@ -485,12 +502,14 @@ def band_fit_E2(results,band):
 
     return Q0_values
 
-def band_fit_M1(results,band,verbose=False):
+def band_fit_M1(results,band_definition,verbose=False):
     """Extracts band M1 fit parameters.
+
+    CAVEAT: Requires updating to properly handle mesh with distinct M values.
 
     Args:
         results (MFDnRunData): results object
-        band (BandDefinition): band definition
+        band_definition (BandDefinition): band definition
 
     Returns:
         (np.array 3x4): band M1 fit parameters, or all np.nan for blatantly undersized systems
@@ -545,33 +564,33 @@ def band_fit_M1(results,band,verbose=False):
         return coefficients
 
     # setup
-    K = band.K
+    K = band_definition.K
 
     # accumulate moment entries
     A_moment = []
     b_moment = []
-    for J in band.J_list_M1_moment:
+    for J in band_definition.J_list_M1_moment:
         A_moment.append(f_moment(K,J))
-        b_moment.append(results.moments[(band.members[J],"M1")])
+        b_moment.append(results.moments[(band_definition.members[J],"M1")])
 
     # accumulate transition entries
     A_trans = []
     b_trans = []
-    for J in band.J_list_M1_trans:
+    for J in band_definition.J_list_M1_trans:
         A_trans.append(f_trans(K,J))
         Ji = J
         Jf = J - 1
-        M = band.M[Ji]
-        values = np.array(results.get_rme(band.members[Jf],band.members[Ji],"M1",M))
-        values *= band.signs[(Ji,M)]*band.signs[(Jf,M)]
+        M = band_definition.M[Ji]
+        values = np.array(results.get_rme(band_definition.members[Jf],band_definition.members[Ji],"M1",M))
+        values *= band_definition.signs[(Ji,M)]*band_definition.signs[(Jf,M)]
         b_trans.append(values)
 
     # combine moment and transition arrays
     A = np.array(A_moment+A_trans,float)
     b = np.array(b_moment+b_trans,float)
     if (verbose):
-        print("J_list_M1_moment:",band.J_list_M1_moment)
-        print("J_list_M1_trans:",band.J_list_M1_trans)
+        print("J_list_M1_moment:",band_definition.J_list_M1_moment)
+        print("J_list_M1_trans:",band_definition.J_list_M1_trans)
         print("Coefficient matrix")
         print(A)
         print("Ordinate matrix")
@@ -603,7 +622,7 @@ def band_fit_M1(results,band,verbose=False):
 
     return parameters
 
-def write_band_fit_parameters(results,filename,band,fields=None,verbose=False):
+def write_band_fit_parameters(results,filename,band_definition,fields=None,verbose=False):
     """Writes band fit parameters.
 
     The output contains one line, of the form:
@@ -621,7 +640,7 @@ def write_band_fit_parameters(results,filename,band,fields=None,verbose=False):
     Args:
         results (MFDnRunData): results object
         filename (str): output filename
-        band (BandDefinition): band definition
+        band_definition (BandDefinition): band definition
         fields (set of str): fields to include, else all fields written if None (default: None)
 
     The fields argument is mostly useful to drop EM band parameters (fields={"energy"})if
@@ -641,17 +660,17 @@ def write_band_fit_parameters(results,filename,band,fields=None,verbose=False):
 
     # energy parameters
     if ("energy" in fields):
-        parameters = band_fit_energy(results,band,verbose)
+        parameters = band_fit_energy(results,band_definition,verbose)
         line += (3*value_format).format(*parameters)
 
     # E2 parameters
     if ("E2" in fields):
-        parameters = band_fit_E2(results,band)
+        parameters = band_fit_E2(results,band_definition)
         line += (2*value_format).format(*parameters)
 
     # M1 parameters
     if ("M1" in fields):
-        parameters = band_fit_M1(results,band,verbose)
+        parameters = band_fit_M1(results,band_definition,verbose)
         flat_parameters = parameters.T.flatten()
         line += (12*value_format).format(*flat_parameters)
 
