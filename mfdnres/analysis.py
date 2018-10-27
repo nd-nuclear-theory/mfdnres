@@ -18,6 +18,7 @@
         - Add energy difference tabulation function.
     09/18/18 (mac): Add dictionary helper functions common_keys and operate_dictionaries.
     09/29/18 (mac): Add sorting and pruning of nan values to energy tabulation.
+    10/27/18 (mac): Add ability to transform keys in results dictionary.
 
 """
 
@@ -145,6 +146,7 @@ def make_key_function(key_descriptor):
 
 def make_results_dict(
         mesh_data,key_descriptor,
+        key_transformation=None,
         verbose=False
 ):
     """Load mesh data into dictionary, using specified parameter tuple as
@@ -157,16 +159,20 @@ def make_results_dict(
     Example:
         >>> KEY_DESCRIPTOR_NMAX_HW = (("Nmax",int),("hw",float))
 
-
     For now, in the even that the same mesh point arises multiple
     times on input (i.e., a given value for the key tuple is
     duplicated), the final occurrence overwrites any earlier
     occurrences.  In the future, a more sophisticated "merging"
     process might be appropriate.
 
+    An optional key transformation is useful for, e.g., shifting the Nmax value
+    stored in the dictionary when results are to be used as reference results
+    for the space of opposite parity.
+
     Arguments:
         mesh_data (list of ResultsData): data for mesh points
         key_descriptor (tuple of tuple): dtype descriptor for key
+        key_transformation (callable,optional): transformation function to apply to key tuple
         verbose (bool,optional): verbose output
 
     Returns:
@@ -181,6 +187,8 @@ def make_results_dict(
 
         # make key
         key = key_function(mesh_point)
+        if (key_transformation is not None):
+            key = key_transformation(key)
         if (verbose):
             print("  make_results_dict: filename {} key {}".format(mesh_point.filename,key))
 
