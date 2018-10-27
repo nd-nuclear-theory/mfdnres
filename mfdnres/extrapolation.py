@@ -54,6 +54,11 @@ def extrapolate_energies_exp(Nmax_values,E_values,c2_guess=0.3,verbose=False):
         print("Nmax values:",Nmax_values)
         print("E values:",E_values)
 
+    # short circuit on missing input values
+    for E in E_values:
+        if (E is np.nan):
+            return np.nan
+
     # do preliminary linear fit
     # based on typical assumed exponential decay constant
     A = np.array([
