@@ -10,6 +10,7 @@
     10/06/17 (mac): Created, from res_parser_spncci.py
     04/27/18 (mac): Rename parameter Mj to M.
     09/06/18 (pjf): Added initial built-in transition extraction.
+    12/12/18 (mac): Update handling of "Angular momenta" section for v15b01.
 """
 
 import itertools
@@ -94,7 +95,10 @@ def parse_params(self,tokenized_lines):
 
     # extract key-value pairs
     conversions = {
-        # MFDn -- only selected numerical fields
+        # MFDn
+        # not yet parsed: Platform, Username
+        "Version" : tools.singleton_of(int),
+        "Revision" : tools.singleton_of(str),
         "ndiags" : tools.singleton_of(int),
         "MPIranks" : tools.singleton_of(int),
         "OMPthreads" : tools.singleton_of(int),
@@ -234,8 +238,15 @@ def parse_E2_moments(self,tokenized_lines):
 
 def parse_angular_momenta(self,tokenized_lines):
     """Parse angular momenta.
+
+    Caveat: These are really the <am^2> observables, so simply calling them <am>
+    is misleading.
     """
-    property_names = ["L","S","Sp","Sn","J"]
+    if (self.params["Revision"]=="beta00"):
+        property_names = ["L","S","Sp","Sn","J"]
+    else:
+        # Lp and Sp observables added with v15beta01
+        property_names = ["L","S","Lp","Sp","Ln","Sn","J"]
     parse_generic_static_properties(self,tokenized_lines,self.native_static_properties,property_names)
 
 def parse_radii(self,tokenized_lines):
