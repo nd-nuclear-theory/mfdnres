@@ -10,6 +10,7 @@
     - 10/26/18 (mac): Update band energy fitting to accommodate mfdnres mesh reorganization.
         + Update configuration file format (need M value for energy retrieval, need band parity).
         + Revise energy fitting to take energies as dictionary.
+    - 12/12/18 (mac): Reimplement BandDefinition derived data structures as Python properties.
 """
 
 import math
@@ -183,14 +184,26 @@ class BandDefinition(object):
                 J_list_M1_trans_string = config["fit"]["J_list_M1_trans"]
                 self.J_list_M1_trans = list(map(float,J_list_M1_trans_string.split()))
 
-        # derived
-        # construct dictionary of band members indexed by J
-        self.members = {}
+    ################################################################
+    # derived properties
+    ################################################################
+
+    # It is desirable to derive these listings on the fly, instead of creating
+    # them in _init_, so that they reflect any subsequent changes to self.levels.
+
+    @property
+    def members(self):
+        """ Dictionary of band members indexed by J. """
+        members_by_J = {}
         for qn in self.levels:
             (J,g,n) = qn
-            self.members[J] = qn
-        # construct sorted list of J values
-        self.J_values = sorted(self.members.keys())
+            members_by_J[J] = qn
+        return members_by_J
+
+    @property
+    def J_values(self): 
+        """ Sorted list of J values. """
+        return sorted(self.members.keys())
 
     ################################################################
     # container-like access
