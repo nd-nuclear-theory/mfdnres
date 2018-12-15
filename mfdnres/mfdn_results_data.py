@@ -12,6 +12,7 @@
     09/06/18 (pjf):
         + Add native_transition_properties attribute.
         + Implement get_rme() and get_rtp().
+    12/14/18 (mac): Add get_moment accessor.
 """
 
 import math
@@ -138,6 +139,30 @@ class MFDnResultsData(results_data.ResultsData):
         rms_radius = self.two_body_static_observables.get(radius_type, {}).get(qn, default)
 
         return rms_radius
+
+    def get_moment(self,moment_type,qn,default=np.nan):
+        """Retrieve moment value.
+
+        This accessor actually could retrieve any native static property, but we
+        keep a name which reflects semantics rather than the internal
+        represenation.
+
+        Arguments:
+           moment_type (str): moment type ("E2p","E2n","M1mu","M1lp","M1ln","M1sp","M1sn")
+           qn (tuple): quantum numbers for state
+           default (float,optional): default value to return for missing radius
+
+        Returns
+           (float): observable value
+
+        """
+
+        # extract labels
+        (J,gex,n) = qn
+
+        value = self.native_static_properties.get(moment_type, {}).get(qn, default)
+
+        return value
 
 
     def get_rme(self,observable,qn_pair,default=np.nan,verbose=False):
