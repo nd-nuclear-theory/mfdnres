@@ -20,6 +20,7 @@
         - Extract SpNCCIMeshPointData.
     10/6/17 (mac): Extract MFDnRunData subclass to mfdn.py.
     10/10/17 (mac): Extract results data base class to results_data.py.
+    09/20/18 (pjf): Store filename in ResultsData.
 """
 
 import glob
@@ -143,6 +144,7 @@ def read_file(filename,res_format,filename_format=None,verbose=False):
 
     for results in results_list:
         results.params.update(info_from_filename)
+        results.filename = filename
 
     return results_list
 
