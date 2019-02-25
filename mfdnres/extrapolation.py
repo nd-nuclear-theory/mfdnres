@@ -8,6 +8,8 @@
 
     07/11/17 (mac): Split out from analysis.py.
     09/18/18 (mac): Clean up imports.
+    02/24/19 (mac): Add rcond parameter to np.linalg.lstsq call to silence
+        future warning message.
 """
 
 import os
@@ -65,7 +67,7 @@ def extrapolate_energies_exp(Nmax_values,E_values,c2_guess=0.3,verbose=False):
         [1,math.exp(-c2_guess*Nmax)]
         for Nmax in Nmax_values
     ])
-    (c0_guess,c1_guess) = np.linalg.lstsq(A,E_values)[0]
+    (c0_guess,c1_guess) = np.linalg.lstsq(A,E_values,rcond=None)[0]
     if (verbose):
         print("Linear fit assuming c2 = {}".format(c2_guess))
         print("(c0,c1):",(c0_guess,c1_guess))

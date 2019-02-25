@@ -19,6 +19,8 @@
     09/18/18 (mac): Add dictionary helper functions common_keys and operate_dictionaries.
     09/29/18 (mac): Add sorting and pruning of nan values to energy tabulation.
     10/27/18 (mac): Add ability to transform keys in results dictionary.
+    02/27/19 (mac): Extend make_energy_difference_table to handle opposite parities via key
+        transformation on reference state.
 
 """
 
@@ -159,7 +161,7 @@ def make_results_dict(
     Example:
         >>> KEY_DESCRIPTOR_NMAX_HW = (("Nmax",int),("hw",float))
 
-    For now, in the even that the same mesh point arises multiple
+    For now, in the event that the same mesh point arises multiple
     times on input (i.e., a given value for the key tuple is
     duplicated), the final occurrence overwrites any earlier
     occurrences.  In the future, a more sophisticated "merging"
@@ -343,7 +345,11 @@ def make_energy_table(mesh_data,key_descriptor,qn,key_list=None,prune=False):
     return table
 
 
-def make_energy_difference_table(mesh_data_pair,key_descriptor,qn_pair,key_list=None,prune=False):
+def make_energy_difference_table(
+        mesh_data_pair,key_descriptor,qn_pair,
+        reference_key_transformation=None,key_list=None,prune=False,
+        verbose=False
+):
     """Generate energy tabulation.
 
     The key descriptor is used to provide the parameter columns of the
@@ -360,6 +366,10 @@ def make_energy_difference_table(mesh_data_pair,key_descriptor,qn_pair,key_list=
     Differences are taken as (E1-E2), i.e., the second data set is the reference
     data set.
 
+    A reference_key_transformation is necessary if the excited state and
+    reference state are expected to live on different mesh points, e.g., for
+    states of opposite parity.
+
     Data format:
         param1 param2 ... E
 
@@ -367,6 +377,8 @@ def make_energy_difference_table(mesh_data_pair,key_descriptor,qn_pair,key_list=
         mesh_data_pair (list of ResultsData): pair of data sets
         key_descriptor (tuple of tuple): dtype descriptor for key
         qn_pair (tuple): pair of quantum numbers (J,g,n) of levels of interest
+        reference_key_transformation (callable,optional): transformation function to apply
+            to key tuple for reference data set
         key_list (list of tuple, optional): key list for data points; defaults to
             common keys from the two data sets
         prune (bool, optional): whether or not to prune nan values from table
@@ -382,14 +394,16 @@ def make_energy_difference_table(mesh_data_pair,key_descriptor,qn_pair,key_list=
 
     # process results into dictionaries
     results_dict1 = make_results_dict(mesh_data1,key_descriptor)
-    results_dict2 = make_results_dict(mesh_data2,key_descriptor)
+    results_dict2 = make_results_dict(mesh_data2,key_descriptor,key_transformation=reference_key_transformation)
 
     # find common keys
     if (key_list is not None):
         common_key_list = key_list
     else:
         common_key_list = common_keys([results_dict1,results_dict2])
-    ## print("Common keys: {}".format(common_key_list))
+    if (verbose):
+        print("results_dict2 keys: {}".format(sorted(results_dict2.keys())))
+        print("Common keys: {}".format(common_key_list))
 
     # tabulate values
     key_function = make_key_function(key_descriptor)
@@ -398,13 +412,15 @@ def make_energy_difference_table(mesh_data_pair,key_descriptor,qn_pair,key_list=
         mesh_point1 = results_dict1[key]
         mesh_point2 = results_dict2[key]
         value1 = mesh_point1.get_energy(qn1)
-        value2 = mesh_point1.get_energy(qn2)
+        value2 = mesh_point2.get_energy(qn2)
         value = value1-value2
         if (prune and np.isnan(value)):
             continue
         table_data += [
             key + (value,)
         ]
+    if (verbose):
+        print("Table data: {}".format(table_data))
 
     # convert to structured array
     table = np.array(
