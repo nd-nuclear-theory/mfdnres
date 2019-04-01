@@ -21,6 +21,7 @@
     10/27/18 (mac): Add ability to transform keys in results dictionary.
     02/27/19 (mac): Extend make_energy_difference_table to handle opposite parities via key
         transformation on reference state.
+    03/31/19 (mac): Add format string for level table.
 
 """
 
@@ -529,14 +530,25 @@ def make_rtp_table(mesh_data,key_descriptor,observable,qnf,qni):
 # tabulation functions -- listing by level
 ################################################################
 
+FORMAT_STRING_LEVEL_TABLE = "{:4.1f} {:1d} {:3d} {:7.3f}"
 def make_level_table(mesh_point,levels=None,energy_cutoff=None):
     """Generate listing of level energies from single run.
 
     Data format:
-      J gex n E
+      J g n E
 
     Legacy format (for comparison):
       seq J gex n T E
+
+    Example (writing out level table):
+
+    >>> level_table = mfdnres.analysis.make_level_table(mesh_point)
+    >>> mfdnres.tools.write_table(
+    >>>     filename,
+    >>>     mfdnres.analysis.FORMAT_STRING_LEVEL_TABLE,
+    >>>     level_table
+    >>> )
+
 
     Arguments:
         mesh_point (BaseResultsData): data for mesh point
@@ -545,12 +557,6 @@ def make_level_table(mesh_point,levels=None,energy_cutoff=None):
 
     Returns:
        (array): data table
-
-    >>> level_table = mfdnres.analysis.make_level_table(mesh_point)
-    >>> mfdnres.tools.write_table(
-    >>>     filename,"{:4.1f} {:1d} {:3d} {:7.3f}",
-    >>>     level_table
-    >>> )
 
 
     """
