@@ -245,7 +245,7 @@ def parse_angular_momenta(self,tokenized_lines):
     if (self.params["Revision"]=="beta00"):
         property_names = ["L","S","Sp","Sn","J"]
     else:
-        # Lp and Sp observables added with v15beta01
+        # nonsensical Lp^2 and Ln^2 observables (unclear definition and sometimes negative) added with v15beta01
         property_names = ["L","S","Lp","Sp","Ln","Sn","J"]
     parse_generic_static_properties(self,tokenized_lines,self.native_static_properties,property_names)
 
