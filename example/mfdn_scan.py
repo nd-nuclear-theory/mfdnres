@@ -7,6 +7,7 @@
 
     10/12/17 (mac): Created, based on analysis/spncci:convergence_analysis.py.
     10/23/17 (mac): Add radius scan example.
+    04/02/19 (mac): Add angular momentum scan example.
 
 """
 
@@ -48,8 +49,8 @@ def make_energy_table_file(mesh_data,nuclide,interaction_coulomb,qn):
         table
     )
 
-def make_radius_table_file(mesh_data,nuclide,interaction_coulomb,radus_type,qn):
-    """ Tabulate p for hw scan.
+def make_radius_table_file(mesh_data,nuclide,interaction_coulomb,radius_type,qn):
+    """ Tabulate radius for hw scan.
 
     Tabulation format:
         Nmax hw value
@@ -58,17 +59,17 @@ def make_radius_table_file(mesh_data,nuclide,interaction_coulomb,radus_type,qn):
         mesh_data (list of ResultsData): data set to include
         nuclide (tuple): (Z,N)
         interaction_coulomb (tuple): (interaction,use_coulomb)
-        radus_type (str): radius type code (rp/rn/r)
+        radius_type (str): radius type code (rp/rn/r)
         qn (tuple): (J,g,n) state label
     
     """
 
     (interaction,coulomb) = interaction_coulomb
     (J,g,n) = qn
-    output_file_name="data/data-Z{nuclide[0]:02d}-N{nuclide[1]:02d}-{interaction:s}-{coulomb:1d}-scan-{radus_type}-{J:04.1f}-{g:1d}-{n:02d}.dat".format(
+    output_file_name="data/data-Z{nuclide[0]:02d}-N{nuclide[1]:02d}-{interaction:s}-{coulomb:1d}-scan-{radius_type}-{J:04.1f}-{g:1d}-{n:02d}.dat".format(
         nuclide=nuclide,
         interaction=interaction,coulomb=coulomb,
-        radus_type=radus_type,
+        radius_type=radius_type,
         J=J,g=g,n=n
     )
 
@@ -78,29 +79,33 @@ def make_radius_table_file(mesh_data,nuclide,interaction_coulomb,radus_type,qn):
         table
     )
 
-## def make_be2s(Z,N,nf,ni,J_values,slurp_directories):
-##     """
-##     """
-## 
-##     # import data
-##     #slurp_directory = mfdnres.res.res_file_directory("mcaprio","spncci","mac0423")
-##     mesh_data = mfdnres.res.slurp_res_files(slurp_directories,"spncci",verbose=False)
-## 
-##     for Ji in J_values:
-##         for Jf in J_values:
-##             if Jf > Ji :
-##                 continue
-##             if (Jf+Ji)<2.0 or abs(Jf-Ji)>2.0:
-##                 continue
-##             output_file_name="data/data-Z{:02d}-N{:02d}-JISP16-0-scan-be2-{:04.1f}-0-{:02d}-{:04.1f}-0-{:02d}.dat".format(Z,N,Jf,nf,Ji,ni)
-##             # make B(E2) tables
-##             #
-##             # Beware this is the "matter" B(E2).  In isoscalar case, divide by 4 for proton B(E2).
-##             rtp_table = mfdnres.analysis.make_rtp_table(mesh_data,KEY_DESCRIPTOR_NNHW,"Qintr",(Jf,0,nf),(Ji,0,ni))
-##             mfdnres.tools.write_table(
-##                 output_file_name,"{:2d} {:2d} {:7.3f} {:7.3f}",
-##                 rtp_table
-##             )
+def make_am_table_file(mesh_data,nuclide,interaction_coulomb,qn):
+    """ Tabulate effective angular momenta for hw scan.
+
+    Tabulation format:
+        Nmax hw value
+
+    Arguments:
+        mesh_data (list of ResultsData): data set to include
+        nuclide (tuple): (Z,N)
+        interaction_coulomb (tuple): (interaction,use_coulomb)
+        qn (tuple): (J,g,n) state label
+    
+    """
+
+    (interaction,coulomb) = interaction_coulomb
+    (J,g,n) = qn
+    output_file_name="data/data-Z{nuclide[0]:02d}-N{nuclide[1]:02d}-{interaction:s}-{coulomb:1d}-scan-am-{J:04.1f}-{g:1d}-{n:02d}.dat".format(
+        nuclide=nuclide,
+        interaction=interaction,coulomb=coulomb,
+        J=J,g=g,n=n
+    )
+
+    table = mfdnres.analysis.make_am_table(mesh_data,KEY_DESCRIPTOR_NMAX_HW,qn)
+    mfdnres.tools.write_table(
+        output_file_name,"{:2d} {:7.3f} {:7.3f} {:7.3f} {:7.3f} {:7.3f}",
+        table
+    )
 
 ################################################################
 # example control code
@@ -173,10 +178,14 @@ def make_tabulations_pjf0015():
     qn = (1.5,1,1)
     make_radius_table_file(mesh_data,nuclide,interaction_coulomb,"rp",qn)
 
+    # make angular momentum table
+    qn = (1.5,1,1)
+    make_am_table_file(mesh_data,nuclide,interaction_coulomb,qn)
+
 ################################################################
 # main
 ################################################################
 
 make_tabulations_pjf0007()
-##make_tabulations_pjf0015()
+make_tabulations_pjf0015()
 

@@ -11,6 +11,7 @@
     04/27/18 (mac): Rename parameter Mj to M.
     09/06/18 (pjf): Added initial built-in transition extraction.
     12/12/18 (mac): Update handling of "Angular momenta" section for v15b01.
+    04/02/19 (mac): Update naming of angular momenta observables.
 """
 
 import itertools
@@ -207,7 +208,7 @@ def parse_decompositions_Nex(self,tokenized_lines):
         self.decompositions["Nex"][qn]=data
 
 def parse_generic_static_properties(self,tokenized_lines,container,property_names):
-    """Parse generic moments given list of property names for the data columns.
+    """Parse generic stati properties given list of property names for the data columns.
 
     Arguments:
         ...
@@ -237,16 +238,15 @@ def parse_E2_moments(self,tokenized_lines):
     parse_generic_static_properties(self,tokenized_lines,self.native_static_properties,property_names)
 
 def parse_angular_momenta(self,tokenized_lines):
-    """Parse angular momenta.
-
-    Caveat: These are really the <am^2> observables, so simply calling them <am>
-    is misleading.
+    """Parse squared angular momenta.
     """
-    if (self.params["Revision"]=="beta00"):
-        property_names = ["L","S","Sp","Sn","J"]
+
+    # parse raw (squared observable) values
+    if (self.params.get("Revision","beta00")=="beta00"):  # early runs with beta00 left "Revision" field blank
+        property_names = ["L_sqr","S_sqr","Sp_sqr","Sn_sqr","J_sqr"]
     else:
         # nonsensical Lp^2 and Ln^2 observables (unclear definition and sometimes negative) added with v15beta01
-        property_names = ["L","S","Lp","Sp","Ln","Sn","J"]
+        property_names = ["L_sqr","S_sqr","Lp_sqr","Sp_sqr","Ln_sqr","Sn_sqr","J_sqr"]
     parse_generic_static_properties(self,tokenized_lines,self.native_static_properties,property_names)
 
 def parse_radii(self,tokenized_lines):

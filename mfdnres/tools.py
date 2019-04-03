@@ -14,6 +14,7 @@
     10/10/17 (mac): Gracefully ignore null key-value lines.
     09/18/18 (mac): Redefine RMEConvention enum to use Edmonds vs. Rose terminology.
     04/02/19 (mac): Add filename construction utility dash_padded.
+    04/02/19 (mac): Move effective_am in from analysis.
 
 """
 
@@ -593,6 +594,22 @@ def canonicalize_Jgn_pair(Jgn_pair,rme_convention):
 
     return (Jgn_pair_canonical, flipped, canonicalization_factor)
 
+################################################################
+# calculate effective angular momentum
+################################################################
+
+def effective_am(J_sqr):
+    """  Convert mean square angular momentum to effective angular momentum.
+
+    Args:
+        J_sqr (float): value representing <J.J>
+
+    Returns:
+        (float): effective J
+    """
+
+    J = (math.sqrt(4*J_sqr+1)-1)/2
+    return J
 
 ################################################################
 # test code

@@ -22,6 +22,7 @@
     02/27/19 (mac): Extend make_energy_difference_table to handle opposite parities via key
         transformation on reference state.
     03/31/19 (mac): Add format string for level table.
+    04/02/19 (mac): Update am handling (add make_am_table and move effective_am to tools).
 
 """
 
@@ -438,7 +439,7 @@ def make_radius_table(mesh_data,key_descriptor,radius_type,qn):
     Arguments:
         mesh_data (list of ResultsData): data for mesh points
         key_descriptor (tuple of tuple): dtype descriptor for key
-        radus_type (str): radius type code (rp/rn/r)
+        radus_type (str): radius type code ("rp","rn","r")
         qn (tuple): quantum numbers (J,g,n) of level to retrieve
 
     Returns:
@@ -456,6 +457,43 @@ def make_radius_table(mesh_data,key_descriptor,radius_type,qn):
     table = np.array(
         table_data,
         dtype = list(key_descriptor)+[("r",float)]
+     )
+    return table
+
+def make_am_table(mesh_data,key_descriptor,qn):
+    """ Generate effective angular momentum tabulation.
+
+    Data format:
+        <key> L Sp Sn S
+    where actual label columns depend up on key_descriptor, e.g.:
+        Nmax hw ...
+        Nsigmamax Nmax hw ...
+
+    Arguments:
+        mesh_data (list of ResultsData): data for mesh points
+        key_descriptor (tuple of tuple): dtype descriptor for key
+        qn (tuple): quantum numbers (J,g,n) of level to retrieve
+
+    Returns:
+       (array): data table
+    """
+
+    # tabulate values
+    key_function = make_key_function(key_descriptor)
+    table_data = [
+        key_function(mesh_point) + (
+            mesh_point.get_am("L",qn),
+            mesh_point.get_am("Sp",qn),
+            mesh_point.get_am("Sn",qn),
+            mesh_point.get_am("S",qn),
+        )
+        for mesh_point in mesh_data
+    ]
+
+    # convert to structured array
+    table = np.array(
+        table_data,
+        dtype = list(key_descriptor)+[("L",float),("Sp",float),("Sn",float),("S",float)]
      )
     return table
 
@@ -578,23 +616,6 @@ def make_level_table(mesh_point,levels=None,energy_cutoff=None):
         dtype = [("J",float),("gex",int),("n",int),("E",float)]
      )
     return table
-
-################################################################
-# calculate effective angular momentum
-################################################################
-
-def effective_am(J_sqr):
-    """  Convert mean square angular momentum to effective angular momentum.
-
-    Args:
-        J_sqr (float): value representing <J.J>
-
-    Returns:
-        (float): effective J
-    """
-
-    J = (math.sqrt(4*J_sqr+1)-1)/2
-    return J
 
 if (__name__ == "__main__"):
     pass
