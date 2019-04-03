@@ -4,15 +4,16 @@
     Mark A. Caprio
     University of Notre Dame
 
-    5/31/15 (mac): Initiated (as mfdn_res.py).
-    6/5/15 (mac): Restructure as subpackage.
-    7/26/15 (mac): Allow mismatch in line parser.
-    7/8/17 (mac): Add write_lines and write_table.
-    7/9/17 (mac): Add parsing tools for structured results files.
-    7/14/17 (mac): Add canonicalization tools for (J,g) subspace pairs.
-    9/17/17 (mac): Add bool_from_str.
+    05/31/15 (mac): Initiated (as mfdn_res.py).
+    06/05/15 (mac): Restructure as subpackage.
+    07/26/15 (mac): Allow mismatch in line parser.
+    07/08/17 (mac): Add write_lines and write_table.
+    07/09/17 (mac): Add parsing tools for structured results files.
+    07/14/17 (mac): Add canonicalization tools for (J,g) subspace pairs.
+    09/17/17 (mac): Add bool_from_str.
     10/10/17 (mac): Gracefully ignore null key-value lines.
     09/18/18 (mac): Redefine RMEConvention enum to use Edmonds vs. Rose terminology.
+    04/02/19 (mac): Add filename construction utility dash_padded.
 
 """
 
@@ -20,6 +21,23 @@ import enum
 import itertools
 import math
 import re
+
+################################################################
+# filename construction
+################################################################
+
+def dash_padded(text):
+    """ Pad nonnull text with leading dash.
+
+    Arguments:
+        text (str): Text to pad.
+
+    Returns:
+        (str): Padded text.
+    """
+
+    padded_text = text if (text=="") else ("-"+text)
+    return padded_text
 
 ################################################################
 # line parser for free-form res files
