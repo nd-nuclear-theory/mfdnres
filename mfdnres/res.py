@@ -193,6 +193,7 @@ def slurp_res_files(
             new_mesh_data = read_file(
                 res_filename,
                 res_format=res_format,filename_format=filename_format,
+                ##verbose=(verbose=="verbose_by_file")
                 verbose=False  # disabled file-by-file verbosity
             )
             mesh_data += new_mesh_data

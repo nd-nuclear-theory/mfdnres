@@ -23,6 +23,11 @@
         - Add sorting and pruning of nan values to radius tabulation.
         - Add moment tabulation with sorting and pruning of nan values.
         - Add __MatchAny to act as wildcard for matching.
+    02/27/19 (mac): Extend make_energy_difference_table to handle opposite parities via key
+        transformation on reference state.
+    03/31/19 (mac): Add format string for level table.
+    04/02/19 (mac): Update am handling (add make_am_table and move effective_am to tools).
+
 """
 
 import math
@@ -176,7 +181,7 @@ def make_results_dict(
     Example:
         >>> KEY_DESCRIPTOR_NMAX_HW = (("Nmax",int),("hw",float))
 
-    For now, in the even that the same mesh point arises multiple
+    For now, in the event that the same mesh point arises multiple
     times on input (i.e., a given value for the key tuple is
     duplicated), the final occurrence overwrites any earlier
     occurrences.  In the future, a more sophisticated "merging"
@@ -360,7 +365,11 @@ def make_energy_table(mesh_data,key_descriptor,qn,key_list=None,prune=False):
     return table
 
 
-def make_energy_difference_table(mesh_data_pair,key_descriptor,qn_pair,key_list=None,prune=False):
+def make_energy_difference_table(
+        mesh_data_pair,key_descriptor,qn_pair,
+        reference_key_transformation=None,key_list=None,prune=False,
+        verbose=False
+):
     """Generate energy tabulation.
 
     The key descriptor is used to provide the parameter columns of the
@@ -377,6 +386,10 @@ def make_energy_difference_table(mesh_data_pair,key_descriptor,qn_pair,key_list=
     Differences are taken as (E1-E2), i.e., the second data set is the reference
     data set.
 
+    A reference_key_transformation is necessary if the excited state and
+    reference state are expected to live on different mesh points, e.g., for
+    states of opposite parity.
+
     Data format:
         param1 param2 ... E
 
@@ -384,6 +397,8 @@ def make_energy_difference_table(mesh_data_pair,key_descriptor,qn_pair,key_list=
         mesh_data_pair (list of ResultsData): pair of data sets
         key_descriptor (tuple of tuple): dtype descriptor for key
         qn_pair (tuple): pair of quantum numbers (J,g,n) of levels of interest
+        reference_key_transformation (callable,optional): transformation function to apply
+            to key tuple for reference data set
         key_list (list of tuple, optional): key list for data points; defaults to
             common keys from the two data sets
         prune (bool, optional): whether or not to prune nan values from table
@@ -399,14 +414,16 @@ def make_energy_difference_table(mesh_data_pair,key_descriptor,qn_pair,key_list=
 
     # process results into dictionaries
     results_dict1 = make_results_dict(mesh_data1,key_descriptor)
-    results_dict2 = make_results_dict(mesh_data2,key_descriptor)
+    results_dict2 = make_results_dict(mesh_data2,key_descriptor,key_transformation=reference_key_transformation)
 
     # find common keys
     if (key_list is not None):
         common_key_list = key_list
     else:
         common_key_list = common_keys([results_dict1,results_dict2])
-    ## print("Common keys: {}".format(common_key_list))
+    if (verbose):
+        print("results_dict2 keys: {}".format(sorted(results_dict2.keys())))
+        print("Common keys: {}".format(common_key_list))
 
     # tabulate values
     key_function = make_key_function(key_descriptor)
@@ -415,13 +432,15 @@ def make_energy_difference_table(mesh_data_pair,key_descriptor,qn_pair,key_list=
         mesh_point1 = results_dict1[key]
         mesh_point2 = results_dict2[key]
         value1 = mesh_point1.get_energy(qn1)
-        value2 = mesh_point1.get_energy(qn2)
+        value2 = mesh_point2.get_energy(qn2)
         value = value1-value2
         if (prune and np.isnan(value)):
             continue
         table_data += [
             key + (value,)
         ]
+    if (verbose):
+        print("Table data: {}".format(table_data))
 
     # convert to structured array
     table = np.array(
@@ -438,7 +457,7 @@ def make_radius_table(mesh_data,key_descriptor,radius_type,qn,key_list=None,prun
     Arguments:
         mesh_data (list of ResultsData): data for mesh points
         key_descriptor (tuple of tuple): dtype descriptor for key
-        radus_type (str): radius type code (rp/rn/r)
+        radus_type (str): radius type code ("rp","rn","r")
         qn (tuple): quantum numbers (J,g,n) of level to retrieve
 
     Returns:
@@ -471,6 +490,43 @@ def make_radius_table(mesh_data,key_descriptor,radius_type,qn,key_list=None,prun
     table = np.array(
         table_data,
         dtype = list(key_descriptor)+[("r",float)]
+     )
+    return table
+
+def make_am_table(mesh_data,key_descriptor,qn):
+    """ Generate effective angular momentum tabulation.
+
+    Data format:
+        <key> L Sp Sn S
+    where actual label columns depend up on key_descriptor, e.g.:
+        Nmax hw ...
+        Nsigmamax Nmax hw ...
+
+    Arguments:
+        mesh_data (list of ResultsData): data for mesh points
+        key_descriptor (tuple of tuple): dtype descriptor for key
+        qn (tuple): quantum numbers (J,g,n) of level to retrieve
+
+    Returns:
+       (array): data table
+    """
+
+    # tabulate values
+    key_function = make_key_function(key_descriptor)
+    table_data = [
+        key_function(mesh_point) + (
+            mesh_point.get_am("L",qn),
+            mesh_point.get_am("Sp",qn),
+            mesh_point.get_am("Sn",qn),
+            mesh_point.get_am("S",qn),
+        )
+        for mesh_point in mesh_data
+    ]
+
+    # convert to structured array
+    table = np.array(
+        table_data,
+        dtype = list(key_descriptor)+[("L",float),("Sp",float),("Sn",float),("S",float)]
      )
     return table
 
@@ -591,14 +647,25 @@ def make_moment_table(mesh_data,key_descriptor,observable,qn,key_list=None,prune
 # tabulation functions -- listing by level
 ################################################################
 
+FORMAT_STRING_LEVEL_TABLE = "{:4.1f} {:1d} {:3d} {:7.3f}"
 def make_level_table(mesh_point,levels=None,energy_cutoff=None):
     """Generate listing of level energies from single run.
 
     Data format:
-      J gex n E
+      J g n E
 
     Legacy format (for comparison):
       seq J gex n T E
+
+    Example (writing out level table):
+
+    >>> level_table = mfdnres.analysis.make_level_table(mesh_point)
+    >>> mfdnres.tools.write_table(
+    >>>     filename,
+    >>>     mfdnres.analysis.FORMAT_STRING_LEVEL_TABLE,
+    >>>     level_table
+    >>> )
+
 
     Arguments:
         mesh_point (BaseResultsData): data for mesh point
@@ -607,12 +674,6 @@ def make_level_table(mesh_point,levels=None,energy_cutoff=None):
 
     Returns:
        (array): data table
-
-    >>> level_table = mfdnres.analysis.make_level_table(mesh_point)
-    >>> mfdnres.tools.write_table(
-    >>>     filename,"{:4.1f} {:1d} {:3d} {:7.3f}",
-    >>>     level_table
-    >>> )
 
 
     """
@@ -634,23 +695,6 @@ def make_level_table(mesh_point,levels=None,energy_cutoff=None):
         dtype = [("J",float),("gex",int),("n",int),("E",float)]
      )
     return table
-
-################################################################
-# calculate effective angular momentum
-################################################################
-
-def effective_am(J_sqr):
-    """  Convert mean square angular momentum to effective angular momentum.
-
-    Args:
-        J_sqr (float): value representing <J.J>
-
-    Returns:
-        (float): effective J
-    """
-
-    J = (math.sqrt(4*J_sqr+1)-1)/2
-    return J
 
 if (__name__ == "__main__"):
     pass

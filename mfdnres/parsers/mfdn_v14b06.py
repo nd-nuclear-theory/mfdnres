@@ -7,6 +7,7 @@
     6/5/15 (mac): Extract from mfdn_res.py.
     10/10/16 (mac): Update to return list containing single mesh point.
     04/27/18 (mac): Rename parameter Mj to M.
+    03/01/19 (mac): Fix parser failure when transitions are missing.
 
 """
 
@@ -315,67 +316,67 @@ def parser(fin,verbose):
 
     # check for transition section header
     line=fin.readline().strip()
-    if (line != "Summary of transition properties"):
-        # if no transition properties to read, we are done...
-        return
-    tools.parse_line(fin.readline(),r"")
+    have_transitions = (line == "Summary of transition properties")
 
+    # read transition data
+    if (have_transitions):
+        tools.parse_line(fin.readline(),r"")
 
-    # read each transition group
-    done_with_transitions = False
-    while (not done_with_transitions):
+        # read each transition group
+        done_with_transitions = False
+        while (not done_with_transitions):
 
-        # check block header line
-        line=fin.readline().strip()
-        if (line != "Transitions to reference state  with J, NP, n, T, Eabs"):
-            done_with_transitions = True
-            continue
+            # check block header line
+            line=fin.readline().strip()
+            if (line != "Transitions to reference state  with J, NP, n, T, Eabs"):
+                done_with_transitions = True
+                continue
 
-        # read final state labels
-        match = tools.parse_line(fin.readline(),r"(?P<seq>\S+)\s+(?P<J>\S+)\s+(?P<g>\S+)\s+(?P<n>\S+)\s+(?P<T>\S+)\s+(?P<Eabs>\S+)")
-        seqf = int(match.group("seq"))
+            # read final state labels
+            match = tools.parse_line(fin.readline(),r"(?P<seq>\S+)\s+(?P<J>\S+)\s+(?P<g>\S+)\s+(?P<n>\S+)\s+(?P<T>\S+)\s+(?P<Eabs>\S+)")
+            seqf = int(match.group("seq"))
 
-        # prime the following subblock reading seqence
-        line=fin.readline().strip()
-
-        # Gamow-Teller block
-        tools.parse_line(line,r"Seq    J    NP  n    T      Eabs      Seq\(Z\+1,N\-1\)  Seq\(Z\-1,N\+1\)  Ref\(Z\+1,N\-1\)  Ref\(Z\-1,N\+1\)")
-        line=fin.readline().strip()
-        while (re.match(r"\d+ ",line) is not None):
-            # process data line
-            match = tools.parse_line(line,r"(?P<seq>\S+)\s+(?P<J>\S+)\s+(?P<g>\S+)\s+(?P<n>\S+)\s+(?P<T>\S+)\s+(?P<me>.*)")
-            seqi = int(match.group("seq"))
-            me_values = list(map(float,match.group("me").split()))
-            results.transitions[(state_lookup[seqf],state_lookup[seqi],"GT",M)] = me_values[0:2]
-
-            # read ahead
+            # prime the following subblock reading seqence
             line=fin.readline().strip()
 
-        # M1 block
-        tools.parse_line(line,r"Seq    J    NP  n    T      Eabs       Dl\(pro,neu\)       Ds\(pro,neu\)      B\(M1: \-\>ref; ref\-\>\)")
-        line=fin.readline().strip()
-        while (re.match(r"\d+ ",line) is not None):
-            # process data line
-            match = tools.parse_line(line,r"(?P<seq>\S+)\s+(?P<J>\S+)\s+(?P<g>\S+)\s+(?P<n>\S+)\s+(?P<T>\S+)\s+(?P<Eabs>\S+)\s+(?P<me>.*)")
-            seqi = int(match.group("seq"))
-            me_values = list(map(float,match.group("me").split()))
-            results.transitions[(state_lookup[seqf],state_lookup[seqi],"M1",M)] = me_values[0:4]
-
-            # read ahead
+            # Gamow-Teller block
+            tools.parse_line(line,r"Seq    J    NP  n    T      Eabs      Seq\(Z\+1,N\-1\)  Seq\(Z\-1,N\+1\)  Ref\(Z\+1,N\-1\)  Ref\(Z\-1,N\+1\)")
             line=fin.readline().strip()
+            while (re.match(r"\d+ ",line) is not None):
+                # process data line
+                match = tools.parse_line(line,r"(?P<seq>\S+)\s+(?P<J>\S+)\s+(?P<g>\S+)\s+(?P<n>\S+)\s+(?P<T>\S+)\s+(?P<me>.*)")
+                seqi = int(match.group("seq"))
+                me_values = list(map(float,match.group("me").split()))
+                results.transitions[(state_lookup[seqf],state_lookup[seqi],"GT",M)] = me_values[0:2]
 
-        # E2 block
-        tools.parse_line(line,r"Seq    J    NP  n    T      Eabs       E2\(pro,neu\)      B\(E2: \-\>ref; ref\-\>\)")
-        line=fin.readline().strip()
-        while (re.match(r"\d+ ",line) is not None):
-            # process data line
-            match = tools.parse_line(line,r"(?P<seq>\S+)\s+(?P<J>\S+)\s+(?P<g>\S+)\s+(?P<n>\S+)\s+(?P<T>\S+)\s+(?P<Eabs>\S+)\s+(?P<me>.*)")
-            seqi = int(match.group("seq"))
-            me_values = list(map(float,match.group("me").split()))
-            results.transitions[(state_lookup[seqf],state_lookup[seqi],"E2",M)] = me_values[0:2]
+                # read ahead
+                line=fin.readline().strip()
 
-            # read ahead
+            # M1 block
+            tools.parse_line(line,r"Seq    J    NP  n    T      Eabs       Dl\(pro,neu\)       Ds\(pro,neu\)      B\(M1: \-\>ref; ref\-\>\)")
             line=fin.readline().strip()
+            while (re.match(r"\d+ ",line) is not None):
+                # process data line
+                match = tools.parse_line(line,r"(?P<seq>\S+)\s+(?P<J>\S+)\s+(?P<g>\S+)\s+(?P<n>\S+)\s+(?P<T>\S+)\s+(?P<Eabs>\S+)\s+(?P<me>.*)")
+                seqi = int(match.group("seq"))
+                me_values = list(map(float,match.group("me").split()))
+                results.transitions[(state_lookup[seqf],state_lookup[seqi],"M1",M)] = me_values[0:4]
+
+                # read ahead
+                line=fin.readline().strip()
+
+            # E2 block
+            tools.parse_line(line,r"Seq    J    NP  n    T      Eabs       E2\(pro,neu\)      B\(E2: \-\>ref; ref\-\>\)")
+            line=fin.readline().strip()
+            while (re.match(r"\d+ ",line) is not None):
+                # process data line
+                match = tools.parse_line(line,r"(?P<seq>\S+)\s+(?P<J>\S+)\s+(?P<g>\S+)\s+(?P<n>\S+)\s+(?P<T>\S+)\s+(?P<Eabs>\S+)\s+(?P<me>.*)")
+                seqi = int(match.group("seq"))
+                me_values = list(map(float,match.group("me").split()))
+                results.transitions[(state_lookup[seqf],state_lookup[seqi],"E2",M)] = me_values[0:2]
+
+                # read ahead
+                line=fin.readline().strip()
 
     # package results
     mesh_data = [results]

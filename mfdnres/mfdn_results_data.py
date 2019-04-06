@@ -7,12 +7,13 @@
     Mark A. Caprio
     University of Notre Dame
 
-    10/6/17 (mac): Extract MFDnResultsData from res.py.
+    10/06/17 (mac): Extract MFDnResultsData from res.py.
     10/23/17 (mac): Add get_radius accessor.
     09/06/18 (pjf):
         + Add native_transition_properties attribute.
         + Implement get_rme() and get_rtp().
     12/14/18 (mac): Add get_moment accessor.
+    04/02/19 (mac): Add get_am accessor.
 """
 
 import math
@@ -136,15 +137,15 @@ class MFDnResultsData(results_data.ResultsData):
         # extract labels
         (J,gex,n) = qn
 
-        rms_radius = self.two_body_static_observables.get(radius_type, {}).get(qn, default)
+        rms_radius = self.two_body_static_observables.get(radius_type,{}).get(qn,default)
 
         return rms_radius
 
     def get_moment(self,moment_type,qn,default=np.nan):
         """Retrieve moment value.
 
-        This accessor actually could retrieve any native static property, but we
-        keep a name which reflects semantics rather than the internal
+        This accessor actually could retrieve *any* native static property, but
+        we keep a name which reflects semantics rather than the internal
         represenation.
 
         Arguments:
@@ -160,7 +161,38 @@ class MFDnResultsData(results_data.ResultsData):
         # extract labels
         (J,gex,n) = qn
 
-        value = self.native_static_properties.get(moment_type, {}).get(qn, default)
+        value = self.native_static_properties.get(moment_type,{}).get(qn,default)
+
+        return value
+
+    def get_am(self,am_type,qn,default=np.nan):
+        """Extract effective angular momentum value.
+
+        Can be converted to effective angular momentum value with
+        mfdnres.analysis.effective_am.
+
+        Arguments:
+           am_type (str): am type ("L","Sp","Sn","S")
+           qn (tuple): quantum numbers for state
+           default (float,optional): default value to return for missing radius
+
+        Returns
+           (float): observable value
+
+        """
+
+        # extract labels
+        (J,gex,n) = qn
+
+        # validate am type name (to protect user from nonsensical Lp and Ln)
+        if (am_type not in {"L","Sp","Sn","S"}):
+            raise ValueError("Invalid angular momentum type name {}".format(am_type))
+
+        # extract effective am value
+        value_sqr = self.native_static_properties.get(am_type+"_sqr",{}).get(qn,default)
+        if (value_sqr<0):
+            raise ValueError("Invalid squared angular momentum value: {:e}".format(value_sqr))
+        value = tools.effective_am(value_sqr)
 
         return value
 
@@ -174,8 +206,8 @@ class MFDnResultsData(results_data.ResultsData):
         """
 
         # canonicalize labels
-        (qn_pair_canonical, flipped, canonicalization_factor) = tools.canonicalize_Jgn_pair(
-            qn_pair, tools.RMEConvention.kEdmonds
+        (qn_pair_canonical,flipped,canonicalization_factor) = tools.canonicalize_Jgn_pair(
+            qn_pair,tools.RMEConvention.kEdmonds
         )
 
         # extract labels
