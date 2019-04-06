@@ -11,6 +11,7 @@
     04/27/18 (mac): Rename parameter Mj to M.
     09/06/18 (pjf): Added initial built-in transition extraction.
     12/12/18 (mac): Update handling of "Angular momenta" section for v15b01.
+    02/22/19 (pjf): Handle early MFDn v15b00 files.
 """
 
 import itertools
@@ -105,6 +106,7 @@ def parse_params(self,tokenized_lines):
         # Basis
         "Nprotons" : tools.singleton_of(int),
         "Nneutrons" : tools.singleton_of(int),
+        "TwoMj" : tools.singleton_of(int),
         "TwoM" : tools.singleton_of(int),
         "parity" : tools.singleton_of(int),
         "Nmin" : tools.singleton_of(int),
@@ -131,6 +133,8 @@ def parse_params(self,tokenized_lines):
     # do special handling of keys
 
     # augment with float M (from TwoM)
+    if ("TwoMj" in key_value_dict):
+        key_value_dict["M"] = key_value_dict["TwoMj"]/2
     if ("TwoM" in key_value_dict):
         key_value_dict["M"] = key_value_dict["TwoM"]/2
 
@@ -242,7 +246,7 @@ def parse_angular_momenta(self,tokenized_lines):
     Caveat: These are really the <am^2> observables, so simply calling them <am>
     is misleading.
     """
-    if (self.params["Revision"]=="beta00"):
+    if (self.params.get("Revision") is None or self.params["Revision"]=="beta00"):
         property_names = ["L","S","Sp","Sn","J"]
     else:
         # Lp and Sp observables added with v15beta01
