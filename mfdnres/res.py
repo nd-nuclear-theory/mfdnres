@@ -21,6 +21,7 @@
     10/6/17 (mac): Extract MFDnRunData subclass to mfdn.py.
     10/10/17 (mac): Extract results data base class to results_data.py.
     09/20/18 (pjf): Store filename in ResultsData.
+    02/22/19 (pjf): Store only basename of filename in ResultsData.
 """
 
 import glob
@@ -144,7 +145,7 @@ def read_file(filename,res_format,filename_format=None,verbose=False):
 
     for results in results_list:
         results.params.update(info_from_filename)
-        results.filename = filename
+        results.filename = os.path.basename(filename)
 
     return results_list
 
