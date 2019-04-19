@@ -64,9 +64,22 @@ def split_mfdn_results_line(tokenized_line):
         qn (tuple): (J,g,n)
         data (np.array): floating point data as np vector
     """
+
+    # recover qn
     qn = (float(tokenized_line[1]),k_parameter_g,int(tokenized_line[2]))
-    data_iterable = list(map(float,tokenized_line[4:]))
-    data = np.array(data_iterable,dtype=float)
+
+    # trap overflow values
+    #
+    # NAIVE: data_list = list(map(float,tokenized_line[4:]))
+    #
+    # Note: FORTRAN may output "NaN" or "*****".  The former is handled
+    # gracefully by float as float("NaN") => nan, but float("*****") crashes.
+    data_list = [
+        float(token) if (token[0]!="*") else np.nan
+        for token in tokenized_line[4:]
+    ]
+
+    data = np.array(data_list,dtype=float)
     return (qn,data)
 
 
