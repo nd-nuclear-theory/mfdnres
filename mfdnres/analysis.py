@@ -587,6 +587,9 @@ def make_level_table(mesh_point,levels=None,energy_cutoff=None):
     >>>     level_table
     >>> )
 
+    Limitation: All levels must be from the same results object ("mesh point").
+    In practice, it may be necessary to combine levels from different results
+    objects (e.g., M-scheme calculations at different M).
 
     Arguments:
         mesh_point (BaseResultsData): data for mesh point
@@ -595,7 +598,6 @@ def make_level_table(mesh_point,levels=None,energy_cutoff=None):
 
     Returns:
        (array): data table
-
 
     """
 

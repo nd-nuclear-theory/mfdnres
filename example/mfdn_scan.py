@@ -1,6 +1,11 @@
-""" mfdn_scan.py
+"""mfdn_scan.py
 
     Example convergence analysis of MFDn runs.
+
+    Required data files:
+
+        Sample run files from runs pjf0007 and/or pjf0015 should be in the expected
+        directory structure.
 
     Mark A. Caprio
     University of Notre Dame
