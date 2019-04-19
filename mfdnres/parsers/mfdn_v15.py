@@ -11,6 +11,7 @@
     04/27/18 (mac): Rename parameter Mj to M.
     09/06/18 (pjf): Added initial built-in transition extraction.
     12/12/18 (mac): Update handling of "Angular momenta" section for v15b01.
+    02/22/19 (pjf): Handle early MFDn v15b00 files.
     04/02/19 (mac): Update naming of angular momenta observables.
 """
 
@@ -119,6 +120,7 @@ def parse_params(self,tokenized_lines):
         # Basis
         "Nprotons" : tools.singleton_of(int),
         "Nneutrons" : tools.singleton_of(int),
+        "TwoMj" : tools.singleton_of(int),
         "TwoM" : tools.singleton_of(int),
         "parity" : tools.singleton_of(int),
         "Nmin" : tools.singleton_of(int),
@@ -145,6 +147,8 @@ def parse_params(self,tokenized_lines):
     # do special handling of keys
 
     # augment with float M (from TwoM)
+    if ("TwoMj" in key_value_dict):
+        key_value_dict["M"] = key_value_dict["TwoMj"]/2
     if ("TwoM" in key_value_dict):
         key_value_dict["M"] = key_value_dict["TwoM"]/2
 

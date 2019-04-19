@@ -19,6 +19,10 @@
     09/18/18 (mac): Add dictionary helper functions common_keys and operate_dictionaries.
     09/29/18 (mac): Add sorting and pruning of nan values to energy tabulation.
     10/27/18 (mac): Add ability to transform keys in results dictionary.
+    02/25/19 (pjf):
+        - Add sorting and pruning of nan values to radius tabulation.
+        - Add moment tabulation with sorting and pruning of nan values.
+        - Add __MatchAny to act as wildcard for matching.
     02/27/19 (mac): Extend make_energy_difference_table to handle opposite parities via key
         transformation on reference state.
     03/31/19 (mac): Add format string for level table.
@@ -38,6 +42,20 @@ import numpy as np
 # electromagnetic g factors (glp,gln,gsp,gsn)
 MU_EM = np.array([1,0,5.586,-3.826])
 
+# singleton representing match any
+class __MatchAny(tuple):
+    def __str__(self):
+        return "ANY"
+    def __repr__(self):
+        return "ANY"
+    def __eq__(self, other):
+        return True
+    def __ne__(self, other):
+        return False
+    def __hash__(self):
+        return id(self)
+ANY = __MatchAny()
+
 ################################################################
 # arithmetic helper functions
 ################################################################
@@ -51,7 +69,7 @@ def floor2(i):
     Returns:
         (int): greatest even integer
     """
-    
+
     return i - (i%2)
 
 ################################################################
@@ -98,7 +116,7 @@ def operate_dictionaries(dict1,dict2,op):
     Returns:
         (dict): results dictionary
     """
-    
+
     results = dict()
     for key in common_keys((dict1,dict2)):
         results[key] = op(dict1[key],dict2[key])
@@ -431,7 +449,7 @@ def make_energy_difference_table(
      )
     return table
 
-def make_radius_table(mesh_data,key_descriptor,radius_type,qn):
+def make_radius_table(mesh_data,key_descriptor,radius_type,qn,key_list=None,prune=False):
     """ Generate radius tabulation.
 
     See docstring for make_energy_table for sorting and tabulation conventions.
@@ -446,12 +464,27 @@ def make_radius_table(mesh_data,key_descriptor,radius_type,qn):
        (array): data table
     """
 
+   # process results into dictionaries
+    results_dict = make_results_dict(mesh_data,key_descriptor)
+
+    # find common keys
+    if (key_list is not None):
+        common_key_list = key_list
+    else:
+        common_key_list = common_keys([results_dict])
+    ## print("Common keys: {}".format(common_key_list))
+
     # tabulate values
     key_function = make_key_function(key_descriptor)
-    table_data = [
-        key_function(mesh_point) + (mesh_point.get_radius(radius_type,qn),)
-        for mesh_point in mesh_data
-    ]
+    table_data = []
+    for key in common_key_list:
+        mesh_point = results_dict[key]
+        value = mesh_point.get_radius(radius_type,qn)
+        if (prune and np.isnan(value)):
+            continue
+        table_data += [
+            key + (value,)
+        ]
 
     # convert to structured array
     table = np.array(
@@ -561,6 +594,52 @@ def make_rtp_table(mesh_data,key_descriptor,observable,qnf,qni):
     table = np.array(
         table_data,
         dtype = list(key_descriptor)+[("RTP",float)]
+     )
+    return table
+
+def make_moment_table(mesh_data,key_descriptor,observable,qn,key_list=None,prune=False):
+    """ Generate moment tabulation.
+
+    Data format:
+        <key> moment
+    where actual label columns depend up on key_descriptor, e.g.:
+        Nmax hw moment
+        Nsigmamax Nmax hw moment
+
+    Arguments:
+        mesh_data (list of ResultsData): data for mesh points
+        key_descriptor (tuple of tuple): dtype descriptor for key
+        observable_name (str): key naming observable
+        qn (tuple): quantum numbers (J,g,n) of level
+
+    Returns:
+       (array): data table
+    """
+    # process results into dictionaries
+    results_dict = make_results_dict(mesh_data,key_descriptor)
+
+    # find common keys
+    if (key_list is not None):
+        common_key_list = key_list
+    else:
+        common_key_list = common_keys([results_dict])
+
+    # tabulate values
+    key_function = make_key_function(key_descriptor)
+    table_data = []
+    for key in common_key_list:
+        mesh_point = results_dict[key]
+        value = mesh_point.get_moment(observable,qn)
+        if (prune and np.isnan(value)):
+            continue
+        table_data += [
+            key + (value,)
+        ]
+
+    # convert to structured array
+    table = np.array(
+        table_data,
+        dtype = list(key_descriptor)+[("moment",float)]
      )
     return table
 
