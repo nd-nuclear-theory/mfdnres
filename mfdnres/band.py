@@ -11,6 +11,8 @@
         + Update configuration file format (need M value for energy retrieval, need band parity).
         + Revise energy fitting to take energies as dictionary.
     - 12/12/18 (mac): Reimplement BandDefinition derived data structures as Python properties.
+    - 04/25/19 (mac): Remove hard-coded workaround for early SpNCCI operator implementation in
+      write_network_table, and add transition_operators optional argument.
 """
 
 import math
@@ -342,7 +344,11 @@ def write_band_table(results,filename,band_definition,fields=None,default=np.nan
 # output tabulation: RME network from band members
 ################################################################
 
-def write_network_table(results,filename,band_definition,energy_cutoff=None):
+def write_network_table(
+        results,filename,band_definition,
+        energy_cutoff=None,
+        transition_operators=["Qpintr","Qnintr","Qintr"]
+):
     """Writes table of E2 RMEs
 
     WARNING: Currently adapted for spncci use.  Must generalize to recover MFDn
@@ -366,7 +372,7 @@ def write_network_table(results,filename,band_definition,energy_cutoff=None):
         band_definition (BandDefinition): band providing set of initial levels
            (and M values)
         energy_cutoff (float,optional): energy cutoff to limit output size
-
+        transition_operators (list of str, optional): operator identifiers for transition operators to tabulate
     """
 
     # assemble table lines
@@ -394,9 +400,17 @@ def write_network_table(results,filename,band_definition,energy_cutoff=None):
             ## M = band_definition.M.get(Ji,None)
             ## available = results.get_rme(qnf,qni,op,M)
 
-            # retrieve value
-            rme = results.get_rme("Qintr",(qnf,qni))
-            if (rme is np.nan):
+            # retrieve values
+            rme_values = [
+                results.get_rme(operator,(qnf,qni))
+                for operator in transition_operators
+            ]
+
+            # short circuit if all values are nans
+            all_nan = True
+            for is_nan in map(np.isnan,rme_values):
+                all_nan = all_nan and is_nan
+            if (all_nan):
                 continue
 
             # initiate line
@@ -422,9 +436,8 @@ def write_network_table(results,filename,band_definition,energy_cutoff=None):
 
             # value data
             ## values = np.abs(results.get_rme(qnf,qni,op,M))
-            ## entries = 2
-            values = (rme,rme)
-            line += (2*value_format).format(*values)
+            num_values = len(rme_values)
+            line += (num_values*value_format).format(*rme_values)
 
             # finalize line
             line += "\n"
