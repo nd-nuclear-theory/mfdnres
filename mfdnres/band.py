@@ -357,9 +357,9 @@ def write_network_table(
 
     Data format:
 
-        J_i gex_i n_i Eabs_i ; J_f p_f n_f Eabs_f ; |RME_p| |RME_n|
+        J_f gex_f n_f Eabs_f ; J_i p_i n_i Eabs_i ; |RME_p| |RME_n|
 
-    Legacy data format (included isospin, swapped initial/final order):
+    Legacy data format (2015-era) -- included isospin, swapped initial/final label order:
 
         J_i gex_i n_i T_i Eabs_i ; J_f p_f n_f T_f Eabs_f ; |RME_p| |RME_n|
 
