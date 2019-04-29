@@ -74,7 +74,8 @@ def split_mfdn_results_line(tokenized_line):
     # NAIVE: data_list = list(map(float,tokenized_line[4:]))
     #
     # Note: FORTRAN may output "NaN" or "*****".  The former is handled
-    # gracefully by float as float("NaN") => nan, but float("*****") crashes.
+    # gracefully by float as float("NaN") => nan, but float("*****") crashes, so
+    # we must trap this case.
     data_list = [
         float(token) if (token[0]!="*") else np.nan
         for token in tokenized_line[4:]
