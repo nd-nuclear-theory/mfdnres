@@ -13,6 +13,7 @@
     12/12/18 (mac): Update handling of "Angular momenta" section for v15b01.
     02/22/19 (pjf): Handle early MFDn v15b00 files.
     04/02/19 (mac): Update naming of angular momenta observables.
+    04/05/19 (pjf): Parse obscalc-ob one-body static and transition output.
 """
 
 import itertools
@@ -124,6 +125,7 @@ def parse_params(self,tokenized_lines):
         # Observables
         "numTBops" : tools.singleton_of(int),
         "TBMEfile" : tools.singleton_of(str),
+        "names": tools.list_of(str),
         # Calculation
         "hw" : tools.singleton_of(float)
     }
@@ -155,6 +157,9 @@ def parse_params(self,tokenized_lines):
 
     if ("TBMEfile" in key_value_dict):
         key_value_dict["tbo_names"] = [filename.replace('.bin', '').replace('tbme-', '') for filename in key_value_dict["TBMEfile"]]
+
+    if "names" in key_value_dict:
+        key_value_dict["one_body_observable_names"] = key_value_dict["names"]
 
     # update to params dictionary
     self.params.update(key_value_dict)
@@ -212,7 +217,7 @@ def parse_decompositions_Nex(self,tokenized_lines):
         self.decompositions["Nex"][qn]=data
 
 def parse_generic_static_properties(self,tokenized_lines,container,property_names):
-    """Parse generic stati properties given list of property names for the data columns.
+    """Parse generic static properties given list of property names for the data columns.
 
     Arguments:
         ...
@@ -292,6 +297,37 @@ def parse_transitions(self, tokenized_lines):
             transition_dict = self.native_transition_properties.setdefault(transition_type, dict())
             transition_dict[Jgn_pair_canonical] = canonicalization_factor*value
 
+def parse_one_body_static_properties(self, tokenized_lines):
+    """Parse obscalc-ob output for static properties.
+    """
+    names = self.params["one_body_observable_names"]
+    for tokenized_line in tokenized_lines:
+        qn = (float(tokenized_line[0]), int(tokenized_line[1]), int(tokenized_line[2]))
+        data_iterable = map(float, tokenized_line[6:])
+
+        for (property_type, value) in zip(names, data_iterable):
+            property_dict = self.one_body_static_properties.setdefault(property_type, dict())
+            property_dict[qn] = value
+
+
+def parse_one_body_transitions(self, tokenized_lines):
+    """Parse obscalc-ob output for transitions.
+    """
+    names = self.params["one_body_observable_names"]
+    for tokenized_line in tokenized_lines:
+        qnf = (float(tokenized_line[0]), int(tokenized_line[1]), int(tokenized_line[2]))
+        qni = (float(tokenized_line[3]), int(tokenized_line[4]), int(tokenized_line[5]))
+        data_iterable = map(float, tokenized_line[6:])
+
+        # only store canonical pair
+        (Jgn_pair_canonical, flipped, canonicalization_factor) = tools.canonicalize_Jgn_pair(
+            (qnf, qni), tools.RMEConvention.kEdmonds
+        )
+
+        for (transition_type, value) in zip(names, data_iterable):
+            transition_dict = self.one_body_transition_properties.setdefault(transition_type, dict())
+            transition_dict[Jgn_pair_canonical] = canonicalization_factor*value
+
 
 section_handlers = {
     # [CODE]
@@ -310,6 +346,8 @@ section_handlers = {
     "Relative radii" : parse_radii,
     "Other 2-body observables" : parse_other_tbo,
     "Transitions": parse_transitions,
+    "Transition one-body observables": parse_one_body_transitions,
+    "Transition one-body observables": parse_one_body_static_properties,
 
 }
 

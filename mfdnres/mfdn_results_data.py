@@ -14,6 +14,9 @@
         + Implement get_rme() and get_rtp().
     12/14/18 (mac): Add get_moment accessor.
     04/02/19 (mac): Add get_am accessor.
+    04/05/19 (pjf):
+        + Add one_body_transition_properties attribute.
+        + Give get_rme() access to one-body observables.
 """
 
 import math
@@ -111,6 +114,8 @@ class MFDnResultsData(results_data.ResultsData):
         self.native_static_properties = {}
         self.two_body_static_observables = {}
         self.native_transition_properties = {}
+        self.one_body_static_properties = {}
+        self.one_body_transition_properties = {}
 
 
     ########################################
@@ -155,6 +160,8 @@ class MFDnResultsData(results_data.ResultsData):
 
         Returns
            (float): observable value
+
+        TODO(pjf): extend to give access to one_body_static_properties
 
         """
 
@@ -216,11 +223,22 @@ class MFDnResultsData(results_data.ResultsData):
         (J_ket,g_ket,n_ket) = qn_ket
 
         # retrieve underlying rme
-        try:
-            rme = (canonicalization_factor
-                * self.native_transition_properties[observable][qn_pair_canonical])
-        except KeyError:
-            return default
+        if self.params.get("hw", 0) != 0:
+            try:
+                rme = (canonicalization_factor
+                    * self.native_transition_properties[observable][qn_pair_canonical])
+            except KeyError:
+                try:
+                    rme = (canonicalization_factor
+                        * self.one_body_transition_properties[observable][qn_pair_canonical])
+                except KeyError:
+                    return default
+        else:
+            try:
+                rme = (canonicalization_factor
+                    * self.one_body_transition_properties[observable][qn_pair_canonical])
+            except KeyError:
+                return default
 
         return rme
 

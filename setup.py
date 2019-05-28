@@ -1,5 +1,4 @@
 import inspect
-import mfdnres
 from setuptools import setup
 
 setup(
@@ -9,6 +8,8 @@ setup(
     description=("A scripting library for universal results postprocessing"),
     license="MIT",
     packages=['mfdnres'],
-    long_description=inspect.getdoc(mfdnres),
+    install_requires=[
+        "numpy>=1.0.0",
+    ],
     classifiers=[],
 )
