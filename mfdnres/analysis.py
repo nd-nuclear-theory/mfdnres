@@ -649,7 +649,7 @@ def make_moment_table(mesh_data,key_descriptor,observable,qn,key_list=None,prune
 
 FORMAT_STRING_LEVEL_TABLE = "{:4.1f} {:1d} {:3d} {:7.3f}"
 def make_level_table(mesh_point,levels=None,energy_cutoff=None):
-    """Generate listing of level energies from single run.
+    """Generate listing of level energies from single calculation mesh point.
 
     Data format:
       J g n E
@@ -666,6 +666,10 @@ def make_level_table(mesh_point,levels=None,energy_cutoff=None):
     >>>     level_table
     >>> )
 
+    Limitation: All levels must be from the same results object ("mesh point").
+    In practice, it may be necessary to combine levels from different results
+    objects (e.g., M-scheme calculations at different M), which requires more
+    sophisticated code.
 
     Arguments:
         mesh_point (BaseResultsData): data for mesh point
@@ -674,7 +678,6 @@ def make_level_table(mesh_point,levels=None,energy_cutoff=None):
 
     Returns:
        (array): data table
-
 
     """
 

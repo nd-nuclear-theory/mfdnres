@@ -242,7 +242,7 @@ class MFDnResultsData(results_data.ResultsData):
 
         return rme
 
-    def get_rtp(self,observable,qn_pair,default=np.nan):
+    def get_rtp(self,observable,qn_pair,default=np.nan,verbose=False):
         """ Retrieve reduced transition probability (RTP).
         """
 
@@ -261,6 +261,22 @@ class MFDnResultsData(results_data.ResultsData):
         rtp = 1/(2*J_ket+1)*rme**2
 
         return rtp
+
+    def get_decomposition(self,decomposition_type,qn,verbose=False):
+        """ Retrieve decomposition ("Nex") as np.array.
+        """
+
+        # validate decomposition type argument
+        if (decomposition_type!="Nex"):
+            raise(ValueError("invalid decomposition type {}".format(decomposition_type)))
+
+        # retrieve decomposition
+        try:
+            decomposition = self.decompositions[decomposition_type][qn]
+        except:
+            return None
+
+        return decomposition
 
 #################################################
 # test code

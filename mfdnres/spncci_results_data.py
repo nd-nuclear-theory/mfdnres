@@ -211,7 +211,7 @@ class SpNCCIResultsData(results_data.ResultsData):
         return rtp
 
     def get_decomposition(self,decomposition_type,qn):
-        """
+        """ Retrieve decomposition ("Nex", "BabySpNCCI", ...) as np.array.
         """
 
         # extract labels

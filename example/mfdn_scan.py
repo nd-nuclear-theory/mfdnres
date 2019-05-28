@@ -1,6 +1,11 @@
-""" mfdn_scan.py
+"""mfdn_scan.py
 
     Example convergence analysis of MFDn runs.
+
+    Required data files:
+
+        Sample run files from runs pjf0007 and/or pjf0015 should be in the expected
+        directory structure.
 
     Mark A. Caprio
     University of Notre Dame
@@ -15,7 +20,6 @@ import mfdnres
 
 # standard sorting and tabulation key
 KEY_DESCRIPTOR_NMAX_HW = (("Nmax",int),("hw",float))
-KEY_DESCRIPTOR_NORB_NMAX_HW = (("natural_orbital_iteration",int),("Nmax",int),("hw",float))
 
 ################################################################
 # output functions to generate table and write to file
@@ -37,13 +41,14 @@ def make_energy_table_file(mesh_data,nuclide,interaction_coulomb,qn):
 
     (interaction,coulomb) = interaction_coulomb
     (J,g,n) = qn
+
+    table = mfdnres.analysis.make_energy_table(mesh_data,KEY_DESCRIPTOR_NMAX_HW,qn)
+
     output_file_name="data/data-Z{nuclide[0]:02d}-N{nuclide[1]:02d}-{interaction:s}-{coulomb:1d}-scan-e-{J:04.1f}-{g:1d}-{n:02d}.dat".format(
         nuclide=nuclide,
         interaction=interaction,coulomb=coulomb,
         J=J,g=g,n=n
     )
-
-    table = mfdnres.analysis.make_energy_table(mesh_data,KEY_DESCRIPTOR_NMAX_HW,qn)
     mfdnres.tools.write_table(
         output_file_name,"{:2d} {:7.3f} {:7.3f}",
         table
@@ -66,14 +71,15 @@ def make_radius_table_file(mesh_data,nuclide,interaction_coulomb,radius_type,qn)
 
     (interaction,coulomb) = interaction_coulomb
     (J,g,n) = qn
+
+    table = mfdnres.analysis.make_radius_table(mesh_data,KEY_DESCRIPTOR_NMAX_HW,"r",qn)
+
     output_file_name="data/data-Z{nuclide[0]:02d}-N{nuclide[1]:02d}-{interaction:s}-{coulomb:1d}-scan-{radius_type}-{J:04.1f}-{g:1d}-{n:02d}.dat".format(
         nuclide=nuclide,
         interaction=interaction,coulomb=coulomb,
         radius_type=radius_type,
         J=J,g=g,n=n
     )
-
-    table = mfdnres.analysis.make_radius_table(mesh_data,KEY_DESCRIPTOR_NMAX_HW,"r",qn)
     mfdnres.tools.write_table(
         output_file_name,"{:2d} {:7.3f} {:7.3f}",
         table
@@ -95,13 +101,14 @@ def make_am_table_file(mesh_data,nuclide,interaction_coulomb,qn):
 
     (interaction,coulomb) = interaction_coulomb
     (J,g,n) = qn
+
+    table = mfdnres.analysis.make_am_table(mesh_data,KEY_DESCRIPTOR_NMAX_HW,qn)
+
     output_file_name="data/data-Z{nuclide[0]:02d}-N{nuclide[1]:02d}-{interaction:s}-{coulomb:1d}-scan-am-{J:04.1f}-{g:1d}-{n:02d}.dat".format(
         nuclide=nuclide,
         interaction=interaction,coulomb=coulomb,
         J=J,g=g,n=n
     )
-
-    table = mfdnres.analysis.make_am_table(mesh_data,KEY_DESCRIPTOR_NMAX_HW,qn)
     mfdnres.tools.write_table(
         output_file_name,"{:2d} {:7.3f} {:7.3f} {:7.3f} {:7.3f} {:7.3f}",
         table
@@ -111,8 +118,10 @@ def make_am_table_file(mesh_data,nuclide,interaction_coulomb,qn):
 # example control code
 ################################################################
 
-def make_tabulations_pjf0007():
-    """ Examples from mfdn_v14 run.  Tabulations are for 3He J=1/2 ground state.
+def make_tabulations_mfdn_v14():
+    """ Examples of tabulating results from mfdn_v14 run.
+
+    Tabulations are for 3He J=1/2 ground state.
     """
 
     # import data
@@ -147,8 +156,10 @@ def make_tabulations_pjf0007():
     make_radius_table_file(mesh_data,nuclide,interaction_coulomb,"rp",qn)
 
 
-def make_tabulations_pjf0015():
-    """ Examples from mfdn_v15 run.  Tabulations are for 7Li J=3/2 ground state.
+def make_tabulations_mfdn_v15():
+    """ Examples of tabulating results from mfdn_v15 run.
+
+    Tabulations are for 7Li J=3/2 ground state.
     """
 
     # import data
@@ -186,6 +197,6 @@ def make_tabulations_pjf0015():
 # main
 ################################################################
 
-make_tabulations_pjf0007()
-make_tabulations_pjf0015()
+make_tabulations_mfdn_v14()
+make_tabulations_mfdn_v15()
 
