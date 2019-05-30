@@ -361,7 +361,7 @@ section_handlers = {
     "Other 2-body observables" : parse_other_tbo,
     "Transitions": parse_transitions,
     "Transition one-body observables": parse_one_body_transitions,
-    "Transition one-body observables": parse_one_body_static_properties,
+    ## "Transition one-body observables": parse_one_body_static_properties,  # WRONG?
 
 }
 

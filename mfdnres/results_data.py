@@ -9,6 +9,7 @@
 
     10/10/17 (mac): Extracted from res.py.
     09/06/18 (pjf): Replace get_levels() with levels property.
+    05/29/19 (mac): Add update method.
 """
 
 import numpy as np
@@ -51,18 +52,23 @@ class ResultsData (object):
 
         levels (dict): list of quantum number tuples (J,g,n)
 
-
     Accessors:
 
-        TODO
+        [See definitions.]
 
+    Manipulators:
+
+        [See definitions.]
+
+    
     """
 
     ########################################
     # Initializer
     ########################################
+
     def __init__(self):
-        """
+        """ Null-initialize standard attributes.
         """
         self.params = {}
         self.energies = {}
@@ -72,6 +78,7 @@ class ResultsData (object):
     ########################################
     # Accessors
     ########################################
+
     @property
     def levels(self):
         """List of quantum number tuples (J,g,n) for levels, sorted by increasing energy eigenvalue.
@@ -115,6 +122,25 @@ class ResultsData (object):
 
         """
         return self.energies.get(qn, default)
+
+    ########################################
+    # Manipulators
+    ########################################
+
+    def update(self,other):
+        """Merge in data from other ResultsData object.
+
+        Merges energy listing and updates eigenvalue count.  Metadata (params
+        and filename) are retained from self.
+
+        Arguments:
+            other (ResultsData): other results set to merge in
+
+        """
+
+        self.energies.update(other.energies)
+        self.num_eigenvalues = len(self.energies)
+
 
 #################################################
 # test code

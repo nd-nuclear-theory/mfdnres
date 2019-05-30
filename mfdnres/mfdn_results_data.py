@@ -17,6 +17,7 @@
     04/05/19 (pjf):
         + Add one_body_transition_properties attribute.
         + Give get_rme() access to one-body observables.
+    05/29/19 (mac): Add update method.
 """
 
 import math
@@ -29,68 +30,74 @@ from . import (
     tools,
     )
 
-
 #################################################
 # MFDnResultsData
 #################################################
 
 class MFDnResultsData(results_data.ResultsData):
-    """Container for MFDn results.
+    """Container for results from single MFDn run.
 
-    TODO clean up docstring
+    Recall that there are inherited attributes:
 
-    TODO: finish neatening transition phases
-        - check GT conjugation phase
-        - define setter method for transitions, to only store in
-           canonically decreasing (f<i) order
-        - reduce states data member to sorted list
-
-    Inherited attributes:
         params (dict)
         energies (dict)
         num_eigenvalues (dict)
         filename (str)
 
-    Attributes:
-        decompositions (dict): wave function amplitude decompositions
+    Data attributes:
 
-            Mapping: decomposition_name -> qn -> np.array (vector)
+        decompositions (dict): wave function probability decompositions
 
-            decomposition name:
+            Mapping: decomposition_name -> qn -> values
 
-              "Nex": decomposition in excitation quanta
+                decomposition name:
+
+                  "Nex": decomposition in excitation quanta
+
+                qn: (J,g,n)
+
+                values (np.array vector): probabilities
+ 
 
         native_static_properties (dict): native-calculated static properties
 
             Mapping: property_name -> qn -> value
 
-            property_name:
-
-                "T": native-calculated isospin (only valid in pn-symmetric basis)
-
-                "M1<type>": M1 moments (<type> in [mu,lp,ln,sp,sn])
-
-                "E2<type>": E2 moments (<type> in [p,n])
-
-                "am<type>": native-calculated angular momentum (only
-                valid in pn-symmetric basis???) (<type> in [L,S,Sp,Sn,J])
+                property_name:
+    
+                    "T": native-calculated isospin (only valid in pn-symmetric basis)
+    
+                    "M1<type>": M1 moments (<type> in [mu,lp,ln,sp,sn])
+    
+                    "E2<type>": E2 moments (<type> in [p,n])
+    
+                    "am<type>": native-calculated angular momentum (only
+                    valid in pn-symmetric basis???) (<type> in [L,S,Sp,Sn,J])
 
         two_body_static_observables (dict): two-body static observables
 
             Mapping: observable_name -> qn -> value
 
-            observable_name:
-
-                "r<type>": radii (<type> in [p,n,""])
-
-                others taken from TBME filenames, e.g.,
-
-                    "TBMEfile(2) = tbme-Trel.bin" -> observable name "Trel"
+                observable_name:
+    
+                    "r<type>": radii (<type> in [p,n,""])
+    
+                    others taken from TBME filenames, e.g.,
+    
+                        "TBMEfile(2) = tbme-Trel.bin"
+    
+                    yields observable name "Trel"
 
         native_transition_properties (dict): MFDn-native transitions
 
             observable_name -> (qnf,qni) -> value
 
+        one_body_static_properties (dict): ...
+
+        one_body_transition_properties (dict): ...
+
+    Accessors:
+       [See definitions below.]
 
     """
 
@@ -99,15 +106,7 @@ class MFDnResultsData(results_data.ResultsData):
     ########################################
 
     def __init__ (self):
-        """
-            Arguments:
-                None.
-            Returned:
-                None.
-
-            Initializes self.params, self.energies from BaseResultsData.  Also initializes
-            self.states, self.properties, self.transitions, self.tbo, self.moments,
-            and self.orbital_occupations.
+        """ Null-initialize standard attributes.
         """
         super().__init__()
         self.decompositions = {}
@@ -117,10 +116,25 @@ class MFDnResultsData(results_data.ResultsData):
         self.one_body_static_properties = {}
         self.one_body_transition_properties = {}
 
-
     ########################################
     # Accessors
     ########################################
+
+    def get_decomposition(self,decomposition_type,qn,verbose=False):
+        """ Retrieve decomposition ("Nex") as np.array.
+        """
+
+        # validate decomposition type argument
+        if (decomposition_type!="Nex"):
+            raise(ValueError("invalid decomposition type {}".format(decomposition_type)))
+
+        # retrieve decomposition
+        try:
+            decomposition = self.decompositions[decomposition_type][qn]
+        except:
+            return None
+
+        return decomposition
 
     def get_radius(self,radius_type,qn,default=np.nan):
         """Retrieve rms radius value.
@@ -134,7 +148,7 @@ class MFDnResultsData(results_data.ResultsData):
            qn (tuple): quantum numbers for state
            default (float,optional): default value to return for missing radius
 
-        Returns
+        Returns:
            (float): rms radius
 
         """
@@ -183,7 +197,7 @@ class MFDnResultsData(results_data.ResultsData):
            qn (tuple): quantum numbers for state
            default (float,optional): default value to return for missing radius
 
-        Returns
+        Returns:
            (float): observable value
 
         """
@@ -262,21 +276,50 @@ class MFDnResultsData(results_data.ResultsData):
 
         return rtp
 
-    def get_decomposition(self,decomposition_type,qn,verbose=False):
-        """ Retrieve decomposition ("Nex") as np.array.
+    ########################################
+    # Manipulators
+    ########################################
+        
+    def update(self,other):
+        """Merge in data from other MFDnResultsData object.
+
+        Behavior for inherited attributes (e.g., energies) is as defined by ResultsData.update().
+
+        Arguments:
+            other (MFDnResultsData): other results set to merge in
+
         """
+        super().update(other)
 
-        # validate decomposition type argument
-        if (decomposition_type!="Nex"):
-            raise(ValueError("invalid decomposition type {}".format(decomposition_type)))
+        # merge observable dictionaries
 
-        # retrieve decomposition
-        try:
-            decomposition = self.decompositions[decomposition_type][qn]
-        except:
-            return None
 
-        return decomposition
+        def update_observable_dictionary(self_dict,other_dict):
+            """ Merge two observable dictionaries of type name->qn->value.
+
+            As currently implemented, data for a named observable is only merged if
+            this named observable arises in "self", not if it is only found in
+            "other".
+
+            Arguments:
+                self_dict (dict): observable dictionary to be updated
+                other_dict (dict): observable dictionary providing update data
+            """
+            
+            # add dictionaries for any missing named observables
+            for name in other_dict.keys() - self_dict.keys():
+                self_dict[name] = {}
+            
+            # update dictionaries for all named
+            for name in self_dict.keys():
+                self_dict[name].update(other_dict[name])
+
+        update_observable_dictionary(self.decompositions,other.decompositions)
+        update_observable_dictionary(self.native_static_properties,other.native_static_properties)
+        update_observable_dictionary(self.two_body_static_observables,other.two_body_static_observables)
+        update_observable_dictionary(self.native_transition_properties,other.native_transition_properties)
+        update_observable_dictionary(self.one_body_static_properties,other.one_body_static_properties)
+        update_observable_dictionary(self.one_body_transition_properties,other.one_body_transition_properties)
 
 #################################################
 # test code
