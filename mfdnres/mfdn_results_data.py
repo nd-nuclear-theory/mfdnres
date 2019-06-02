@@ -18,6 +18,8 @@
         + Add one_body_transition_properties attribute.
         + Give get_rme() access to one-body observables.
     05/29/19 (mac): Add update method.
+    06/02/19 (mac): Add deduced isoscalar and isovector E2 observable
+      support.
 """
 
 import math
@@ -160,7 +162,7 @@ class MFDnResultsData(results_data.ResultsData):
 
         return rms_radius
 
-    def get_moment(self,moment_type,qn,default=np.nan):
+    def get_moment(self,observable,qn,default=np.nan,verbose=False):
         """Retrieve moment value.
 
         This accessor actually could retrieve *any* native static property, but
@@ -168,7 +170,8 @@ class MFDnResultsData(results_data.ResultsData):
         represenation.
 
         Arguments:
-           moment_type (str): moment type ("E2p","E2n","M1mu","M1lp","M1ln","M1sp","M1sn")
+           observable (str): moment type ("E2p","E2n","M1mu","M1lp","M1ln","M1sp",
+               "M1sn"), as well as deduced cases ("E20", "E22")
            qn (tuple): quantum numbers for state
            default (float,optional): default value to return for missing radius
 
@@ -179,10 +182,20 @@ class MFDnResultsData(results_data.ResultsData):
 
         """
 
+        # trap deduced isoscalar/isovector observables
+        if (observable in {"E20","E21"}):
+            E2p = self.get_moment("E2p",qn,default,verbose)
+            E2n = self.get_moment("E2n",qn,default,verbose)
+            if (observable =="E20"):
+                value = 1/2*(E2p+E2n)
+            else:
+                value = 1/2*(E2p-E2n)
+            return value
+
         # extract labels
         (J,gex,n) = qn
 
-        value = self.native_static_properties.get(moment_type,{}).get(qn,default)
+        value = self.native_static_properties.get(observable,{}).get(qn,default)
 
         return value
 
@@ -224,12 +237,35 @@ class MFDnResultsData(results_data.ResultsData):
         Returns RME in Edmonds convention, as common for spectroscopic data
         analysis in the shell model community.
 
+        Adds support for "E20" and E21" as isoscalar E2 and isovector E2.
+
+        Arguments:
+           observable (str): operator type ("E2p","E2n",...), as well as
+               deduced cases ("E20", "E22")
+           qn_pair (tuple): quantum numbers for states (qn_bra,qn_ket)
+           default (float,optional): default value to return for missing radius
+
+        Returns
+           (float): observable value
+
         """
+
+        # trap deduced isoscalar/isovector observables
+        if (observable in {"E20","E21"}):
+            E2p = self.get_rme("E2p",qn_pair,default,verbose)
+            E2n = self.get_rme("E2n",qn_pair,default,verbose)
+            if (observable =="E20"):
+                value = 1/2*(E2p+E2n)
+            else:
+                value = 1/2*(E2p-E2n)
+            return value
 
         # canonicalize labels
         (qn_pair_canonical,flipped,canonicalization_factor) = tools.canonicalize_Jgn_pair(
             qn_pair,tools.RMEConvention.kEdmonds
         )
+        if (verbose):
+            print("get_rme: observable {}, qn_pair {} => qn_pair_canonical {}".format(observable,qn_pair,qn_pair_canonical))
 
         # extract labels
         (qn_bra,qn_ket) = qn_pair_canonical
@@ -254,6 +290,10 @@ class MFDnResultsData(results_data.ResultsData):
             except KeyError:
                 return default
 
+        if (verbose):
+            print("    rme {:e}".format(rme))
+
+
         return rme
 
     def get_rtp(self,observable,qn_pair,default=np.nan,verbose=False):
@@ -267,7 +307,7 @@ class MFDnResultsData(results_data.ResultsData):
 
         # retrieve underlying rme
         try:
-            rme = self.get_rme(observable,qn_pair)
+            rme = self.get_rme(observable,qn_pair,default,verbose)
         except KeyError:
             return default
 

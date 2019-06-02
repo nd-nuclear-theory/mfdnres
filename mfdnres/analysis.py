@@ -27,6 +27,7 @@
         transformation on reference state.
     03/31/19 (mac): Add format string for level table.
     04/02/19 (mac): Update am handling (add make_am_table and move effective_am to tools).
+    06/02/19 (mac): Update am handling (add make_am_table and move effective_am to tools).
 
 """
 
@@ -496,6 +497,8 @@ def make_radius_table(mesh_data,key_descriptor,radius_type,qn,key_list=None,prun
 def make_am_table(mesh_data,key_descriptor,qn):
     """ Generate effective angular momentum tabulation.
 
+    TODO: Update to sort keys with common_key_list API.
+
     Data format:
         <key> L Sp Sn S
     where actual label columns depend up on key_descriptor, e.g.:
@@ -533,6 +536,8 @@ def make_am_table(mesh_data,key_descriptor,qn):
 def make_rme_table(mesh_data,key_descriptor,observable,qnf,qni):
     """ Generate reduced matrix element (RME) tabulation.
 
+    TODO: Update to sort keys with common_key_list API.
+
     Data format:
         <key> RME
     where actual label columns depend up on key_descriptor, e.g.:
@@ -560,40 +565,6 @@ def make_rme_table(mesh_data,key_descriptor,observable,qnf,qni):
     table = np.array(
         table_data,
         dtype = list(key_descriptor)+[("RME",float)]
-     )
-    return table
-
-def make_rtp_table(mesh_data,key_descriptor,observable,qnf,qni):
-    """ Generate reduced transition probability (RTP) tabulation.
-
-    Data format:
-        <key> RTP
-    where actual label columns depend up on key_descriptor, e.g.:
-        Nmax hw RTP
-        Nsigmamax Nmax hw RTP
-
-    Arguments:
-        mesh_data (list of ResultsData): data for mesh points
-        key_descriptor (tuple of tuple): dtype descriptor for key
-        observable_name (str): key naming observable
-        qnf, qni (tuple): quantum numbers (J,g,n) of final and initial levels
-
-    Returns:
-       (array): data table
-    """
-
-
-    # tabulate values
-    key_function = make_key_function(key_descriptor)
-    table_data = [
-        key_function(mesh_point) + (mesh_point.get_rtp(observable,(qnf,qni)),)
-        for mesh_point in mesh_data
-    ]
-
-    # convert to structured array
-    table = np.array(
-        table_data,
-        dtype = list(key_descriptor)+[("RTP",float)]
      )
     return table
 
@@ -640,6 +611,53 @@ def make_moment_table(mesh_data,key_descriptor,observable,qn,key_list=None,prune
     table = np.array(
         table_data,
         dtype = list(key_descriptor)+[("moment",float)]
+     )
+    return table
+
+def make_rtp_table(mesh_data,key_descriptor,observable,qnf,qni,key_list=None,prune=False,verbose=False):
+    """ Generate reduced transition probability (RTP) tabulation.
+
+    Data format:
+        <key> RTP
+    where actual label columns depend up on key_descriptor, e.g.:
+        Nmax hw RTP
+        Nsigmamax Nmax hw RTP
+
+    Arguments:
+        mesh_data (list of ResultsData): data for mesh points
+        key_descriptor (tuple of tuple): dtype descriptor for key
+        observable_name (str): key naming observable
+        qnf, qni (tuple): quantum numbers (J,g,n) of final and initial levels
+
+    Returns:
+       (array): data table
+    """
+
+    # process results into dictionaries
+    results_dict = make_results_dict(mesh_data,key_descriptor)
+
+    # find common keys
+    if (key_list is not None):
+        common_key_list = key_list
+    else:
+        common_key_list = common_keys([results_dict])
+
+    # tabulate values
+    key_function = make_key_function(key_descriptor)
+    table_data = []
+    for key in common_key_list:
+        mesh_point = results_dict[key]
+        value = mesh_point.get_rtp(observable,(qnf,qni))
+        if (prune and np.isnan(value)):
+            continue
+        table_data += [
+            key + (value,)
+        ]
+
+    # convert to structured array
+    table = np.array(
+        table_data,
+        dtype = list(key_descriptor)+[("RTP",float)]
      )
     return table
 
