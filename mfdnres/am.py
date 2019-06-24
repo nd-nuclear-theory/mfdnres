@@ -7,7 +7,8 @@
     Mark A. Caprio
     University of Notre Dame
 
-    7/15/17 (mac): Created.
+    07/15/17 (mac): Created.
+    06/24/19 (mac): Add parity_grade.
     
 """
 
@@ -51,10 +52,25 @@ def parity_sign(j):
     # oddness).  Without abs(), e.g., ParitySign(-1) can result in
     # failure, from a remainder result other than 0 or 1.
 
-    assert(is_integer(j));
-    remainder = abs(int(j)) % 2;
-    sign = 1 - 2*remainder;
+    if (not(is_integer(j))):
+        raise(ValueError("noninteger angular momentum {}".format(j)))
+    remainder = abs(int(j)) % 2
+    sign = 1 - 2*remainder
     return sign
+
+def parity_grade(parity):
+    """ Recover grade from parity.
+
+    Arguments:
+        parity (int): parity +1 or -1
+
+    Returns:
+        grade (int): parity grade 0 or 1
+    """
+
+    if (not ((parity==+1) or (parity==-1))):
+        raise(ValueError("invalid parity {}".format(parity)))
+    return (1-parity)//2
 
 def allowed_triangle(j1,j2,j3):
     """ Test if three angular momenta are coupled legally, i.e., they form a closed triangle.
@@ -102,3 +118,9 @@ if (__name__=="__main__"):
         for j in [0.5]:
             print("j {} parity_sign {}".format(j,parity_sign(j)))
     
+    # test parity_grade
+    for P in [+1,-1]:
+        print("P {:+2d} parity_grade {}".format(P,parity_grade(P)))
+    if (False):
+        for P in [0]:
+            print("P {:+2d} parity_grade {}".format(P,parity_grade(P)))
