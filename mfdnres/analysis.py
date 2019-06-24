@@ -1,4 +1,4 @@
-""" analysis.py -- analysis tools for processing MFDn results file
+"""analysis.py -- analysis tools for processing MFDn results file
 
     Language: Python 3
     Mark A. Caprio
@@ -28,11 +28,15 @@
     03/31/19 (mac): Add format string for level table.
     04/02/19 (mac): Update am handling (add make_am_table and move effective_am to tools).
     06/02/19 (mac): Update am handling (add make_am_table and move effective_am to tools).
-
+    06/24/19 (mac):
+        - Add merged_mesh and ancillary dictionary utilities for manipulating
+            params (refactored from tabulate_band_11be_11be-xfer.py).
+        - Revise and extend make_level_table_* family of functions.
 """
 
-import math
 import functools
+import itertools
+import math
 
 import numpy as np
 
@@ -124,10 +128,10 @@ def operate_dictionaries(dict1,dict2,op):
     return results
 
 ################################################################
-# consolidate data into dictionary
+# consolidate data from mesh points into dictionary
 ################################################################
 
-def extract_key(key_fields,mesh_point):
+def extract_key(key_fields,results_data):
     """Generate key tuple from mesh point data's parameters.
 
     This function may be specialized to return a specific key, e.g.:
@@ -148,7 +152,7 @@ def extract_key(key_fields,mesh_point):
         (tuple): values of given parameters
 
     """
-    key = tuple([mesh_point.params[key] for key in key_fields])
+    key = tuple([results_data.params[key] for key in key_fields])
     return key
 
 def make_key_function(key_descriptor):
@@ -206,23 +210,23 @@ def make_results_dict(
     key_function = make_key_function(key_descriptor)
 
     results_dict = dict()
-    for mesh_point in mesh_data:
+    for results_data in mesh_data:
 
         # make key
-        key = key_function(mesh_point)
+        key = key_function(results_data)
         if (key_transformation is not None):
             key = key_transformation(key)
         if (verbose):
-            print("  make_results_dict: filename {} key {}".format(mesh_point.filename,key))
+            print("  make_results_dict: filename {} key {}".format(results_data.filename,key))
 
         # store data point
         if (key not in results_dict):
             # save mesh point
-            results_dict[key] = mesh_point
+            results_dict[key] = results_data
         else:
             # TODO: do smart merge "update" on existing mesh point
             # overwrite mesh point
-            results_dict[key] = mesh_point
+            results_dict[key] = results_data
 
     return results_dict
 
@@ -259,9 +263,9 @@ def selected_mesh_data(
 
     # select submesh
     new_mesh_data = [
-        mesh_point
-        for mesh_point in mesh_data
-        if (key_function(mesh_point) == selected_values)
+        results_data
+        for results_data in mesh_data
+        if (key_function(results_data) == selected_values)
     ]
     if (verbose):
         print("  selected_mesh_data: selected mesh points {}".format(len(new_mesh_data)))
@@ -303,11 +307,142 @@ def sorted_mesh_data(
     return new_mesh_data
 
 ################################################################
+# consolidation of results data objects by shared parameters
+################################################################
+
+def subdict(d,keys):
+    """Subset a dictionary to only include given keys.
+
+    Arguments:
+        d (dict): dictionary to subset
+        keys (list): list of key values
+
+    Returns:
+        subdict (dict): dictionary with reduced set of keys
+
+    """
+    subitems = [
+        item
+        for item in d.items()
+        if item[0] in keys
+    ]
+    return dict(subitems)
+
+def dict_items(d):
+    """ Convert dictionary to sorted tuple of items.
+
+    Arguments:
+        d (dict): dictionary
+
+    Returns:
+        dict_items (tuple of tuple): tuple of items
+    """
+    return tuple(sorted(d.items()))
+
+## def make_subdict_function(keys):
+##     """ Generate a function to subset a dictionary to the given keys.
+## 
+##     Arguments:
+##         keys (list): list of key values
+## 
+##     Returns:
+##         subdict_function (callable): function to extract subsetted dictionary
+##     """
+##     return functools.partial(subdict,keys=keys)
+
+def make_params_subdict_items_function(keys):
+    """ Generate a function to subset a dictionary to the given keys.
+
+    Arguments:
+        keys (list): list of keys
+
+    Returns:
+        params_subdict_function (callable): function to extract subsetted dictionary from ResultsData params
+    """
+
+    return lambda results : dict_items(subdict(results.params,keys))
+
+def merged_mesh(mesh,keys,verbose=False):
+    """Obtain mesh in which results data objects sharing same parameter values are merged.
+
+    Each ResultsData object in the returned mesh is obtained by defining a new
+    empty object followed by updates, so no original ResultsData objects will
+    have been modified.
+
+    The key function should return a tuple of key-value pairs, used to
+    distinguish equivalent (for merger) vs. nonequivalent mesh points.  The
+    params dictionary for each new ResultsData is constructed from the key-value
+    items in the tuble returned by the key function.  Therefore, the key-value
+    items should include not only the parameters required in the merger, to
+    distinguish equivalent vs. nonequivalent mesh points, but also any ancillary
+    key-value pairs which might be required in later processing of the mesh
+    point, even if it is known a priori that all mesh elements share the same
+    value for this parameter making it irrelevant to the merging process (e.g.,
+    the "nuclide" parameter should be included if that parameter is later used
+    in filename construction, or the "parity" parameter may be used in mesh
+    selection).
+
+    Example:
+
+    >>> # merge results data (of different M) by shared mesh parameters
+    >>> mesh_data = mfdnres.analysis.merged_mesh(
+    >>>     mesh_data,
+    >>>     ("nuclide","interaction","coulomb","hw","Nmax","parity"),
+    >>>     verbose=True
+    >>> )
+
+    Arguments:
+
+       mesh (list of ResultsData): mesh to be merged (entrywise)
+
+       key (callable): key function which takes a ResultsData object and returns a key
+           value which uniquely defines groups of mesh points to be merged (e.g., to 
+           merge calculations carried out at different M values, mesh points should have
+           the same key if and only if they differ only in their M value, and no other
+           relevant parameter); return type should be a dict for use as new params
+
+    Return:
+
+        merged_mesh (list of ResultsData): merged mesh
+
+    """
+
+    results_type = type(mesh[0])
+    keyfunc = make_params_subdict_items_function(keys)
+    sorted_mesh = sorted(mesh,key=keyfunc)
+    target_mesh = []
+    for group_key, group in itertools.groupby(sorted_mesh,keyfunc):
+
+        if (verbose):
+            print()
+            print("merging key: {}".format(group_key))
+
+        # initialize new mesh point
+        results = results_type()
+        results.params=dict(group_key)
+
+        # merge in data
+        for other_results in group:
+            if (verbose):
+                print("  contributing params: {}".format(other_results.params))
+                print("  contributing levels: {}".format(other_results.levels))
+            results.update(other_results)
+
+        # save new mesh point
+        if (verbose):
+            print("  merged params: {}".format(results.params))
+            print("  merged levels: {}".format(results.levels))
+
+        target_mesh.append(results)
+
+    return target_mesh
+        
+################################################################
 # tabulation functions -- observable vs. parameters
 ################################################################
 
 def make_energy_table(mesh_data,key_descriptor,qn,key_list=None,prune=False):
-    """Generate energy tabulation.
+    """Generate energy tabulation on parameter mesh.
 
     The key descriptor is used to provide the parameter columns of the
     tabulation (and may in general be different from the key which was
@@ -350,8 +485,8 @@ def make_energy_table(mesh_data,key_descriptor,qn,key_list=None,prune=False):
     key_function = make_key_function(key_descriptor)
     table_data = []
     for key in common_key_list:
-        mesh_point = results_dict[key]
-        value = mesh_point.get_energy(qn)
+        results_data = results_dict[key]
+        value = results_data.get_energy(qn)
         if (prune and np.isnan(value)):
             continue
         table_data += [
@@ -365,13 +500,12 @@ def make_energy_table(mesh_data,key_descriptor,qn,key_list=None,prune=False):
      )
     return table
 
-
 def make_energy_difference_table(
         mesh_data_pair,key_descriptor,qn_pair,
         reference_key_transformation=None,key_list=None,prune=False,
         verbose=False
 ):
-    """Generate energy tabulation.
+    """Generate energy tabulation on parameter mesh.
 
     The key descriptor is used to provide the parameter columns of the
     tabulation (and may in general be different from the key which was
@@ -430,10 +564,10 @@ def make_energy_difference_table(
     key_function = make_key_function(key_descriptor)
     table_data = []
     for key in common_key_list:
-        mesh_point1 = results_dict1[key]
-        mesh_point2 = results_dict2[key]
-        value1 = mesh_point1.get_energy(qn1)
-        value2 = mesh_point2.get_energy(qn2)
+        results_data1 = results_dict1[key]
+        results_data2 = results_dict2[key]
+        value1 = results_data1.get_energy(qn1)
+        value2 = results_data2.get_energy(qn2)
         value = value1-value2
         if (prune and np.isnan(value)):
             continue
@@ -451,7 +585,7 @@ def make_energy_difference_table(
     return table
 
 def make_radius_table(mesh_data,key_descriptor,radius_type,qn,key_list=None,prune=False):
-    """ Generate radius tabulation.
+    """ Generate radius tabulation on parameter mesh.
 
     See docstring for make_energy_table for sorting and tabulation conventions.
 
@@ -479,8 +613,8 @@ def make_radius_table(mesh_data,key_descriptor,radius_type,qn,key_list=None,prun
     key_function = make_key_function(key_descriptor)
     table_data = []
     for key in common_key_list:
-        mesh_point = results_dict[key]
-        value = mesh_point.get_radius(radius_type,qn)
+        results_data = results_dict[key]
+        value = results_data.get_radius(radius_type,qn)
         if (prune and np.isnan(value)):
             continue
         table_data += [
@@ -495,7 +629,7 @@ def make_radius_table(mesh_data,key_descriptor,radius_type,qn,key_list=None,prun
     return table
 
 def make_am_table(mesh_data,key_descriptor,qn):
-    """ Generate effective angular momentum tabulation.
+    """ Generate effective angular momentum tabulation on parameter mesh.
 
     TODO: Update to sort keys with common_key_list API.
 
@@ -517,13 +651,13 @@ def make_am_table(mesh_data,key_descriptor,qn):
     # tabulate values
     key_function = make_key_function(key_descriptor)
     table_data = [
-        key_function(mesh_point) + (
-            mesh_point.get_am("L",qn),
-            mesh_point.get_am("Sp",qn),
-            mesh_point.get_am("Sn",qn),
-            mesh_point.get_am("S",qn),
+        key_function(results_data) + (
+            results_data.get_am("L",qn),
+            results_data.get_am("Sp",qn),
+            results_data.get_am("Sn",qn),
+            results_data.get_am("S",qn),
         )
-        for mesh_point in mesh_data
+        for results_data in mesh_data
     ]
 
     # convert to structured array
@@ -534,7 +668,7 @@ def make_am_table(mesh_data,key_descriptor,qn):
     return table
 
 def make_rme_table(mesh_data,key_descriptor,observable,qnf,qni):
-    """ Generate reduced matrix element (RME) tabulation.
+    """ Generate reduced matrix element (RME) tabulation on parameter mesh.
 
     TODO: Update to sort keys with common_key_list API.
 
@@ -557,8 +691,8 @@ def make_rme_table(mesh_data,key_descriptor,observable,qnf,qni):
     # tabulate values
     key_function = make_key_function(key_descriptor)
     table_data = [
-        key_function(mesh_point) + (mesh_point.get_rme(observable,(qnf,qni)),)
-        for mesh_point in mesh_data
+        key_function(results_data) + (results_data.get_rme(observable,(qnf,qni)),)
+        for results_data in mesh_data
     ]
 
     # convert to structured array
@@ -569,7 +703,7 @@ def make_rme_table(mesh_data,key_descriptor,observable,qnf,qni):
     return table
 
 def make_moment_table(mesh_data,key_descriptor,observable,qn,key_list=None,prune=False):
-    """ Generate moment tabulation.
+    """ Generate moment tabulation on parameter mesh.
 
     Data format:
         <key> moment
@@ -599,8 +733,8 @@ def make_moment_table(mesh_data,key_descriptor,observable,qn,key_list=None,prune
     key_function = make_key_function(key_descriptor)
     table_data = []
     for key in common_key_list:
-        mesh_point = results_dict[key]
-        value = mesh_point.get_moment(observable,qn)
+        results_data = results_dict[key]
+        value = results_data.get_moment(observable,qn)
         if (prune and np.isnan(value)):
             continue
         table_data += [
@@ -615,7 +749,7 @@ def make_moment_table(mesh_data,key_descriptor,observable,qn,key_list=None,prune
     return table
 
 def make_rtp_table(mesh_data,key_descriptor,observable,qnf,qni,key_list=None,prune=False,verbose=False):
-    """ Generate reduced transition probability (RTP) tabulation.
+    """ Generate reduced transition probability (RTP) tabulation on parameter mesh.
 
     Data format:
         <key> RTP
@@ -646,8 +780,8 @@ def make_rtp_table(mesh_data,key_descriptor,observable,qnf,qni,key_list=None,pru
     key_function = make_key_function(key_descriptor)
     table_data = []
     for key in common_key_list:
-        mesh_point = results_dict[key]
-        value = mesh_point.get_rtp(observable,(qnf,qni))
+        results_data = results_dict[key]
+        value = results_data.get_rtp(observable,(qnf,qni))
         if (prune and np.isnan(value)):
             continue
         table_data += [
@@ -666,56 +800,134 @@ def make_rtp_table(mesh_data,key_descriptor,observable,qnf,qni,key_list=None,pru
 ################################################################
 
 FORMAT_STRING_LEVEL_TABLE = "{:4.1f} {:1d} {:3d} {:7.3f}"
-def make_level_table(mesh_point,levels=None,energy_cutoff=None):
-    """Generate listing of level energies from single calculation mesh point.
+def make_level_table_energy(results_data,levels=None):
+    """Make tabulation of energies by level, from single calculation mesh point.
 
-    Data format:
+    Data format (when written to file):
       J g n E
 
-    Legacy format (for comparison):
+    Legacy format (for pre-2018 files, for comparison):
       seq J gex n T E
 
     Example (writing out level table):
 
-    >>> level_table = mfdnres.analysis.make_level_table(mesh_point)
+    >>> level_table = mfdnres.analysis.make_level_table(results_data)
     >>> mfdnres.tools.write_table(
     >>>     filename,
     >>>     mfdnres.analysis.FORMAT_STRING_LEVEL_TABLE,
     >>>     level_table
     >>> )
 
-    Limitation: All levels must be from the same results object ("mesh point").
-    In practice, it may be necessary to combine levels from different results
-    objects (e.g., M-scheme calculations at different M), which requires more
-    sophisticated code.
+    Limitation: All levels must be from the same results data object.  This
+    presupposes that calculations from different M have already been merged.
 
     Arguments:
-        mesh_point (BaseResultsData): data for mesh point
+        results_data (BaseResultsData): data for mesh point
         levels (list of tuples): levels to include or None for all (default: None)
-        energy_cutoff (float,optional): energy cutoff to limit output size
 
     Returns:
-       (array): data table
+       (array): table of (J,g,n,E)
 
     """
 
     # determine list of levels to use
     if (levels is None):
-        levels = mesh_point.levels
+        levels = results_data.levels
 
     # tabulate values
+    qn_dtype = [("J",float),("gex",int),("n",int)]
+    values_dtype = [("E",float)]
+    def values(qn):
+        return (results_data.get_energy(qn),)
     table_data = [
-        qn + (mesh_point.get_energy(qn),)
+        qn + values(qn)
         for qn in levels
-        if not ((energy_cutoff is not None) and (mesh_point.get_energy(qn)>energy_cutoff))  # clumsy!
     ]
 
     # convert to structured array
     table = np.array(
         table_data,
-        dtype = [("J",float),("gex",int),("n",int),("E",float)]
+        dtype = qn_dtype+values_dtype
+    )
+    return table
+
+FORMAT_STRING_AM_TABLE = "{:4.1f} {:1d} {:3d} {:7.3f} {:7.3f} {:7.3f} {:7.3f}"
+def make_level_table_am(results_data,levels=None):
+    """Make tabulation of angular momenta by level, from single calculation mesh point.
+
+    Arguments:
+        results_data (BaseResultsData): data for mesh point
+        levels (list of tuples): levels to include or None for all (default: None)
+
+    Returns:
+       (array): table of (J,g,n,L,Sp,Sn,S)
+
+    """
+
+    # determine list of levels to use
+    if (levels is None):
+        levels = results_data.levels
+
+    # tabulate values
+    qn_dtype = [("J",float),("gex",int),("n",int)]
+    values_dtype = [("L",float),("Sp",float),("Sn",float),("S",float)]
+    def values(qn):
+        return (
+            results_data.get_am("L",qn),
+            results_data.get_am("Sp",qn),
+            results_data.get_am("Sn",qn),
+            results_data.get_am("S",qn),
+        )
+    table_data = [
+        qn + values(qn)
+        for qn in levels
+    ]
+
+    # convert to structured array
+    table = np.array(
+        table_data,
+        dtype = qn_dtype+values_dtype
      )
     return table
+
+def format_string_decomposition_table(decomposition_length):
+    """Generate variable-length format string for decomposition table."""
+    return "{:4.1f} {:1d} {:3d}"+decomposition_length*" {:7.5f}"
+def make_level_table_decomposition(results_data,decomposition_length,levels=None):
+    """Make tabulation of Nex decomposition by level, from single calculation mesh point.
+
+    Arguments:
+        results_data (BaseResultsData): data for mesh point
+        levels (list of tuples): levels to include or None for all (default: None)
+        decomposition_length (int): length to which to pad or truncate all
+            decompositions, required since used in dtype construction
+
+    Returns:
+       (array): table of (J,g,n,P0,P1,...)
+
+    """
+
+    # determine list of levels to use
+    if (levels is None):
+        levels = results_data.levels
+
+    # tabulate values
+    qn_dtype = [("J",float),("gex",int),("n",int)]
+    values_dtype = decomposition_length*[("",float),]
+    def values(qn):
+        return tuple(results_data.get_decomposition("Nex",qn)[:decomposition_length])
+    table_data = [
+        qn + values(qn)
+        for qn in levels
+    ]
+
+    # convert to structured array
+    table = np.array(
+        table_data,
+        dtype = qn_dtype+values_dtype
+     )
+    return table
+
 
 if (__name__ == "__main__"):
     pass

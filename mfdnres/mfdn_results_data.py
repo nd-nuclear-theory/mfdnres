@@ -20,6 +20,8 @@
     05/29/19 (mac): Add update method.
     06/02/19 (mac): Add deduced isoscalar and isovector E2 observable
       support.
+    06/24/19 (mac): Make update_observable_dictionary robust against
+        missing observables.
 """
 
 import math
@@ -31,6 +33,32 @@ from . import (
     results_data,
     tools,
     )
+
+#################################################
+# observable dictionary update helper function
+#################################################
+
+def update_observable_dictionary(self_dict,other_dict):
+    """Merge two observable dictionaries of type name->qn->value.
+
+    Allows for possibility that an observable name may exist only in
+    self_dict or only in other_dict.
+
+    Arguments:
+        self_dict (dict): observable dictionary to be updated
+        other_dict (dict): observable dictionary providing update data
+
+    """
+    
+    observables = set(self_dict.keys()).union(other_dict.keys())
+    for name in observables:
+        # ensure observable exists in self_dict
+        if (name not in self_dict.keys()):
+            self_dict[name] = {}
+        # update observable from other_dict
+        if name in other_dict.keys():
+            self_dict[name].update(other_dict[name])
+
 
 #################################################
 # MFDnResultsData
@@ -332,28 +360,6 @@ class MFDnResultsData(results_data.ResultsData):
         super().update(other)
 
         # merge observable dictionaries
-
-
-        def update_observable_dictionary(self_dict,other_dict):
-            """ Merge two observable dictionaries of type name->qn->value.
-
-            As currently implemented, data for a named observable is only merged if
-            this named observable arises in "self", not if it is only found in
-            "other".
-
-            Arguments:
-                self_dict (dict): observable dictionary to be updated
-                other_dict (dict): observable dictionary providing update data
-            """
-            
-            # add dictionaries for any missing named observables
-            for name in other_dict.keys() - self_dict.keys():
-                self_dict[name] = {}
-            
-            # update dictionaries for all named
-            for name in self_dict.keys():
-                self_dict[name].update(other_dict[name])
-
         update_observable_dictionary(self.decompositions,other.decompositions)
         update_observable_dictionary(self.native_static_properties,other.native_static_properties)
         update_observable_dictionary(self.two_body_static_observables,other.two_body_static_observables)
