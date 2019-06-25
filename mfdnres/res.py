@@ -22,6 +22,9 @@
     10/10/17 (mac): Extract results data base class to results_data.py.
     09/20/18 (pjf): Store filename in ResultsData.
     02/22/19 (pjf): Store only basename of filename in ResultsData.
+    06/24/19 (mac): Update res_file_directory construction for new default
+        location "results/res".
+
 """
 
 import glob
@@ -36,7 +39,7 @@ from . import descriptor
 # filename utility
 ################################################################
 
-def res_file_directory(username,code,run_number,results_dir="results",run_results_are_in_subdir=True):
+def res_file_directory(username,code,run_number,results_dir="results",res_file_subdir=os.path.join("results","res")):
     """Construct full path to res file directory, given user, code, and run.
 
         This function assumes directory naming conventions appropriate
@@ -66,8 +69,8 @@ def res_file_directory(username,code,run_number,results_dir="results",run_result
         raise(ValueError("Need to set environment variable GROUP_HOME"))
 
     res_directory = os.path.join(group_home,results_dir,username,code,"run"+run_number)
-    if (run_results_are_in_subdir):
-        res_directory = os.path.join(res_directory,"results")
+    if (res_file_subdir is not None):
+        res_directory = os.path.join(res_directory,res_file_subdir)
 
     return res_directory
 
