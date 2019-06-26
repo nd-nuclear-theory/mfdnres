@@ -22,6 +22,8 @@
       support.
     06/24/19 (mac): Make update_observable_dictionary robust against
         missing observables.
+    06/25/19 (mac): Add get_isospin accessor.
+
 """
 
 import math
@@ -150,8 +152,34 @@ class MFDnResultsData(results_data.ResultsData):
     # Accessors
     ########################################
 
+    def get_isospin(self,qn,default=np.nan,verbose=False):
+        """ Retrieve effective isospin T.
+
+        Arguments:
+           qn (tuple): quantum numbers for state
+           default (float,optional): default value to return for missing observable
+
+        Returns:
+           (float): observable value
+        """
+
+        # retrieve decomposition
+        try:
+            value = self.native_static_properties["T"][qn]
+        except:
+            return default
+
+        return value
+
     def get_decomposition(self,decomposition_type,qn,verbose=False):
         """ Retrieve decomposition ("Nex") as np.array.
+
+        Arguments:
+           decomposition_type (str): decomposition type ("Nex")
+           qn (tuple): quantum numbers for state
+
+        Returns:
+           (np.array): decomposition probabilities
         """
 
         # validate decomposition type argument
@@ -345,7 +373,7 @@ class MFDnResultsData(results_data.ResultsData):
         return rtp
 
     ########################################
-    # Manipulators
+    # Updating method
     ########################################
         
     def update(self,other):
