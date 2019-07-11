@@ -32,6 +32,7 @@
         - Add merged_mesh and ancillary dictionary utilities for manipulating
             params (refactored from tabulate_band_11be_11be-xfer.py).
         - Revise and extend make_level_table_* family of functions.
+    07/11/19 (mac): Add mesh_key_listing for mesh diagnostic listing.
 """
 
 import functools
@@ -128,7 +129,7 @@ def operate_dictionaries(dict1,dict2,op):
     return results
 
 ################################################################
-# consolidate data from mesh points into dictionary
+# key-based operations on mesh
 ################################################################
 
 def extract_key(key_fields,results_data):
@@ -362,14 +363,43 @@ def make_params_subdict_items_function(keys):
 
     return lambda results : dict_items(subdict(results.params,keys))
 
+def mesh_key_listing(mesh,keys,verbose=False):
+    """Provide sorted list of key tuples appearing in mesh.
+
+    In verbose operation, can discared result and simply use to print
+    diagnostic information on mesh.
+
+    Arguments:
+
+        mesh (list of ResultsData): mesh to be merged (entrywise)
+
+        keys (list): list of keys
+
+    Return:
+
+        mesh (list of tuples): listing of key-value tuples
+
+    """
+
+    keyfunc = make_params_subdict_items_function(keys)
+    mesh_keys = map(keyfunc,mesh)
+    mesh_keys = sorted(list(mesh_keys))
+
+    if (verbose):
+        for key_tuple in mesh_keys:
+            print(key_tuple)
+
+    return mesh_keys
+
 def merged_mesh(mesh,keys,verbose=False):
-    """Obtain mesh in which results data objects sharing same parameter values are merged.
+    """Obtain results mesh in which results data objects sharing same parameter
+    values are merged.
 
-    Each ResultsData object in the returned mesh is obtained by defining a new
-    empty object followed by updates, so no original ResultsData objects will
-    have been modified.
+    Params: The "params" for the resulting object are the minimal common set of
+    parameters used in the sorting key which defines the merge (see "Merge key"
+    below).
 
-    The key function should return a tuple of key-value pairs, used to
+    Merge key: The key function should return a tuple of key-value pairs, used to
     distinguish equivalent (for merger) vs. nonequivalent mesh points.  The
     params dictionary for each new ResultsData is constructed from the key-value
     items in the tuble returned by the key function.  Therefore, the key-value
@@ -382,6 +412,12 @@ def merged_mesh(mesh,keys,verbose=False):
     in filename construction, or the "parity" parameter may be used in mesh
     selection).
 
+    Preservation of original objects: Each ResultsData object in the returned
+    mesh is obtained by first defining a new empty object.  Then all ResultsData
+    objects to be merged are copied into this empty object by the update method.
+    This ensures that no original ResultsData objects is modified in the
+    process.
+
     Example:
 
     >>> # merge results data (of different M) by shared mesh parameters
@@ -393,13 +429,9 @@ def merged_mesh(mesh,keys,verbose=False):
 
     Arguments:
 
-       mesh (list of ResultsData): mesh to be merged (entrywise)
+        mesh (list of ResultsData): mesh to be merged (entrywise)
 
-       key (callable): key function which takes a ResultsData object and returns a key
-           value which uniquely defines groups of mesh points to be merged (e.g., to 
-           merge calculations carried out at different M values, mesh points should have
-           the same key if and only if they differ only in their M value, and no other
-           relevant parameter); return type should be a dict for use as new params
+        keys (list): list of keys
 
     Return:
 
@@ -407,7 +439,11 @@ def merged_mesh(mesh,keys,verbose=False):
 
     """
 
-    results_type = type(mesh[0])
+    try:
+        results_type = type(mesh[0])
+    except IndexError:  # empty mesh has no result type
+        return []
+
     keyfunc = make_params_subdict_items_function(keys)
     sorted_mesh = sorted(mesh,key=keyfunc)
     target_mesh = []
@@ -915,7 +951,12 @@ def make_level_table_decomposition(results_data,decomposition_length,levels=None
     qn_dtype = [("J",float),("gex",int),("n",int)]
     values_dtype = decomposition_length*[("",float),]
     def values(qn):
-        return tuple(results_data.get_decomposition("Nex",qn)[:decomposition_length])
+        decomposition=results_data.get_decomposition("Nex",qn)
+        if (decomposition is None):
+            value_list = [np.nan]*decomposition_length
+        else:
+            value_list = decomposition[:decomposition_length]
+        return tuple(value_list)
     table_data = [
         qn + values(qn)
         for qn in levels
