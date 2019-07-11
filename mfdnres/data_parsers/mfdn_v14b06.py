@@ -16,7 +16,7 @@ import re
 # intra-package references
 from .. import (
     mfdn_results_data_v14,
-    res,
+    input,
     tools,
     )
 
@@ -384,7 +384,7 @@ def parser(fin,verbose):
 
 
 # register parser
-res.register_res_format("mfdn_v14b06",parser)
+input.register_data_format("mfdn_v14b06",parser)
 
 ################################################################
 # test code

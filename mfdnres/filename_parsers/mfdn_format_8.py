@@ -12,7 +12,7 @@
 import re
 
 # intra-package references
-from .. import descriptor
+from .. import input
 
 _parity_map = {"g0": +1, "g1": -1, "gx": 0}
 
@@ -89,11 +89,11 @@ def parser(filename):
     return info
 
 
-descriptor.register_filename_format("mfdn_format_8", parser)
+input.register_filename_format("mfdn_format_8", parser)
 
 if (__name__ == "__main__"):
 
     filename = r"run0000-mfdn15-Z2-N6-Daejeon16-coul1-hw10.000-a_cm0-an01.500-bl01.000-spWTmax12.000-WTmax15.000-g0-Mj0.0-its200-tol1.0e-06.res"
-    info = descriptor.parse_res_filename(filename, filename_format="mfdn_format_8")
+    info = input.parse_filename(filename, filename_format="mfdn_format_8")
     print(filename)
     print(info)

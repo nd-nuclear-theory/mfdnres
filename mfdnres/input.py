@@ -1,4 +1,4 @@
-"""res.py
+"""input.py
 
     Import control code for results files.
 
@@ -24,6 +24,8 @@
     02/22/19 (pjf): Store only basename of filename in ResultsData.
     06/24/19 (mac): Update res_file_directory construction for new default
         location "results/res".
+    06/26/19 (mac): Rename from res.py to input.py, and incorporate filename
+        parsing control from descriptor.py.
 
 """
 
@@ -31,9 +33,6 @@ import glob
 import os
 
 import numpy as np
-
-#intra-packages references
-from . import descriptor
 
 ################################################################
 # filename utility
@@ -74,14 +73,88 @@ def res_file_directory(username,code,run_number,results_dir="results",res_file_s
 
     return res_directory
 
+################################################################
+# filename parser registry
+################################################################
+
+# global registration variables
+filename_format_parser = {}
+
+def register_filename_format(format_name,parser):
+    """Register information for parsing filename.
+
+    Args:
+        format_name (str): name for filename format
+        parser (callable): function for parsing filename
+
+    """
+
+    filename_format_parser[format_name] = parser
+
+################################################################
+# filename parser control
+################################################################
+
+def parse_filename(filename,filename_format):
+    """Parse results filename.
+
+    Only the basename is considered, extracted via os.path.basename,
+    i.e., any preceding path is ignored.
+
+    A filename parsing function is assumed to provide the following
+    mandatory fields:
+
+        "run" (str): run name (may be null)
+        "descriptor" (str): the part of the filename which
+             describes the run parameters
+        "Z", "N" (int): proton and neutron numbers
+
+    E.g., under "format5ho", the filename
+
+        "run0364-mfdn-Z4-N3-JISP16-1-hw20.000-aL100-Nmax10-MM1-lan1000.res"
+
+    yields
+
+        "run" : "0364"
+        "descriptor" : "Z4-N3-JISP16-1-hw20.000-aL100-Nmax10-MM1-lan1000"
+        "Z" : 4
+        "N" : 3
+        "interaction" : "JISP16"
+        ...
+
+    The wrapper parse_filename will add the field "nuclide" as a
+    tuple of int, e.g.,
+
+        "nuclide" : (4,3)
+
+    Args:
+        filename (str): filename to parse
+
+    Returns: (dict) : dictionary with keys for parameters ("run",
+        "descriptor", "Z", "N", ...) parsed from filename, plus
+        "nuclide" as a tuple of int
+
+    """
+
+    # parse filename
+    basename = os.path.basename(filename)
+    parser = filename_format_parser[filename_format]
+    info = parser(basename)
+
+    # define nuclide tuple
+    info["filename"] = filename
+    info["nuclide"] = (info["Z"],info["N"])
+
+    return info
+
 #################################################
-# parser registry
+# data parser registry
 #################################################
 
 # global registration variables
-res_format_parser = {}
+data_format_parser = {}
 
-def register_res_format(format_name,parser):
+def register_data_format(format_name,parser):
     """Register information for parsing res file.
 
     Args:
@@ -90,10 +163,10 @@ def register_res_format(format_name,parser):
 
     """
 
-    res_format_parser[format_name] = parser
+    data_format_parser[format_name] = parser
 
 ##################################################
-# res file import
+# data file import control
 ##################################################
 
 def read_file(filename,res_format,filename_format=None,verbose=False):
@@ -128,13 +201,13 @@ def read_file(filename,res_format,filename_format=None,verbose=False):
     if (filename_format is None):
         info_from_filename = {}
     else:
-        info_from_filename = descriptor.parse_res_filename(filename,filename_format)
+        info_from_filename = parse_filename(filename,filename_format)
 
     # parse results file contents for run parameters and data
     if (verbose):
         print("  read_file: filename {}".format(filename))
     with open(filename,'rt') as fin:
-        results_list = res_format_parser[res_format](fin,verbose=verbose)
+        results_list = data_format_parser[res_format](fin,verbose=verbose)
     if (verbose):
         print("  read_file: mesh points {:d}".format(len(results_list)))
 

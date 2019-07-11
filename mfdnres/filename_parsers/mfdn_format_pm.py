@@ -19,7 +19,7 @@ decimal and as field separator.
 import re
 
 # intra-package references
-from .. import descriptor
+from .. import input
 
 def parser(filename):
     """ Parses results filename in Pieter's typical format, defined for ho basis.
@@ -77,11 +77,11 @@ def parser(filename):
 
     return info
 
-descriptor.register_filename_format("mfdn_format_pm", parser)
+input.register_filename_format("mfdn_format_pm", parser)
 
 if (__name__ == "__main__"):
 
     filename = r"MFDn.res.Z4.N5.JISP16.Nmin1.Nm13.hw20.0.La500.St06.tol1e-6"
-    info = descriptor.parse_res_filename(filename, filename_format="mfdn_format_pm")
+    info = input.parse_filename(filename, filename_format="mfdn_format_pm")
     print(filename)
     print(info)

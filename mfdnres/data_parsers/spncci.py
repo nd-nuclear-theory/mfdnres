@@ -17,7 +17,7 @@ import numpy as np
 
 from .. import (
     spncci_results_data,
-    res,
+    input,
     tools,
     )
 
@@ -306,7 +306,7 @@ def parser(in_file,verbose):
     return mesh_data
 
 # register the parser
-res.register_res_format('spncci',parser)
+input.register_data_format('spncci',parser)
 
 if (__name__=="__main__"):
     pass

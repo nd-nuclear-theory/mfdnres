@@ -22,7 +22,7 @@ import numpy as np
 
 from .. import (
     mfdn_results_data,
-    res,
+    input,
     tools,
     )
 
@@ -406,7 +406,7 @@ def parser(in_file,verbose):
     return mesh_data
 
 # register the parser
-res.register_res_format('mfdn_v15',parser)
+input.register_data_format('mfdn_v15',parser)
 
 
 if (__name__=="__main__"):
