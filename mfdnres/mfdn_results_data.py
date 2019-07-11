@@ -227,7 +227,7 @@ class MFDnResultsData(results_data.ResultsData):
 
         Arguments:
            observable (str): moment type ("E2p","E2n","M1mu","M1lp","M1ln","M1sp",
-               "M1sn"), as well as deduced cases ("E20", "E22")
+               "M1sn"), as well as deduced cases ("E20", "E21")
            qn (tuple): quantum numbers for state
            default (float,optional): default value to return for missing radius
 
@@ -296,8 +296,8 @@ class MFDnResultsData(results_data.ResultsData):
         Adds support for "E20" and E21" as isoscalar E2 and isovector E2.
 
         Arguments:
-           observable (str): operator type ("E2p","E2n",...), as well as
-               deduced cases ("E20", "E22")
+           observable (str): operator type ("E2p", "E2n", "M1", "Dlp", "Dln",
+               "Dsp", "Dsn", ...), as well as deduced cases ("E20", "E21")
            qn_pair (tuple): quantum numbers for states (qn_bra,qn_ket)
            default (float,optional): default value to return for missing radius
 

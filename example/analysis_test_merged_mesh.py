@@ -16,6 +16,7 @@
 """
 
 import mfdnres
+import mfdnres.ncci
 
 ################################################################
 # global data file path configuration
@@ -69,7 +70,9 @@ def read_data():
     # include this key unless we first augment the obscalc-ob params to include
     # parity, or else we could restore this parameter later.
     for results_data in mesh_data:
-        results_data.params.update({"parity":(results_data.params["Nmax"]%2)})
+        results_data.params.update({
+            "parity":(-1)**(results_data.params["Nmax"]+mfdnres.ncci.N0_for_nuclide(results_data.params["nuclide"]))
+        })
     print("After augmenting params (keys)")
     mfdnres.analysis.mesh_key_listing(mesh_data,("nuclide","interaction","coulomb","hw","Nmax","parity","M","code_type"),verbose=True)
 

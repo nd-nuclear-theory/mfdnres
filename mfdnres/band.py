@@ -235,6 +235,8 @@ class BandDefinition(object):
 def write_band_table(results,filename,band_definition,fields=None,default=np.nan):
     """Writes level energy, moment, and in-band transition data.
 
+    Meant for use in generating in-band Alaga ratio plots (as in berotor2).
+
     With default arguments, recovers behavior of write_level_table.
 
     Each output line is written in the form
@@ -346,14 +348,18 @@ def write_band_table(results,filename,band_definition,fields=None,default=np.nan
 
 def write_network_table(
         results,filename,band_definition,
-        energy_cutoff=None,
-        transition_operators=["Qpintr","Qnintr","Qintr"]
+        transition_operators,
+        energy_cutoff=None
 ):
     """Writes table of E2 RMEs
 
-    WARNING: Currently adapted for spncci use.  Must generalize to recover MFDn
-    use.  Currently puts mass Q operator in place of both proton and neutron
-    operators.
+    The specified transition_operators must match the code being used, e.g., for mfdn
+
+        transition_operators=["E2p","E2n","E20","E21"]
+
+    or for spncci
+
+        transition_operators=["Qpintr","Qnintr","Qintr"]
 
     Data format:
 
@@ -371,8 +377,8 @@ def write_network_table(
         filename (str): output filename
         band_definition (BandDefinition): band providing set of initial levels
            (and M values)
+        transition_operators (list of str): operator identifiers for transition operators to tabulate
         energy_cutoff (float,optional): energy cutoff to limit output size
-        transition_operators (list of str, optional): operator identifiers for transition operators to tabulate
     """
 
     # assemble table lines
