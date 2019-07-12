@@ -5,6 +5,7 @@
     University of Notre Dame
 
     05/31/19 (mac): Created.
+    07/12/19 (mac): Add augment_params_with_parity().
 
 """
 
@@ -45,6 +46,21 @@ def N0_for_nuclide(nuclide):
             eta += 1
 
     return N0
+
+def augment_params_with_parity(results_data):
+    """Postprocess mesh point to add parity as parameter, based on Nmax and nuclide.
+
+    The parity parameter is already normally available in the results from mfdn
+    but not after merging with results from obscalc-ob.
+
+    Arguments:
+        results_data (ResultsData): results data object to augment
+    """
+
+    results_data.params.update({
+        "parity":(-1)**(results_data.params["Nmax"]+N0_for_nuclide(results_data.params["nuclide"]))
+    })
+
 
 ################################################################
 # test code

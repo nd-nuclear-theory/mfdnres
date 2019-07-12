@@ -53,29 +53,20 @@ def read_data():
     print("Raw mesh (keys)")
     mfdnres.analysis.mesh_key_listing(mesh_data,("nuclide","interaction","coulomb","hw","Nmax","parity","M","code_name"),verbose=True)
 
-    # merge results data (of different code_name and M) by shared mesh parameters
+    # merge results data (from different M and mfdn/obscalc-ob)
     mesh_data = mfdnres.analysis.merged_mesh(
         mesh_data,
-        ## ("nuclide","interaction","coulomb","hw","Nmax","parity"),
         ("nuclide","interaction","coulomb","hw","Nmax"),
+        postprocessor=mfdnres.ncci.augment_params_with_parity,
         verbose=False
     )
 
     print("Merged mesh (keys)")
-    mfdnres.analysis.mesh_key_listing(mesh_data,("nuclide","interaction","coulomb","hw","Nmax","parity","M","code_type"),verbose=True)
-
-    # augment params
-    #
-    # Beware that obscalc-ob does not have a "parity" key, so merger cannot
-    # include this key unless we first augment the obscalc-ob params to include
-    # parity, or else we could restore this parameter later.
-    for results_data in mesh_data:
-        results_data.params.update({
-            "parity":(-1)**(results_data.params["Nmax"]+mfdnres.ncci.N0_for_nuclide(results_data.params["nuclide"]))
-        })
-    print("After augmenting params (keys)")
-    mfdnres.analysis.mesh_key_listing(mesh_data,("nuclide","interaction","coulomb","hw","Nmax","parity","M","code_type"),verbose=True)
-
+    mfdnres.analysis.mesh_key_listing(
+        mesh_data,
+        ("nuclide","interaction","coulomb","hw","Nmax","parity"),
+        verbose=True
+    )
 
     # select case of interest
     selector = {"interaction":"Daejeon16","hw":15.0}

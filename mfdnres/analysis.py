@@ -391,7 +391,7 @@ def mesh_key_listing(mesh,keys,verbose=False):
 
     return mesh_keys
 
-def merged_mesh(mesh,keys,verbose=False):
+def merged_mesh(mesh,keys,postprocessor=None,verbose=False):
     """Obtain results mesh in which results data objects sharing same parameter
     values are merged.
 
@@ -433,6 +433,9 @@ def merged_mesh(mesh,keys,verbose=False):
 
         keys (list): list of keys
 
+        postprocessor (callable): callable to apply to all mesh points in final
+           merged mesh (e.g., to define extra parameters)
+
     Return:
 
         merged_mesh (list of ResultsData): merged mesh
@@ -444,8 +447,11 @@ def merged_mesh(mesh,keys,verbose=False):
     except IndexError:  # empty mesh has no result type
         return []
 
+    # presort mesh (required for groupby)
     keyfunc = make_params_subdict_items_function(keys)
     sorted_mesh = sorted(mesh,key=keyfunc)
+
+    # group and merge mesh points
     target_mesh = []
     for group_key, group in itertools.groupby(sorted_mesh,keyfunc):
 
@@ -470,6 +476,11 @@ def merged_mesh(mesh,keys,verbose=False):
             print("  merged levels: {}".format(results.levels))
 
         target_mesh.append(results)
+
+    # postprocess mesh
+    if (postprocessor is not None):
+        for results_data in target_mesh:
+            postprocessor(results_data)
 
     return target_mesh
         
