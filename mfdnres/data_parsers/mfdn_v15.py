@@ -251,7 +251,7 @@ def parse_generic_static_properties(self,tokenized_lines,container,property_name
 def parse_M1_moments(self,tokenized_lines):
     """Parse M1 moments.
     """
-    property_names = ["M1mu","M1lp","M1ln","M1sp","M1sn"]
+    property_names = ["M1","Dlp","Dln","Dsp","Dsn"]
     parse_generic_static_properties(self,tokenized_lines,self.native_static_properties,property_names)
 
 def parse_E2_moments(self,tokenized_lines):
