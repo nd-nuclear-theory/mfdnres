@@ -943,6 +943,10 @@ def format_string_decomposition_table(decomposition_length):
 def make_level_table_decomposition(results_data,decomposition_length,levels=None):
     """Make tabulation of Nex decomposition by level, from single calculation mesh point.
 
+    Decomposition length is typically
+
+        decomposition_length = (Nmax - (Nmax%2))//2 + 1
+
     Arguments:
         results_data (BaseResultsData): data for mesh point
         levels (list of tuples): levels to include or None for all (default: None)

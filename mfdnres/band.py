@@ -13,6 +13,7 @@
     - 12/12/18 (mac): Reimplement BandDefinition derived data structures as Python properties.
     - 04/25/19 (mac): Remove hard-coded workaround for early SpNCCI operator implementation in
       write_network_table, and add transition_operators optional argument.
+    - 07/15/19 (mac): Generalize write_network_table to take arbitrary level set and dJ constraint.
 """
 
 import math
@@ -232,7 +233,7 @@ class BandDefinition(object):
 # output tabulation: in-band moment and transition data
 ################################################################
 
-def write_band_table(results,filename,band_definition,fields=None,default=np.nan):
+def write_band_table(results_data,filename,band_definition,fields=None,default=np.nan):
     """Writes level energy, moment, and in-band transition data.
 
     Meant for use in generating in-band Alaga ratio plots (as in berotor2).
@@ -267,7 +268,7 @@ def write_band_table(results,filename,band_definition,fields=None,default=np.nan
     Hint: If all the transitions come out as missing, have you set the correct M value?
 
     Args:
-        results (MFDnRunData): results object containing the levels
+        results_data (MFDnResultsData): results object containing the levels
         filename (str): output filename
         band_definition (BandDefinition): band definition
         fields (set of str): fields to include, else all fields written if None (default: None)
@@ -290,11 +291,11 @@ def write_band_table(results,filename,band_definition,fields=None,default=np.nan
         # initial state data
         line = "{:1d} {:6.3f} {:1d} {:2d} {:6.3f} {:8.3f}".format(
             0,
-            results.get_property(qn,"J"),
-            results.get_property(qn,"g"),
-            results.get_property(qn,"n"),
-            results.get_property(qn,"T"),
-            results.get_energy(qn)
+            results_data.get_property(qn,"J"),
+            results_data.get_property(qn,"g"),
+            results_data.get_property(qn,"n"),
+            results_data.get_property(qn,"T"),
+            results_data.get_energy(qn)
         )
 
         # loop over moment fields
@@ -306,9 +307,9 @@ def write_band_table(results,filename,band_definition,fields=None,default=np.nan
         for (field,op,entries) in field_definitions:
             if (field in fields):
                 values = default*np.ones(entries)
-                if ((qn,op) in results.moments):
+                if ((qn,op) in results_data.moments):
                     # values exist
-                    values = np.array(results.moments[(qn,op)])
+                    values = np.array(results_data.moments[(qn,op)])
                 line += (entries*value_format).format(*values)
 
         # loop over transition fields
@@ -328,7 +329,7 @@ def write_band_table(results,filename,band_definition,fields=None,default=np.nan
                     # final level and appropriate M calculation are defined
                     M = band_definition.M[Ji]
                     qnf = band_definition.members[Jf]
-                    values = results.get_rme(qnf,qni,op,M,default=default)
+                    values = results_data.get_rme(qnf,qni,op,M,default=default)
                     if ((Ji,M) in band_definition.signs) and ((Jf,M) in band_definition.signs):
                         # phases are defined for these states at the required M
                         values *= band_definition.signs[(Ji,M)]*band_definition.signs[(Jf,M)]
@@ -347,8 +348,9 @@ def write_band_table(results,filename,band_definition,fields=None,default=np.nan
 ################################################################
 
 def write_network_table(
-        results,filename,band_definition,
+        results_data,filename,levels,
         transition_operators,
+        allowed_dJ_set={-2,-1},
         energy_cutoff=None
 ):
     """Writes table of E2 RMEs
@@ -363,59 +365,62 @@ def write_network_table(
 
     Data format:
 
-        J_f gex_f n_f Eabs_f ; J_i p_i n_i Eabs_i ; |RME_p| |RME_n|
+        J_f g_f n_f Eabs_f ; J_i p_i n_i Eabs_i ; |RME_p| |RME_n|
 
     Legacy data format (2015-era) -- included isospin, swapped initial/final label order:
 
-        J_i gex_i n_i T_i Eabs_i ; J_f p_f n_f T_f Eabs_f ; |RME_p| |RME_n|
+        J_i g_i n_i T_i Eabs_i ; J_f p_f n_f T_f Eabs_f ; |RME_p| |RME_n|
 
     Tabulation is of J-descending transitions only.  This may be
     generalized in the future.
 
     Args:
-        results (MFDnRunData): results object containing the levels
+        results_data (MFDnResultsData): results object containing the levels
         filename (str): output filename
-        band_definition (BandDefinition): band providing set of initial levels
-           (and M values)
+        levels (list of tuple): list of level quantum numbers
         transition_operators (list of str): operator identifiers for transition operators to tabulate
         energy_cutoff (float,optional): energy cutoff to limit output size
+        allowed_dJ_set (set,optional): allowed dJ values for transitions in tabulation;
+            default value {-2,-1} selects strictly J-decreasing transitions
+
     """
 
     # assemble table lines
     value_format = " {:9.4f}"  # format string for numerical values
     lines = []
 
-    # loop over initial states in band
-    for qni in band_definition.levels:
-
-        # loop over all final states in results
-        for qnf in results.levels:
+    # loop over state pairs
+    #
+    # from initial state in specified set to any final state, final state most
+    # rapidly varying
+    for qni in levels:
+        for qnf in results_data.levels:
 
             # test for transition to include in tabulation
             #   -- J-descending
             #   -- M defined for initial level
             #   -- transition available in calculations
-            (Ji,gexi,ni) = qni
-            (Jf,gex,nf) = qnf
-            allowed_sense = (Jf < Ji)
-            if (not allowed_sense):
+            (Ji,gi,ni) = qni
+            (Jf,gf,nf) = qnf
+            dJ=Jf-Ji
+            if (dJ not in allowed_dJ_set):
                 continue
 
             # MFDn:
             ## op = "E2"
             ## M = band_definition.M.get(Ji,None)
-            ## available = results.get_rme(qnf,qni,op,M)
+            ## available = results_data.get_rme(qnf,qni,op,M)
 
             # retrieve values
             rme_values = [
-                results.get_rme(operator,(qnf,qni))
+                results_data.get_rme(operator,(qnf,qni))
                 for operator in transition_operators
             ]
 
             # short circuit if all values are nans
             all_nan = True
             for is_nan in map(np.isnan,rme_values):
-                all_nan = all_nan and is_nan
+                all_nan &= is_nan
             if (all_nan):
                 continue
 
@@ -423,7 +428,7 @@ def write_network_table(
             line = ""
 
             # final state data
-            energy = results.get_energy(qnf)
+            energy = results_data.get_energy(qnf)
             if ((energy_cutoff is not None) and (energy>energy_cutoff)):
                 continue
             line += "{qn[0]:4.1f} {qn[1]:1d} {qn[2]:2d} {energy:8.3f}    ".format(
@@ -432,7 +437,7 @@ def write_network_table(
             )
 
             # initial state data
-            energy = results.get_energy(qni)
+            energy = results_data.get_energy(qni)
             if ((energy_cutoff is not None) and (energy>energy_cutoff)):
                 continue
             line += "{qn[0]:4.1f} {qn[1]:1d} {qn[2]:2d} {energy:8.3f}    ".format(
@@ -441,7 +446,6 @@ def write_network_table(
             )
 
             # value data
-            ## values = np.abs(results.get_rme(qnf,qni,op,M))
             num_values = len(rme_values)
             line += (num_values*value_format).format(*rme_values)
 
@@ -508,13 +512,13 @@ def band_fit_energy(band_definition,level_energy_dict,verbose=False):
 
     return parameters
 
-def band_fit_E2(results,band_definition):
+def band_fit_E2(results_data,band_definition):
     """Extracts band E2 moments for normalization.
 
     CAVEAT: Requires updating to properly handle mesh with distinct M values.
 
     Args:
-        results (MFDnRunData): results object
+        results_data (MFDnResultsData): results object
         band_definition (BandDefinition): band definition
 
     Returns:
@@ -529,18 +533,18 @@ def band_fit_E2(results,band_definition):
     factor = (3*K**2-J*(J+1))/((J+1)*(2*J+3))
     if (factor == 0):
         raise ValueError("attempt to extract Q0 in case where Q(J) factor is 0")
-    Q_values = np.array(results.moments.get((qn,"E2"),np.nan))
+    Q_values = np.array(results_data.moments.get((qn,"E2"),np.nan))
     Q0_values = Q_values/factor
 
     return Q0_values
 
-def band_fit_M1(results,band_definition,verbose=False):
+def band_fit_M1(results_data,band_definition,verbose=False):
     """Extracts band M1 fit parameters.
 
     CAVEAT: Requires updating to properly handle mesh with distinct M values.
 
     Args:
-        results (MFDnRunData): results object
+        results_data (MFDnResultsData): results object
         band_definition (BandDefinition): band definition
 
     Returns:
@@ -603,7 +607,7 @@ def band_fit_M1(results,band_definition,verbose=False):
     b_moment = []
     for J in band_definition.J_list_M1_moment:
         A_moment.append(f_moment(K,J))
-        b_moment.append(results.moments[(band_definition.members[J],"M1")])
+        b_moment.append(results_data.moments[(band_definition.members[J],"M1")])
 
     # accumulate transition entries
     A_trans = []
@@ -613,7 +617,7 @@ def band_fit_M1(results,band_definition,verbose=False):
         Ji = J
         Jf = J - 1
         M = band_definition.M[Ji]
-        values = np.array(results.get_rme(band_definition.members[Jf],band_definition.members[Ji],"M1",M))
+        values = np.array(results_data.get_rme(band_definition.members[Jf],band_definition.members[Ji],"M1",M))
         values *= band_definition.signs[(Ji,M)]*band_definition.signs[(Jf,M)]
         b_trans.append(values)
 
@@ -654,7 +658,7 @@ def band_fit_M1(results,band_definition,verbose=False):
 
     return parameters
 
-def write_band_fit_parameters(results,filename,band_definition,fields=None,verbose=False):
+def write_band_fit_parameters(results_data,filename,band_definition,fields=None,verbose=False):
     """Writes band fit parameters.
 
     The output contains one line, of the form:
@@ -670,7 +674,7 @@ def write_band_fit_parameters(results,filename,band_definition,fields=None,verbo
     Some of these fields may optionally be omitted.
 
     Args:
-        results (MFDnRunData): results object
+        results_data (MFDnResultsData): results object
         filename (str): output filename
         band_definition (BandDefinition): band definition
         fields (set of str): fields to include, else all fields written if None (default: None)
@@ -692,17 +696,17 @@ def write_band_fit_parameters(results,filename,band_definition,fields=None,verbo
 
     # energy parameters
     if ("energy" in fields):
-        parameters = band_fit_energy(results,band_definition,verbose)
+        parameters = band_fit_energy(results_data,band_definition,verbose)
         line += (3*value_format).format(*parameters)
 
     # E2 parameters
     if ("E2" in fields):
-        parameters = band_fit_E2(results,band_definition)
+        parameters = band_fit_E2(results_data,band_definition)
         line += (2*value_format).format(*parameters)
 
     # M1 parameters
     if ("M1" in fields):
-        parameters = band_fit_M1(results,band_definition,verbose)
+        parameters = band_fit_M1(results_data,band_definition,verbose)
         flat_parameters = parameters.T.flatten()
         line += (12*value_format).format(*flat_parameters)
 
