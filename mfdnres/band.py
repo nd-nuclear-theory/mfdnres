@@ -21,6 +21,10 @@ import configparser # for band file
 
 import numpy as np
 
+from . import (
+    am
+)
+
 ################################################################
 # band configuration definition
 ################################################################
@@ -349,7 +353,7 @@ def write_band_table(results_data,filename,band_definition,fields=None,default=n
 
 def write_network_table(
         results_data,filename,levels,
-        transition_operators,
+        J0,transition_operators,
         allowed_dJ_set={-2,-1},
         energy_cutoff=None
 ):
@@ -378,6 +382,7 @@ def write_network_table(
         results_data (MFDnResultsData): results object containing the levels
         filename (str): output filename
         levels (list of tuple): list of level quantum numbers
+        J0 (float): multipolarity (to allow triangle selection)
         transition_operators (list of str): operator identifiers for transition operators to tabulate
         energy_cutoff (float,optional): energy cutoff to limit output size
         allowed_dJ_set (set,optional): allowed dJ values for transitions in tabulation;
@@ -404,6 +409,8 @@ def write_network_table(
             (Jf,gf,nf) = qnf
             dJ=Jf-Ji
             if (dJ not in allowed_dJ_set):
+                continue
+            if (not am.allowed_triangle(Ji,J0,Jf)):
                 continue
 
             # MFDn:
