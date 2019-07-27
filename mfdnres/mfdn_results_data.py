@@ -23,6 +23,8 @@
     06/24/19 (mac): Make update_observable_dictionary robust against
         missing observables.
     06/25/19 (mac): Add get_isospin accessor.
+    07/26/19 (mac): Support "M1" as deduced observable in get_moment
+        and get_rme.
 
 """
 
@@ -225,9 +227,14 @@ class MFDnResultsData(results_data.ResultsData):
         we keep a name which reflects semantics rather than the internal
         represenation.
 
+        Adds support for deduced cases: "E20" and E21" for isoscalar E2 and
+        isovector E2, "M1" deduced from dipole terms.  (Any native-calculated
+        "M1" from MFDn is ignored, as this is redundant to the dipole terms and
+        not provided by obscalc-ob.)
+
         Arguments:
-           observable (str): moment type ("E2p","E2n","M1mu","M1lp","M1ln","M1sp",
-               "M1sn"), as well as deduced cases ("E20", "E21")
+           observable (str): moment type ("E2p", "E2n", "Dlp", "Dln",
+               "Dsp", "Dsn", ...), as well as deduced cases ("E20", "E21","M1")
            qn (tuple): quantum numbers for state
            default (float,optional): default value to return for missing radius
 
@@ -246,6 +253,14 @@ class MFDnResultsData(results_data.ResultsData):
                 value = 1/2*(E2p+E2n)
             else:
                 value = 1/2*(E2p-E2n)
+            return value
+        elif (observable == "M1"):
+            Dsp = self.get_moment("Dsp",qn,default,verbose)
+            Dsn = self.get_moment("Dsn",qn,default,verbose)
+            Dlp = self.get_moment("Dlp",qn,default,verbose)
+            gp = 5.586
+            gn = -3.826
+            value = Dlp+gp*Dsp+gn*Dsn
             return value
 
         # extract labels
@@ -293,11 +308,14 @@ class MFDnResultsData(results_data.ResultsData):
         Returns RME in Edmonds convention, as common for spectroscopic data
         analysis in the shell model community.
 
-        Adds support for "E20" and E21" as isoscalar E2 and isovector E2.
+        Adds support for deduced cases: "E20" and E21" for isoscalar E2 and
+        isovector E2, "M1" deduced from dipole terms.  (Any native-calculated
+        "M1" from MFDn is ignored, as this is redundant to the dipole terms and
+        not provided by obscalc-ob.)
 
         Arguments:
-           observable (str): operator type ("E2p", "E2n", "M1", "Dlp", "Dln",
-               "Dsp", "Dsn", ...), as well as deduced cases ("E20", "E21")
+           observable (str): operator type ("E2p", "E2n", "Dlp", "Dln",
+               "Dsp", "Dsn", ...), as well as deduced cases ("E20", "E21","M1")
            qn_pair (tuple): quantum numbers for states (qn_bra,qn_ket)
            default (float,optional): default value to return for missing radius
 
@@ -314,6 +332,14 @@ class MFDnResultsData(results_data.ResultsData):
                 value = 1/2*(E2p+E2n)
             else:
                 value = 1/2*(E2p-E2n)
+            return value
+        elif (observable == "M1"):
+            Dsp = self.get_rme("Dsp",qn_pair,default,verbose)
+            Dsn = self.get_rme("Dsn",qn_pair,default,verbose)
+            Dlp = self.get_rme("Dlp",qn_pair,default,verbose)
+            gp = 5.586
+            gn = -3.826
+            value = Dlp+gp*Dsp+gn*Dsn
             return value
 
         # canonicalize labels
