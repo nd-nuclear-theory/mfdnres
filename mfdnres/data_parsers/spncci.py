@@ -67,10 +67,10 @@ def parse_params(self,tokenized_lines):
 
 
 def parse_observables(self,tokenized_lines):
-    """
-    Legacy support: Parse ambiguously named "Observables" sections.
+    """Legacy support: Parse ambiguously named "Observables" sections.
 
     These are to be renamed in future spncci runs!
+
     """
 
     #trap unfortunate overload of Observables section name
@@ -88,7 +88,7 @@ def parse_observables(self,tokenized_lines):
 
 
 def parse_spj_listing(self,tokenized_lines):
-    """ Parse matrices of RMEs.
+    """ Parse ...
 
     Future: May be adding gex quantum number.
 
@@ -103,7 +103,7 @@ def parse_spj_listing(self,tokenized_lines):
     self.Jgex_values = list((J,gex) for J in self.spj_listing["J"])
 
 def parse_baby_spncci_listing(self,tokenized_lines):
-    """ Parse matrices of RMEs.
+    """ Parse ...
     """
     table = np.array(
         tokenized_lines,
@@ -137,7 +137,7 @@ def parse_decompositions_Nex(self,tokenized_lines):
         ## print((J,gex),self.decompositions["Nex"][(J,gex)])
 
 def parse_decompositions_baby_spncci(self,tokenized_lines):
-    """ Parse matrices of RMEs.
+    """ Parse ...
     """
 
     self.decompositions["BabySpNCCI"] = {}
@@ -173,7 +173,7 @@ def parse_energies(self,tokenized_lines):
         self.num_eigenvalues[(J,gex)]=self.num_eigenvalues.setdefault((J,gex),0)+1
 
 def parse_observable_rmes(self,tokenized_lines):
-    """Parse matrices of RMEs.
+    """Parse ...
 
     Matrix is canonicalized (assuming RMEs are in group theory
     convention and operator has spherical-harmonic-like conjugation

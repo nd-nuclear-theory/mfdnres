@@ -1,4 +1,4 @@
-""" spncci.py
+""" spncci_results_data.py
 
     Result storage and access for spncci runs.
 
@@ -7,10 +7,11 @@
     Mark A. Caprio
     University of Notre Dame
 
-    7/9/17 (mac): Extract SpNCCIMeshPointData from res.py.
-    7/15/17 (mac): Implement approximate shape invariants.
-    7/22/17 (mac): Move out approximate shape invariants.
+    07/09/17 (mac): Extract SpNCCIMeshPointData from res.py.
+    07/15/17 (mac): Implement approximate shape invariants.
+    07/22/17 (mac): Move out approximate shape invariants.
     10/10/17 (mac): Rename SpNCCIMeshPointData to SpNCCIResultsData.
+    09/21/19 (mac): Fill in docstring for SpNCCIResultsData.
 
 """
 
@@ -29,25 +30,80 @@ from . import (
 #################################################
 
 class SpNCCIResultsData(results_data.ResultsData):
-    """ Container for results data for spncci mesh point.
+    """Container for results data for single spncci mesh point.
 
-    TODO: rewrite docstring
+    Recall that there are inherited attributes:
 
-    Inherited attributes:
         params (dict)
         energies (dict)
         num_eigenvalues (dict)
         filename (str)
 
-    Attributes:
-        spj_listing (list of tuple):
-        baby_spncci_listing (list of list):
-        decompositions (dictionary):
-        observables (dictionary):
-          (observable,(Jg_bra,Jg_ket)) -> matrix
-          observable (str): observable identifier
+    Data attributes:
+
+        WARNING: The "g" quantum number is currently interpreted as the gex
+        excitation quantum number and hard coded as 0 in the parser (9/21/19).
+
+        spj_listing (list of tuple): table of J subspace dimensions for the run,
+        as list of (subspace_index,J,dim)
+
+        Jgex_values (list of tuple): listing of J subpsaces for the run, as
+        (J,g)
+
+        baby_spncci_listing (array): table of "BabySpNCCI" subspace dimensions
+        for the run, as an array with rows having the following numpy dtype:
+
+            [
+                ("subspace_index",int),("irrep_family_index",int),
+                ("Nsigmaex",int),("sigma.N",float),("sigma.lambda",int),("sigma.mu",int),
+                ("Sp",float),("Sn",float),("S",float),
+                ("Nex",int),("omega.N",float),("omega.lambda",int),("omega.mu",int),
+                ("gamma_max",int),("upsilon_max",int),("dim",int)
+            ]
+
+        decompositions (dictionary): wave function probability decompositions
+
+            Mapping: decomposition_type -> (J,g) -> matrix 
+    
+                decomposition_type (str): identifier for decomposition type
+                ("Nex", "BabySpNCCI")
+    
+                (J,g) (tuple): (J,g) for space
+
+                matrix (matrix): matrix representation of decomposition
+                probabilities, i.e., where the probability histogram for each
+                eigenstate is stored as the column vector matrix[:,n0], where n0
+                is the zero-based state index
+
+        observables (dictionary): observable RMEs on eigenbasis
+
+            Mapping: (observable,(Jg_bra,Jg_ket)) -> matrix
+
+                observable (str): observable identifier
+
+                (Jg_bra,Jg_ket) (tuple): (J,g) for bra and ket spaces, respectively
+
+                     Note that (Jg_bra,Jg_ket) is always stored canonically, and
+                     the observable matrix elements for the reverse pairing is
+                     obtained through the conjugation relation.
+
+                matrix (matrix): matrix representation of observable on energy
+                eigenbasis, i.e., indexed by zero-based state indices
+                (n0_bra,n0_ket)
+
+            The RMEs in an observable matrix are stored in group theoretical
+            (Rose) convention, but the accessor for individual RMEs converts to
+            Edmonds convention to meet the expectation of traditional nuclear
+            theory users.
 
     Accessors:
+
+        get_baby_spncci_subspace_label
+        get_rme_matrix
+        get_radius
+        get_rme
+        get_rtp
+        get_decomposition
 
     """
 
