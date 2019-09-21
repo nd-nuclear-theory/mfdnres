@@ -45,6 +45,7 @@ class BandDefinition(object):
 
         [fit]
         J_list_energy (list of float): J values to use for energies in energy fit
+
         J_Q (float): J value to use for normalization of E2 intrinsic matrix element
         J_list_M1_moment (list of float): J values to use for M1 moments in M1 fit
         J_list_M1_trans (list of float): J values to use for initial levels for M1 transitions in M1 fit
@@ -52,6 +53,7 @@ class BandDefinition(object):
     Attributes derived from these:
         members (dict): dictionary mapping J -> (J,g,n)
         J_values (list of float): sorted list of J values
+
 
     While the BandDefinition class is primarily intended to represent
     traditional bands for rotational analysis, it can also be used to
@@ -179,9 +181,13 @@ class BandDefinition(object):
         self.J_list_M1_moment = []
         self.J_list_M1_trans = []
         if (config.has_section("fit")):
+
+            # rotational energy fit
             if (config.has_option("fit","J_list_energy")):
                 J_list_energy_string = config["fit"]["J_list_energy"]
                 self.J_list_energy = list(map(float,J_list_energy_string.split()))
+
+            # rotational transition fit
             if (config.has_option("fit","J_Q")):
                 self.J_Q = float(config["fit"]["J_Q"])
             if (config.has_option("fit","J_list_M1_moment")):
@@ -190,6 +196,20 @@ class BandDefinition(object):
             if (config.has_option("fit","J_list_M1_trans")):
                 J_list_M1_trans_string = config["fit"]["J_list_M1_trans"]
                 self.J_list_M1_trans = list(map(float,J_list_M1_trans_string.split()))
+
+            ## # LS coupling fit
+            ## if (config.has_option("fit","S")):
+            ##     self.S = float(config["fit"]["S"])
+            ## if (config.has_option("fit","LJ_pairs")):
+            ##     LJ_pairs_string = config["fit"]["LJ_pairs"]
+            ##     LJ_pairs_string_lines = LJ_pairs_string.strip().split("\n")
+            ##     LJ_pairs = []
+            ##     LJ_reverse_mapping = {}
+            ##     for line in LJ_pairs_string_lines:
+            ##         entries = line.split()
+            ##         (L,J) = (int(entries[0]),float(entries[1]))
+            ##         LJ_pairs.append((L,J))
+            ##         self.LJ_reverse_mapping[J] = L
 
     ################################################################
     # derived properties
@@ -369,14 +389,15 @@ def write_network_table(
 
     Data format:
 
-        J_f g_f n_f Eabs_f ; J_i p_i n_i Eabs_i ; |RME_p| |RME_n|
+        Jf gf nf Ef   Ji gi ni Ei   RME1 RME2 ...
 
     Legacy data format (2015-era) -- included isospin, swapped initial/final label order:
 
         J_i g_i n_i T_i Eabs_i ; J_f p_f n_f T_f Eabs_f ; |RME_p| |RME_n|
 
-    Tabulation is of J-descending transitions only.  This may be
-    generalized in the future.
+    By default, tabulation is of J-descending transitions only, but this may be controlled through the option allowed_dJ_set.
+
+    Transitions are in canonical order by quantum numbers qni and then qnf.
 
     Args:
         results_data (MFDnResultsData): results object containing the levels
@@ -398,8 +419,8 @@ def write_network_table(
     #
     # from initial state in specified set to any final state, final state most
     # rapidly varying
-    for qni in levels:
-        for qnf in results_data.levels:
+    for qni in sorted(levels):
+        for qnf in sorted(results_data.levels):
 
             # test for transition to include in tabulation
             #   -- J-descending
@@ -470,10 +491,10 @@ def write_network_table(
 ################################################################
 
 def band_fit_energy(band_definition,level_energy_dict,verbose=False):
-    """Obtain band energy parameters, by fitting band energies.
+    """Obtain band rotational energy parameters, by fitting band energies.
 
     Args:
-        band_definition (BandDefinition): band providing set of initial levels
+        band_definition (BandDefinition): band providing set of levels
         level_energy_dict (dict): level energies, as mapping J->energy
 
     Returns:
@@ -516,6 +537,59 @@ def band_fit_energy(band_definition,level_energy_dict,verbose=False):
 
     # convert last coefficient to a = c3/c2
     parameters[2] /= parameters[1]
+
+    return parameters
+
+def band_fit_energy_ls(band_definition,level_energy_dict,band_LSJ_content,verbose=False):
+    """Obtain band LS-scheme rotational energy parameters.
+
+    Fitting is currently restricted to case of unique J for each band member,
+    consistent with rotational-oriented J->energy storage scheme, but should be
+    extended to identifying band member by (L,J).
+
+    Band member table:
+       
+
+    Args:
+        band_definition (BandDefinition): band providing set of levels
+        level_energy_dict (dict): level energies, as mapping J->energy
+        band_LSJ_content (tuple): (S,LJ_pairs)
+            S (float): spin
+            LJ_pairs (list of tuple): (L,J) pairs (L integer, J float)
+ 
+    Returns:
+        (np.array 1x3): band energy parameters (E0,aL,xi)
+
+    """
+
+    (S,LJ_pairs) = band_LSJ_content
+
+    # construct energy vector
+    b = np.array([
+        level_energy_dict[J]
+        for J in band_definition.J_list_energy
+    ])
+    if (verbose):
+        print("J:",band_definition.J_list_energy)
+        print("Members:",band_definition.members)
+        print("Energies:",b)
+
+    # construct coefficient matrix
+    A = []
+    LJ_reverse_mapping = dict([
+        (J,L)
+        for (L,J) in LJ_pairs
+    ])  # mapping J->L
+    for J in band_definition.J_list_energy:
+        L = LJ_reverse_mapping[J]
+        LS = 0.5*( J*(J+1) - L*(L+1) - S*(S+1) )
+        A.append([1,L*(L+1),LS])
+    A = np.array(A)
+
+    # solve system
+    parameters = np.linalg.lstsq(A,b)[0]
+    if (verbose):
+        print("Parameters:",parameters)
 
     return parameters
 
