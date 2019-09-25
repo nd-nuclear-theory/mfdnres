@@ -12,7 +12,7 @@
     07/22/17 (mac): Move out approximate shape invariants.
     10/10/17 (mac): Rename SpNCCIMeshPointData to SpNCCIResultsData.
     09/21/19 (mac): Fill in docstring for SpNCCIResultsData.
-
+    09/24/19 (mac): Add update method to permit merging of mesh points.
 """
 
 import math
@@ -24,6 +24,61 @@ from . import (
     results_data,
     tools,
     )
+
+#################################################
+# helper function for merging observable dictionaries
+#################################################
+
+def update_observable_dictionary_matrix(self_dict,other_dict):
+    """Merge two observable dictionaries of type name->qn->matrix.
+
+    Allows for possibility that an observable name may exist only in
+    self_dict or only in other_dict.
+
+    If two matrices exist for the same observable and qn, picks
+
+    Arguments:
+        self_dict (dict): observable dictionary to be updated
+        other_dict (dict): observable dictionary providing update data
+
+    """
+    
+    observables = set(self_dict.keys()).union(other_dict.keys())
+    for name in observables:
+        # ensure observable exists in both dictionaries
+        if (name not in self_dict.keys()):
+            self_dict[name] = {}
+        if (name not in other_dict.keys()):
+            other_dict[name] = {}
+            
+        # for each qn value
+        qn_set = set(self_dict[name].keys()).union(other_dict[name].keys())
+        for qn in qn_set:
+            # identify self and other matrices
+            if (qn in self_dict[name].keys()):
+                self_shape =self_dict[name][qn].shape
+            else:
+                self_shape = (0,0)
+            if (qn in other_dict[name].keys()):
+                other_shape = other_dict[name][qn].shape
+            else:
+                other_shape = (0,0)
+            # pick "bigger" matrix
+            if (other_shape>self_shape):
+                # canonical comparison of shapes:
+                #
+                #   - for decomposition-type matrix: rows will be the same, so
+                #     canonical comparison amounts to comparison of cols, i.e.,
+                #     dimension of eigenspace
+                #
+                #   - for transition-type matrix: dimension of both row and
+                #     column subspaces are capped by same "num_eigenvalues", so
+                #     if rows is larger (or equal) for a given matrix, cols will
+                #     also be larger (or equal) and vice versa, so superiority
+                #     is always Pareto superiority (of both rows and columns),
+                #     and canonical comparison will identify which matrix is
+                #     Pareto superior
+                self_dict[name][qn] = other_dict[name][qn]
 
 #################################################
 # SpNCCIResultsData
@@ -44,11 +99,11 @@ class SpNCCIResultsData(results_data.ResultsData):
         WARNING: The "g" quantum number is currently interpreted as the gex
         excitation quantum number and hard coded as 0 in the parser (9/21/19).
 
-        spj_listing (list of tuple): table of J subspace dimensions for the run,
-        as list of (subspace_index,J,dim)
-
         Jgex_values (list of tuple): listing of J subpsaces for the run, as
         (J,g)
+
+        spj_listing (array): table of J subspace dimensions for the run,
+        as array with rows (subspace_index,J,dim)
 
         baby_spncci_listing (array): table of "BabySpNCCI" subspace dimensions
         for the run, as an array with rows having the following numpy dtype:
@@ -77,7 +132,7 @@ class SpNCCIResultsData(results_data.ResultsData):
 
         observables (dictionary): observable RMEs on eigenbasis
 
-            Mapping: (observable,(Jg_bra,Jg_ket)) -> matrix
+            Mapping: observable_name -> (Jg_bra,Jg_ket) -> matrix
 
                 observable (str): observable identifier
 
@@ -118,7 +173,7 @@ class SpNCCIResultsData(results_data.ResultsData):
         """
         super().__init__()
         self.Jgex_values = []
-        self.spj_listing = None
+        self.spj_listing = []  # null list can serve as starting point for merger update operation
         self.baby_spncci_listing = None
         self.decompositions = {}
         self.observables = {}
@@ -159,7 +214,6 @@ class SpNCCIResultsData(results_data.ResultsData):
             print("Jg_pair_canonical {} flipped {} canonicalization_factor {}".format(Jg_pair_canonical,flipped,canonicalization_factor))
 
         # retrieve underlying matrix
-        key = (observable,Jg_pair_canonical)
         try:
             matrix = self.observables[observable][Jg_pair_canonical]
         except:
@@ -281,6 +335,47 @@ class SpNCCIResultsData(results_data.ResultsData):
             return None
 
         return decomposition
+
+    ########################################
+    # Updating method
+    ########################################
+        
+    def update(self,other):
+        """Merge in data from other MFDnResultsData object.
+
+        Behavior for inherited attributes (e.g., energies) is as defined by ResultsData.update().
+
+        Arguments:
+            other (SpNCCIResultsData): other results set to merge in
+
+        """
+        super().update(other)
+
+        # merge Jg subspace list
+        self.Jgex_values = sorted(list(set(self.Jgex_values).union(set(other.Jgex_values))))
+        
+        # merge J subspace dimension tabulations
+        #   subspace indices will be lost
+        j_dim_dict = {}
+        for (subspace_index,J,dim) in (list(self.spj_listing) + list(other.spj_listing)):
+            j_dim_dict[J] = dim
+        self.spj_listing = [
+            (-1,J,j_dim_dict[J])
+            for J in sorted(list(j_dim_dict.keys()))
+        ]
+
+        # no means to merge nonidentical baby_spncci subspace listings
+        ## if (self.baby_spncci_listing != other.baby_spncci_listing):
+        ##     raise(ValueError("Cannot merge nonidentical baby_spncci_listing"))
+        if (self.baby_spncci_listing is None):
+            self.baby_spncci_listing = other.baby_spncci_listing
+        ## elif (self.baby_spncci_listing.shape != other.baby_spncci_listing.shape):
+        elif (not(self.baby_spncci_listing.shape == other.baby_spncci_listing.shape)):
+            raise(ValueError("Cannot merge baby_spncci listings"))
+
+        # merge dictionaries
+        update_observable_dictionary_matrix(self.decompositions,other.decompositions)
+        update_observable_dictionary_matrix(self.observables,other.observables)
 
 #################################################
 # test code

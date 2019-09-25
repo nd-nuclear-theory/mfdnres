@@ -141,7 +141,6 @@ class ResultsData (object):
         self.energies.update(other.energies)
         self.num_eigenvalues = len(self.energies)
 
-
 #################################################
 # test code
 #################################################

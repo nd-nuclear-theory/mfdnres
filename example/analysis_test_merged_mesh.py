@@ -27,20 +27,17 @@ def read_data():
     results, as well as M runs.
     """
 
-    full_data = []
-
     run_list = [
-
         "mac0506",  # 10Be+
     ]
 
     data_dir_list = [
-        mfdnres.res.res_file_directory("mcaprio","mfdn",run)
+        mfdnres.input.res_file_directory("mcaprio","mfdn",run)
         for run in run_list
     ]
     res_format = "mfdn_v15"
     filename_format="mfdn_format_7_ho"
-    mesh_data = mfdnres.res.slurp_res_files(
+    mesh_data = mfdnres.input.slurp_res_files(
         data_dir_list,res_format,filename_format,
         glob_pattern="*-*-*.res",
         verbose=True
@@ -70,8 +67,7 @@ def read_data():
 
     # select case of interest
     selector = {"interaction":"Daejeon16","hw":15.0}
-    mesh_data = mfdnres.analysis.selected_mesh_data(full_data,selector,verbose=False)
-
+    mesh_data = mfdnres.analysis.selected_mesh_data(mesh_data,selector,verbose=False)
 
     return mesh_data
 

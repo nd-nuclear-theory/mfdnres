@@ -25,6 +25,7 @@
     06/25/19 (mac): Add get_isospin accessor.
     07/26/19 (mac): Support "M1" as deduced observable in get_moment
         and get_rme.
+    09/24/19 (mac): Move update_observable_dictionary out to results_data.py.
 
 """
 
@@ -39,7 +40,7 @@ from . import (
     )
 
 #################################################
-# observable dictionary update helper function
+# helper function for merging observable dictionaries
 #################################################
 
 def update_observable_dictionary(self_dict,other_dict):
@@ -62,7 +63,6 @@ def update_observable_dictionary(self_dict,other_dict):
         # update observable from other_dict
         if name in other_dict.keys():
             self_dict[name].update(other_dict[name])
-
 
 #################################################
 # MFDnResultsData
