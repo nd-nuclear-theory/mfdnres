@@ -16,5 +16,5 @@ from . import filename_parsers
 from . import analysis
 
 # optional: user must load
-## import mfdnres.band
 ## from . import band
+## from . import histogram
