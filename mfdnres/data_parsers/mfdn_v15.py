@@ -14,6 +14,7 @@
     02/22/19 (pjf): Handle early MFDn v15b00 files.
     04/02/19 (mac): Update naming of angular momenta observables.
     04/05/19 (pjf): Parse obscalc-ob one-body static and transition output.
+    10/10/19 (pjf): Store Lanczos residuals.
 """
 
 import itertools
@@ -199,17 +200,21 @@ def parse_energies(self,tokenized_lines):
     # set up container for native-calculated isospins
     self.native_static_properties["T"] = {}
 
+    # set up container for Lanczos residuals
+    self.residuals = {}
+
     # sort energies into energies dictionary
     for entry in table:
 
         # retrieve entry
-        (_,J,n,T,E,_,_,_)=entry
+        (_,J,n,T,E,error,_,_)=entry
         g = k_parameter_g
         qn = (J,g,n)
         Jg_pair = (J,g)
 
         # store data from entry
         self.energies[qn] = E
+        self.residuals[qn] = error
         self.num_eigenvalues[Jg_pair] = self.num_eigenvalues.setdefault(Jg_pair,0)+1
         self.native_static_properties["T"][qn] = T
 
