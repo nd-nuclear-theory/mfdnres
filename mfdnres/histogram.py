@@ -28,6 +28,22 @@ class BinMapping(collections.abc.MutableMapping):
         >>> print(binmap)
         {0.0: 0, 1.0: 0.45, 2.0: 0.8}
     """
+    @classmethod
+    def create_bisection_bins(cls, keys):
+        """Create default bins for histogram (by bisection between keys).
+
+        Arguments:
+            keys (list of numeric): values for centers of bins
+        Returns:
+            (list of numeric): bin partitions
+        """
+        bins = [-math.inf]
+        for i in range(len(keys)-1):
+            bins.append((keys[i]+keys[i+1])/2)
+        bins += [math.inf]
+
+        return bins
+
     def __init__(self, keys, bins=None, values=None):
         self.__keys = list(keys)
         self.__len = len(keys)
@@ -38,11 +54,7 @@ class BinMapping(collections.abc.MutableMapping):
                 raise ValueError("values have wrong shape: {}".format(values))
             self.__data = list(values[:])
         if bins is None:
-            # build default bisection bins
-            self.__bins = [-math.inf]
-            for i in range(len(keys)-1):
-                self.__bins.append((keys[i]+keys[i+1])/2)
-            self.__bins += [math.inf]
+            self.__bins = BinMapping.create_bisection_bins(keys)
         else:
             if len(bins) > len(keys)+1:
                 raise ValueError("too many bins for keys")
