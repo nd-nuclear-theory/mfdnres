@@ -76,10 +76,10 @@ class BinMapping(collections.abc.MutableMapping):
 
         # validate bins
         for i in range(len(keys)):
-            if (self.__keys[i] < self.__bins[i]) or (self.__keys[i] > self.__bins[i+1]):
-                raise ValueError("invalid bin: ({}, {}, {})".format(
-                    self.__bins[i], self.__keys[i], self.__bins[i+1]
-                ))
+            ## if (self.__keys[i] < self.__bins[i]) or (self.__keys[i] > self.__bins[i+1]):
+            ##     raise ValueError("invalid bin: ({}, {}, {})".format(
+            ##         self.__bins[i], self.__keys[i], self.__bins[i+1]
+            ##     ))
             if sorted(self.__bins) != self.__bins:
                 raise ValueError("bins not sorted: {}".format(self.__bins))
 
@@ -90,7 +90,7 @@ class BinMapping(collections.abc.MutableMapping):
         )
 
     def __str__(self):
-        return str(dict(self))
+        return str(self.as_dict())
 
     def clear(self):
         """Reset all bins to zero."""
@@ -148,6 +148,11 @@ class BinMapping(collections.abc.MutableMapping):
             return False
         return True
 
+    def as_dict(self):
+        """Generate dictionary mapping from label values to data values."""
+        return dict(zip(self.__keys,self.__data))
+
+    
 if __name__ == "__main__":
     import timeit
     import numpy as np

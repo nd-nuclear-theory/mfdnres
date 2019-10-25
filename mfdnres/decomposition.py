@@ -24,21 +24,33 @@ def read_lanczos(filename="mfdn_alphabeta.dat", **kwargs):
     return (alphabeta[:, 0], alphabeta[:-1, 1])
 
 
-def generate_decomposition(labels, casimir_eigenvalues, alpha, beta, **kwargs):
+def generate_decomposition(labels, expected_eigenvalues, alphabeta, **kwargs):
     """Generate decomposition from Lanczos alpha-beta matrix and expected eigenvalues.
 
     Arguments:
         labels (list): irrep labels
-        casimir_eigenvalues: eigenvalues of Casimir (or linear combination thereof)
-        alpha (np.array of float): alpha matrix elements
-        beta (np.array of float): beta matrix elements
+        expected_eigenvalues: expected eigenvalues of Casimir (or linear combination thereof)
+        alphabeta (tuple): (alpha,beta)
+            alpha (np.array of float): alpha matrix elements
+            beta (np.array of float): beta matrix elements
+
+    Returns:
+        raw_decomposition (list of tuple): (eigenvalue,probability) pairs from Lanczos alphabeta diagonalization
+        binned_decomposition (histogram.BinMapping): probabilities binned by expected labels
 
     """
+    # generate Lanczos decomposition
+    alpha, beta = alphabeta
     eigvals, eigvecs = linalg.eigh_tridiagonal(alpha, beta)
-
-    bins = histogram.BinMapping.create_bisection_bins(casimir_eigenvalues)
-    hist = histogram.BinMapping(keys=labels, bins=bins)
-    for i, eigval in enumerate(eigvals):
-        hist[eigval] += eigvecs[0, i]**2
-
-    return hist
+    raw_decomposition = [
+        (eigval,eigvecs[0, i]**2)
+        for i, eigval in enumerate(eigvals)
+    ]
+    
+    # bin Lanczos decomposition
+    bins = histogram.BinMapping.create_bisection_bins(expected_eigenvalues)
+    binned_decomposition = histogram.BinMapping(keys=labels, bins=bins)
+    for eigval, probability in raw_decomposition:
+        binned_decomposition[eigval] += probability
+        
+    return (raw_decomposition,binned_decomposition)
