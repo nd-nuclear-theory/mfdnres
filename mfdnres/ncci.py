@@ -53,15 +53,19 @@ def augment_params_with_parity(results_data):
     The parity parameter is already normally available in the results from mfdn
     but not after merging with results from obscalc-ob.
 
+    The natural parity is defined by the number of oscillator quanta N0, as each
+    oscillator quantum carries negative parity.
+
     Note that the grade can be extracted then as
 
         g = mfdnres.am.parity_grade(results_data.params["parity"])
 
     Arguments:
         results_data (ResultsData): results data object to augment
+
     """
 
-    g = results_data.params["Nmax"]+N0_for_nuclide(results_data.params["nuclide"])
+    g = (results_data.params["Nmax"]+N0_for_nuclide(results_data.params["nuclide"]))%2
     results_data.params.update({
         "parity" : (-1)**g
     })
