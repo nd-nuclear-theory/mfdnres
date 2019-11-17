@@ -242,6 +242,10 @@ class MFDnResultsData(results_data.ResultsData):
            (float): observable value
 
         TODO(pjf): extend to give access to one_body_static_properties
+        TODO(mac): extend to give access to postprocessor self-transition rmes
+        TODO(mac): and handle case where MFDn also output garbage values at
+          diagonalization time (mfdn v15b02 with obme calculation turned off
+          outputs garbage for obmes)
 
         """
 
