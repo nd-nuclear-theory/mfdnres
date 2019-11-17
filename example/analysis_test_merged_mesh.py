@@ -27,10 +27,10 @@ def read_data():
     results, as well as M runs.
     """
 
+    # slurp runs
     run_list = [
         "mac0506",  # 10Be+
     ]
-
     data_dir_list = [
         mfdnres.input.res_file_directory("mcaprio","mfdn",run)
         for run in run_list
@@ -43,14 +43,14 @@ def read_data():
         verbose=True
     )
 
+    # diagnostic output -- FOR ILLUSTRATION ONLY
     print("Raw mesh (params)")
     for results_data in mesh_data:
         print(mfdnres.analysis.dict_items(results_data.params))
-
     print("Raw mesh (keys)")
     mfdnres.analysis.mesh_key_listing(mesh_data,("nuclide","interaction","coulomb","hw","Nmax","parity","M","code_name"),verbose=True)
 
-    # merge results data (from different M and mfdn/obscalc-ob)
+    # merge results data (from different M and from mfdn/obscalc-ob runs)
     mesh_data = mfdnres.analysis.merged_mesh(
         mesh_data,
         ("nuclide","interaction","coulomb","hw","Nmax"),
@@ -58,6 +58,7 @@ def read_data():
         verbose=False
     )
 
+    # diagnostic output -- FOR ILLUSTRATION ONLY
     print("Merged mesh (keys)")
     mfdnres.analysis.mesh_key_listing(
         mesh_data,
