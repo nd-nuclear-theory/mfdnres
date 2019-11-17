@@ -526,7 +526,7 @@ def band_fit_energy(band_definition,level_energy_dict,verbose=False):
         ])
 
     # solve system
-    parameters = np.linalg.lstsq(A,b)[0]
+    parameters = np.linalg.lstsq(A,b,rcond=None)[0]
     if (verbose):
         print("Parameters:",parameters)
 
@@ -587,23 +587,21 @@ def band_fit_energy_ls(band_definition,level_energy_dict,band_LSJ_content,verbos
     A = np.array(A)
 
     # solve system
-    parameters = np.linalg.lstsq(A,b)[0]
+    parameters = np.linalg.lstsq(A,b,rcond=None)[0]
     if (verbose):
         print("Parameters:",parameters)
 
     return parameters
 
-def band_fit_E2(results_data,band_definition):
+def band_fit_E2(band_definition,results_data):
     """Extracts band E2 moments for normalization.
 
-    CAVEAT: Requires updating to properly handle mesh with distinct M values.
-
     Args:
-        results_data (MFDnResultsData): results object
         band_definition (BandDefinition): band definition
+        results_data (MFDnResultsData): results object
 
     Returns:
-        ((np.array 1x2)): band intrinsic quadrupole moments (Q0p,Q0n)
+        ((np.array 1x4)): band intrinsic quadrupole moments (Q0p,Q0n,Q00,Q01)
 
     """
 
@@ -614,19 +612,24 @@ def band_fit_E2(results_data,band_definition):
     factor = (3*K**2-J*(J+1))/((J+1)*(2*J+3))
     if (factor == 0):
         raise ValueError("attempt to extract Q0 in case where Q(J) factor is 0")
-    Q_values = np.array(results_data.moments.get((qn,"E2"),np.nan))
+    Q_values = np.array([
+        results_data.get_moment("E2p",qn),
+        results_data.get_moment("E2n",qn),
+        results_data.get_moment("E20",qn),
+        results_data.get_moment("E21",qn),
+        ])
     Q0_values = Q_values/factor
 
     return Q0_values
 
-def band_fit_M1(results_data,band_definition,verbose=False):
+def band_fit_M1(band_definition,results_data,verbose=False):
     """Extracts band M1 fit parameters.
 
-    CAVEAT: Requires updating to properly handle mesh with distinct M values.
+    TODO: Update to use 2018-era accessors.
 
     Args:
-        results_data (MFDnResultsData): results object
         band_definition (BandDefinition): band definition
+        results_data (MFDnResultsData): results object
 
     Returns:
         (np.array 3x4): band M1 fit parameters, or all np.nan for blatantly undersized systems
@@ -725,7 +728,7 @@ def band_fit_M1(results_data,band_definition,verbose=False):
             return parameters
 
     # solve system
-    parameters = np.linalg.lstsq(A,b)[0]
+    parameters = np.linalg.lstsq(A,b,rcond=None)[0]
 
     # upgrade parameter matrix to three rows
     #   zero pads for parameter a2 if not already present
