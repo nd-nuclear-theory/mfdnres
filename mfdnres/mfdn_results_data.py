@@ -26,6 +26,7 @@
     07/26/19 (mac): Support "M1" as deduced observable in get_moment
         and get_rme.
     09/24/19 (mac): Move update_observable_dictionary out to results_data.py.
+    11/17/19 (mac): Extend get_moment to use self-transition rme first if available.
 
 """
 
@@ -241,15 +242,20 @@ class MFDnResultsData(results_data.ResultsData):
         Returns
            (float): observable value
 
-        TODO(pjf): extend to give access to one_body_static_properties
-        TODO(mac): extend to give access to postprocessor self-transition rmes
-        TODO(mac): and handle case where MFDn also output garbage values at
-          diagonalization time (mfdn v15b02 with obme calculation turned off
-          outputs garbage for obmes)
+        From berotor2 footnote 3:
+
+            mu(J)=math.sqrt(4*math.pi/3)/am.hat(J)*(JJ10|JJ)*<J||M1||J>
+
+            (JJ10|JJ) = math.sqrt((J)/((J + 1)))
+
+        From berotor2 footnote 1:
+
+            eQ(J)=math.sqrt(16*math.pi/5)/am.hat(J)*(JJ20|JJ)*<J||Q2||J>
+            (JJ20|JJ) = math.sqrt((J*(2*J - 1))/((J + 1)*(2*J + 3)))
 
         """
 
-        # trap deduced isoscalar/isovector observables
+        # trap deduced observables (isoscalar/isovector E2 or physical M1)
         if (observable in {"E20","E21"}):
             E2p = self.get_moment("E2p",qn,default,verbose)
             E2n = self.get_moment("E2n",qn,default,verbose)
@@ -270,7 +276,18 @@ class MFDnResultsData(results_data.ResultsData):
         # extract labels
         (J,gex,n) = qn
 
-        value = self.native_static_properties.get(observable,{}).get(qn,default)
+        # get moment from rme, if available (may be from postprocessor)
+        if (observable in ["Dlp", "Dln","Dsp", "Dsn"]):
+            rme_prefactor = math.sqrt(4*math.pi/3)/am.hat(J)*math.sqrt((J)/((J + 1)))
+        elif (observable in ["E2p", "E2n"]):
+            rme_prefactor = math.sqrt(16*math.pi/5)/am.hat(J)*math.sqrt((J*(2*J - 1))/((J + 1)*(2*J + 3)))
+        else:
+            raise(ValueError("unrecognized moment type {}".format(observable)))
+        value = rme_prefactor*self.get_rme(observable,(qn,qn))
+        
+        # else revert to native static moment (may be garbage if obmes were turned off)
+        if (np.isnan(value)):
+            value = self.native_static_properties.get(observable,{}).get(qn,default)
 
         return value
 
@@ -328,7 +345,7 @@ class MFDnResultsData(results_data.ResultsData):
 
         """
 
-        # trap deduced isoscalar/isovector observables
+        # trap deduced observables (isoscalar/isovector E2 or physical M1)
         if (observable in {"E20","E21"}):
             E2p = self.get_rme("E2p",qn_pair,default,verbose)
             E2n = self.get_rme("E2n",qn_pair,default,verbose)

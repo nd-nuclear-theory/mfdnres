@@ -593,7 +593,7 @@ def band_fit_energy_ls(band_definition,level_energy_dict,band_LSJ_content,verbos
 
     return parameters
 
-def band_fit_E2(band_definition,results_data):
+def band_fit_E2(band_definition,results_data,verbose=False):
     """Extracts band E2 moments for normalization.
 
     Args:
@@ -618,6 +618,8 @@ def band_fit_E2(band_definition,results_data):
         results_data.get_moment("E20",qn),
         results_data.get_moment("E21",qn),
         ])
+    if (verbose):
+        print("qn {} Q_values {}".format(qn,Q_values))
     Q0_values = Q_values/factor
 
     return Q0_values
