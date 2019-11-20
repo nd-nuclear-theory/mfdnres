@@ -224,14 +224,19 @@ class MFDnResultsData(results_data.ResultsData):
     def get_moment(self,observable,qn,default=np.nan,verbose=False):
         """Retrieve moment value.
 
-        This accessor actually could retrieve *any* native static property, but
-        we keep a name which reflects semantics rather than the internal
-        represenation.
+        The preferred method of deducing the moment is from the RME from the
+        state to itself, if available via get_rme.  (This RME may be either a
+        native # calculated rme or from the postprocessor.)  If the RME is not
+        available, the accessor looks for a native calculated moment.  But
+        beware that mfdnv15b02 outputs junk native moments if OBDME calculation
+        has been turned out, and native calculated moments (as well as native
+        calculated transitions) are output with fixed low precision.  Hence our
+        preference for using the RME to calculate the moment.
 
         Adds support for deduced cases: "E20" and E21" for isoscalar E2 and
         isovector E2, "M1" deduced from dipole terms.  (Any native-calculated
         "M1" from MFDn is ignored, as this is redundant to the dipole terms and
-        not provided by obscalc-ob.)
+        is not provided by obscalc-ob.)
 
         Arguments:
            observable (str): moment type ("E2p", "E2n", "Dlp", "Dln",
@@ -276,7 +281,7 @@ class MFDnResultsData(results_data.ResultsData):
         # extract labels
         (J,gex,n) = qn
 
-        # get moment from rme, if available (may be from postprocessor)
+        # get moment from rme, if available
         if (observable in ["Dlp", "Dln","Dsp", "Dsn"]):
             rme_prefactor = math.sqrt(4*math.pi/3)/am.hat(J)*math.sqrt((J)/((J + 1)))
         elif (observable in ["E2p", "E2n"]):
@@ -328,6 +333,11 @@ class MFDnResultsData(results_data.ResultsData):
 
         Returns RME in Edmonds convention, as common for spectroscopic data
         analysis in the shell model community.
+
+        If hw parameter is nonzero, first recourse is to native calculated rme,
+        then fallback is postprocessor rme.  But for hw=0, assumption is that
+        non-oscillator basis was used, and native rmes are not meaningful, so
+        accessor only looks for postprocessor rme.
 
         Adds support for deduced cases: "E20" and E21" for isoscalar E2 and
         isovector E2, "M1" deduced from dipole terms.  (Any native-calculated
