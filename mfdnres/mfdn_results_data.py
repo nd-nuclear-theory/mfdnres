@@ -27,6 +27,7 @@
         and get_rme.
     09/24/19 (mac): Move update_observable_dictionary out to results_data.py.
     11/17/19 (mac): Extend get_moment to use self-transition rme first if available.
+    01/04/20 (mac): Add "M1-native" special case to get_moment.
 
 """
 
@@ -239,8 +240,9 @@ class MFDnResultsData(results_data.ResultsData):
         is not provided by obscalc-ob.)
 
         Arguments:
-           observable (str): moment type ("E2p", "E2n", "Dlp", "Dln",
-               "Dsp", "Dsn", ...), as well as deduced cases ("E20", "E21","M1")
+           observable (str): moment type ("E2p", "E2n", "Dlp", "Dln", "Dsp",
+               "Dsn", ...), as well as deduced cases ("E20", "E21", "M1",
+               "M1-native")
            qn (tuple): quantum numbers for state
            default (float,optional): default value to return for missing radius
 
@@ -276,6 +278,17 @@ class MFDnResultsData(results_data.ResultsData):
             gp = 5.586
             gn = -3.826
             value = Dlp+gp*Dsp+gn*Dsn
+            return value
+        elif (observable == "M1-native"):
+            # force retrieval of MFDn.res precomputed physical value
+            #
+            # If no RMEs are available, and only the MFDn.res static M1 moment
+            # observables are available, this may yield higher precision than
+            # the M1 value this function would usually compute as a linear
+            # combination of the D terms taken from MFDn.res.  These terms
+            # typically have smaller magnitudes but are saved at the same fixed
+            # point precision at the physical M1.
+            value = self.native_static_properties.get("M1",{}).get(qn,default)
             return value
 
         # extract labels
