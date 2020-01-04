@@ -11,6 +11,7 @@
     04/27/18 (mac): Rename parameter Mj to M.
     09/06/18 (pjf): Allow negative M.
     09/06/18 (pjf): Allow hyphens in interaction name.
+    12/17/19 (mac): Support format_7_trans (make diagonalization-related fields optional).
 
 """
 
@@ -40,13 +41,13 @@ def parser(filename):
         r"Z(?P<Z>\d+)\-N(?P<N>\d+)"
         r"\-(?P<interaction>.+)\-coul(?P<coulomb>\d)"
         r"\-hw(?P<hw>[\d\.]+)"
-        r"\-a_cm(?P<lawson>[\d\.]+)"
+        r"(\-a_cm(?P<lawson>[\d\.]+))?"
         r"\-Nmax(?P<Nmax>\d+)"
         r"(\-Ncutob(?P<Ncut>\d+))?"
         r"(?P<mixed_parity_flag>x)?(?P<fci_flag>\-fci)?"
-        r"\-Mj(?P<M>-?[\d\.]+)"
-        r"\-lan(?P<lanczos>\d+)"
-        r"\-tol(?P<tolerance>\d+\.\d+[eE][+-]\d+)"
+        r"(\-Mj(?P<M>-?[\d\.]+))?"
+        r"(\-lan(?P<lanczos>\d+))?"
+        r"(\-tol(?P<tolerance>\d+\.\d+[eE][+-]\d+))?"
         r"((?P<natural_orbital_flag>\-natorb)?\-no(?P<natural_orbital_iteration>\d+))?"
         # epilog
         r").res"
@@ -60,13 +61,13 @@ def parser(filename):
         "hw" : float,
         "lawson" : float,
         "Nmax" : int,
-        "Ncut" : (lambda i  :  int(i) if (i is not None) else None),
+        "Ncut" : int,
         "mixed_parity_flag" : (lambda s  :  (s=="x")),
         "fci_flag" : (lambda s  :  (s=="-fci")),
         "M" : float,
         "lanczos" : int,
         "natural_orbital_flag" : (lambda s  :  (s=="-natorb")),
-        "natural_orbital_iteration" : (lambda i  :  int(i) if (i is not None) else None)
+        "natural_orbital_iteration" : int
         }
 
     match = regex.match(filename)
@@ -77,7 +78,7 @@ def parser(filename):
     # convert fields
     for key in conversions:
         conversion = conversions[key]
-        info[key] = conversion(info[key])
+        info[key] = conversion(info[key]) if (info[key] is not None) else None
 
     return info
 

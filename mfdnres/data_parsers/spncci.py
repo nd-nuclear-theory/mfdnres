@@ -7,8 +7,9 @@
     Mark A. Caprio
     University of Notre Dame
 
-    7/9/17 (mac): Created.
-    9/17/17 (mac): Fix bool conversion on input.
+    07/09/17 (mac): Created.
+    09/17/17 (mac): Fix bool conversion on input.
+    01/04/20 (mac): Remove num_eigenvalues as static data (now available as property).
 """
 
 import itertools
@@ -170,7 +171,6 @@ def parse_energies(self,tokenized_lines):
         (J,gex,n0,E)=entry
         n = n0 + 1  # convert to 1-based spectroscopic numbering of states
         self.energies[(J,gex,n)]=E
-        self.num_eigenvalues[(J,gex)]=self.num_eigenvalues.setdefault((J,gex),0)+1
 
 def parse_observable_rmes(self,tokenized_lines):
     """Parse ...

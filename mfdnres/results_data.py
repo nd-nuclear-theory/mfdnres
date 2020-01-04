@@ -10,6 +10,7 @@
     10/10/17 (mac): Extracted from res.py.
     09/06/18 (pjf): Replace get_levels() with levels property.
     05/29/19 (mac): Add update method.
+    01/04/20 (mac): Convert num_eigenvalues from static data to property.
 """
 
 import numpy as np
@@ -42,15 +43,15 @@ class ResultsData (object):
 
             Here qn is a tuple of quantum numbers, typically (J,g,i) or (J,gex,i).
 
-        num_eigenvalues (dict):  Number of eigenvalues, as dictionary subspace->number.
-
-            Here subspace is a tuple of quantum numbers, typically (J,g) or (J,gex).
-
         filename (str): Source results filename for this mesh point.
 
     Properties:
 
         levels (dict): list of quantum number tuples (J,g,n)
+
+        num_eigenvalues (dict):  Number of eigenvalues, as dictionary subspace->number.
+
+            Here subspace is a tuple of quantum numbers, typically (J,g) or (J,gex).
 
     Accessors:
 
@@ -72,7 +73,6 @@ class ResultsData (object):
         """
         self.params = {}
         self.energies = {}
-        self.num_eigenvalues = {}
         self.filename = ""
 
     ########################################
@@ -83,17 +83,36 @@ class ResultsData (object):
     def levels(self):
         """List of quantum number tuples (J,g,n) for levels, sorted by increasing energy eigenvalue.
 
-        Note some parsers (legacy) may store (J,gex,n), in which case that is the interpretation of the tuple.
+        Note some parsers (legacy) may store (J,gex,n), in which case that is
+        the interpretation of the tuple.
 
         Returns:
             (list of tuples): list of quantum numbers
 
         """
-        # Makes a list of unsorted quantum number tuples
+        # Make a list of unsorted quantum number tuples
         raw_qn_list = list(self.energies.keys())
-        # Sorts the quantum numbers based on their associated energy
+        # Sort the quantum numbers based on their associated energy
         qn_list = sorted(raw_qn_list, key=(lambda qn: self.energies[qn]))
         return qn_list
+
+    @property
+    def num_eigenvalues(self):
+        """Dictionary of subspace dimensions (J,g)->dim for levels.
+
+        Note some parsers (legacy) may store (J,gex), in which case that is
+        the interpretation of the tuple.
+
+        Returns:
+            (dict): subspace dimension dictionary
+
+        """
+        # tally up levels by subspace
+        num_eigenvalues_by_subspace={}
+        for qn in self.energies.keys():
+            (J,g,_)=qn
+            num_eigenvalues_by_subspace[(J,g)]=num_eigenvalues_by_subspace.setdefault((J,g),0)+1
+        return num_eigenvalues_by_subspace
 
     def get_levels(self):
         """DEPRECATED -- Retrieve list of quantum number tuples (J,g,n) for levels, sorted by increasing energy eigenvalue.
@@ -139,7 +158,6 @@ class ResultsData (object):
         """
 
         self.energies.update(other.energies)
-        self.num_eigenvalues = len(self.energies)
 
 #################################################
 # test code

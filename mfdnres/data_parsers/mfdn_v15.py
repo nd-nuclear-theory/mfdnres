@@ -15,6 +15,7 @@
     04/02/19 (mac): Update naming of angular momenta observables.
     04/05/19 (pjf): Parse obscalc-ob one-body static and transition output.
     10/10/19 (pjf): Store Lanczos residuals.
+    01/04/20 (mac): Remove num_eigenvalues as static data (now available as property).
 """
 
 import itertools
@@ -215,7 +216,6 @@ def parse_energies(self,tokenized_lines):
         # store data from entry
         self.energies[qn] = E
         self.residuals[qn] = error
-        self.num_eigenvalues[Jg_pair] = self.num_eigenvalues.setdefault(Jg_pair,0)+1
         self.native_static_properties["T"][qn] = T
 
 def parse_decompositions_Nex(self,tokenized_lines):
