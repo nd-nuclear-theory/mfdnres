@@ -15,6 +15,7 @@
     09/18/18 (mac): Redefine RMEConvention enum to use Edmonds vs. Rose terminology.
     04/02/19 (mac): Add filename construction utility dash_padded.
     04/02/19 (mac): Move effective_am in from analysis.
+    01/04/20 (mac): Fix canonicalize_Jgn_pair.
 
 """
 
@@ -505,24 +506,20 @@ def canonicalization_prescription_Jg(Jg_pair,rme_convention):
 
     (Jg_bra,Jg_ket) = Jg_pair
 
-    if (Jg_bra <= Jg_ket):
-        # canonical
-        flipped = False
-        canonicalization_factor = 1.
-    else:
+    flipped = not (Jg_bra <= Jg_ket)
+    canonicalization_factor = 1.
+    if (flipped):
         # non-canonical
         #
         # expression for canonicalization factor is based on sector labels
         # *after* swap (i.e., need canonical m.e. on RHS of assignment)
         (J_bra,_)=Jg_ket  # note swap
         (J_ket,_)=Jg_bra  # note swap
-        flipped = True
         canonicalization_factor = (-1)**(J_ket-J_bra)
         if (rme_convention==RMEConvention.kRose):
             canonicalization_factor *= math.sqrt((2*J_bra+1)/(2*J_ket+1))
 
     return (flipped,canonicalization_factor)
-
 
 def canonicalize_Jg_pair(Jg_pair,rme_convention):
     """Put subspace labels in canonical order, and provide
@@ -540,8 +537,6 @@ def canonicalize_Jg_pair(Jg_pair,rme_convention):
         (Jg_bra',Jg_ket') (tuple): canonicalized (J,g) pair
         flipped (bool): whether or not flip necessary to canonicalize
         canonicalization_factor (float): canonicalization phase
-
-
     """
 
     (Jg_bra,Jg_ket) = Jg_pair
@@ -570,21 +565,29 @@ def canonicalize_Jgn_pair(Jgn_pair,rme_convention):
        rme_convention (RMEPhaseConvention): phase and normalization convention on RMEs
 
     Returns:
-        phase (float): canonicalization phase
         (Jgn_bra',Jgn_ket') (tuple): canonicalized (J,g,n) pair
-
+        flipped (bool): whether or not flip necessary to canonicalize
+        canonicalization_factor (float): canonicalization phase
     """
 
     (Jgn_bra, Jgn_ket) = Jgn_pair
-    (J_bra, g_bra, _) = Jgn_bra
-    (J_ket, g_ket, _) = Jgn_ket
+    (J_bra, g_bra, n_bra) = Jgn_bra
+    (J_ket, g_ket, n_ket) = Jgn_ket
     Jg_bra = (J_bra, g_bra)
     Jg_ket = (J_ket, g_ket)
 
-    (flipped, canonicalization_factor) = canonicalization_prescription_Jg(
-        (Jg_bra, Jg_ket), rme_convention
-        )
+    # determine canonicalization
+    if (Jg_bra==Jg_ket):
+        # canonicalize within subspace
+       flipped = not (n_bra <= n_ket)
+       canonicalization_factor = 1.
+    else:
+        # canonicalize subspaces
+        (flipped, canonicalization_factor) = canonicalization_prescription_Jg(
+            (Jg_bra, Jg_ket), rme_convention
+            )
 
+    # canonicalize Jgn pair
     if (flipped):
         # non-canonical
         Jgn_pair_canonical = tuple(reversed(Jgn_pair))

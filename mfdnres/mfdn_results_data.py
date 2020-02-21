@@ -160,11 +160,11 @@ class MFDnResultsData(results_data.ResultsData):
         """ Retrieve effective isospin T.
 
         Arguments:
-           qn (tuple): quantum numbers for state
-           default (float,optional): default value to return for missing observable
+            qn (tuple): quantum numbers for state
+            default (float,optional): default value to return for missing observable
 
         Returns:
-           (float): observable value
+            (float): observable value
         """
 
         # retrieve decomposition
@@ -179,11 +179,11 @@ class MFDnResultsData(results_data.ResultsData):
         """ Retrieve decomposition ("Nex") as np.array.
 
         Arguments:
-           decomposition_type (str): decomposition type ("Nex")
-           qn (tuple): quantum numbers for state
+            decomposition_type (str): decomposition type ("Nex")
+            qn (tuple): quantum numbers for state
 
         Returns:
-           (np.array): decomposition probabilities
+            (np.array): decomposition probabilities
         """
 
         # validate decomposition type argument
@@ -206,12 +206,12 @@ class MFDnResultsData(results_data.ResultsData):
         if it still even does that in v15).
 
         Arguments:
-           radius_type (str): radius type rp/rn/r
-           qn (tuple): quantum numbers for state
-           default (float,optional): default value to return for missing radius
+            radius_type (str): radius type rp/rn/r
+            qn (tuple): quantum numbers for state
+            default (float,optional): default value to return for missing observable
 
         Returns:
-           (float): rms radius
+            (float): rms radius
 
         """
 
@@ -240,14 +240,14 @@ class MFDnResultsData(results_data.ResultsData):
         is not provided by obscalc-ob.)
 
         Arguments:
-           observable (str): moment type ("E2p", "E2n", "Dlp", "Dln", "Dsp",
-               "Dsn", ...), as well as deduced cases ("E20", "E21", "M1",
-               "M1-native")
-           qn (tuple): quantum numbers for state
-           default (float,optional): default value to return for missing radius
+            observable (str): moment type ("E2p", "E2n", "Dlp", "Dln", "Dsp",
+                "Dsn", ...), as well as deduced cases ("E20", "E21", "M1",
+                "M1-native")
+            qn (tuple): quantum numbers for state
+            default (float,optional): default value to return for missing observable
 
         Returns
-           (float): observable value
+            (float): observable value
 
         From berotor2 footnote 3:
 
@@ -316,12 +316,12 @@ class MFDnResultsData(results_data.ResultsData):
         mfdnres.analysis.effective_am.
 
         Arguments:
-           am_type (str): am type ("L","Sp","Sn","S")
-           qn (tuple): quantum numbers for state
-           default (float,optional): default value to return for missing radius
+            am_type (str): am type ("L","Sp","Sn","S")
+            qn (tuple): quantum numbers for state
+            default (float,optional): default value to return for missing observable
 
         Returns:
-           (float): observable value
+            (float): observable value
 
         """
 
@@ -340,7 +340,6 @@ class MFDnResultsData(results_data.ResultsData):
 
         return value
 
-
     def get_rme(self,observable,qn_pair,default=np.nan,verbose=False):
         """Retrieve reduced matrix element (RME).
 
@@ -358,13 +357,13 @@ class MFDnResultsData(results_data.ResultsData):
         not provided by obscalc-ob.)
 
         Arguments:
-           observable (str): operator type ("E2p", "E2n", "Dlp", "Dln",
-               "Dsp", "Dsn", ...), as well as deduced cases ("E20", "E21","M1")
-           qn_pair (tuple): quantum numbers for states (qn_bra,qn_ket)
-           default (float,optional): default value to return for missing radius
+            observable (str): operator type ("E2p", "E2n", "Dlp", "Dln",
+                "Dsp", "Dsn", ...), as well as deduced cases ("E20", "E21","M1")
+            qn_pair (tuple): quantum numbers for states (qn_bra,qn_ket)
+            default (float,optional): default value to return for missing observable
 
         Returns
-           (float): observable value
+            (float): observable value
 
         """
 
@@ -419,9 +418,54 @@ class MFDnResultsData(results_data.ResultsData):
         if (verbose):
             print("    rme {:e}".format(rme))
 
-
         return rme
 
+    def get_rme_matrix(self,observable,subspace_pair,dim_pair,default=np.nan,verbose=False):
+        """Construct matrix of reduced matrix elements (RMEs).
+
+        Resulting matrix may be useful either for diagnostic purposes (to review
+        available transitions) or in block calculations with RMEs.
+
+        See get_rme for conventions regarding RME itself.
+    
+        Example:
+            >>> mesh_point.get_rme_matrix("E2p",((2,0),(2,0)),(4,4),verbose=True)
+
+
+        Arguments:
+            observable (str): operator type ("E2p", ...) accepted by get_rme
+            subspace_pair (tuple): quantum numbers for subspaces (Jg_bra,Jg_ket)
+            dim_pair (tuple): dimensions (dim_bra,dim_ket)
+            default (float,optional): default value to return for missing observable
+
+        Returns
+            (np.array of float): observable values
+
+        """
+
+        # unpack arguments
+        (Jg_bra,Jg_ket) = subspace_pair
+        (J_bra,g_bra) = Jg_bra
+        (J_ket,g_ket) = Jg_ket
+        (bra_dim,ket_dim) = dim_pair
+
+        # assemble matrix
+        rme_matrix = np.empty((bra_dim,ket_dim))
+        for bra_index in range(bra_dim):
+            for ket_index in range(ket_dim):
+                qn_bra = (J_bra,g_bra,bra_index+1)  # convert to spectroscopic 1-based numbering
+                qn_ket = (J_ket,g_ket,ket_index+1)  # convert to spectroscopic 1-based numbering
+                rme_matrix[bra_index,ket_index] = self.get_rme(
+                    observable,(qn_bra,qn_ket),
+                    default=default,verbose=verbose
+                )
+
+        if (verbose):
+            print("    rme matrix")
+            print(rme_matrix)
+            
+        return rme_matrix
+                
     def get_rtp(self,observable,qn_pair,default=np.nan,verbose=False):
         """ Retrieve reduced transition probability (RTP).
         """

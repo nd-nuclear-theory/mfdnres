@@ -11,7 +11,7 @@
     04/27/18 (mac): Rename parameter Mj to M.
     09/06/18 (pjf): Allow negative M.
     09/06/18 (pjf): Allow hyphens in interaction name.
-    12/17/19 (mac): Support format_7_trans (make diagonalization-related fields optional).
+    12/17/19 (mac): Support format_7_trans (i.e., make diagonalization-related fields optional).
 
 """
 
@@ -81,7 +81,6 @@ def parser(filename):
         info[key] = conversion(info[key]) if (info[key] is not None) else None
 
     return info
-
 
 input.register_filename_format("mfdn_format_7_ho", parser)
 
