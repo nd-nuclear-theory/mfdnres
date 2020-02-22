@@ -67,7 +67,7 @@ def generate_decomposition(alphabeta,eigenvalue_label_dict,verbose=False):
         alphabeta (tuple): (alpha,beta)
             alpha (np.array of float): alpha matrix elements
             beta (np.array of float): beta matrix elements
-        eigenvalue_label_dict (dict): mapping from eigenvalue to list of labels
+        eigenvalue_label_dict (dict): mapping from eigenvalue to labels
 
     Returns:
         decomposition (dict): probabilities binned by labels (as lists of degenerate labels)
@@ -126,7 +126,6 @@ def eigenvalue_label_dict_Nex(Nmax,verbose=False):
 
     """
 
-    print(mcscript.utils.value_range(Nmax%2,Nmax,2))
     eigenvalue_label_dict = {
         float(Nex): Nex
         for Nex in mcscript.utils.value_range(Nmax%2,Nmax,2)
@@ -175,8 +174,29 @@ def read_eigenvalues(filename,verbose=False):
 
     return eigenvalue_label_dict
 
-def print_decomposition(decomposition,label_format="s",probability_format="8.6f"):
+def mean_am_sqr(decomposition):
+    """Calculate mean angular momentum squared from angular momentum distribution.
+
+    May be used for check against MFDn observable mean am sqr.
+
+    May use with mfdnres.tools.effective_am to extract effective am by:
+
+        J*(J+1) = <J^2>
+
+    Arguments:
+        decomposition (dict): mapping from am to probability
+
+    Returns
+        (float): mean am squared
+
     """
+    mean_am2=0.
+    for am in sorted(list(decomposition.keys())):
+        mean_am2+=am*(am+1)*decomposition[am]
+    return mean_am2
+
+def print_decomposition(decomposition,label_format="s",probability_format="8.6f"):
+    """ Print diagnostic output of decomposition, sorted by labels.
     """
 
     format_str = "{{:{}}} {{:{}}}".format(label_format,probability_format)
