@@ -28,6 +28,8 @@
     09/24/19 (mac): Move update_observable_dictionary out to results_data.py.
     11/17/19 (mac): Extend get_moment to use self-transition rme first if available.
     01/04/20 (mac): Add "M1-native" special case to get_moment.
+    04/25/20 (mac): Correct normalization of deduced isocalar/isovector quadrupole RMEs
+        to match definitions in intrinsic.
 
 """
 
@@ -267,9 +269,9 @@ class MFDnResultsData(results_data.ResultsData):
             E2p = self.get_moment("E2p",qn,default,verbose)
             E2n = self.get_moment("E2n",qn,default,verbose)
             if (observable =="E20"):
-                value = 1/2*(E2p+E2n)
+                value = E2p+E2n
             else:
-                value = 1/2*(E2p-E2n)
+                value = E2p-E2n
             return value
         elif (observable == "M1"):
             Dsp = self.get_moment("Dsp",qn,default,verbose)
