@@ -18,8 +18,7 @@
         + Add one_body_transition_properties attribute.
         + Give get_rme() access to one-body observables.
     05/29/19 (mac): Add update method.
-    06/02/19 (mac): Add deduced isoscalar and isovector E2 observable
-      support.
+    06/02/19 (mac): Add deduced isoscalar and isovector E2 observable support.
     06/24/19 (mac): Make update_observable_dictionary robust against
         missing observables.
     06/25/19 (mac): Add get_isospin accessor.
@@ -30,6 +29,7 @@
     01/04/20 (mac): Add "M1-native" special case to get_moment.
     04/25/20 (mac): Correct normalization of deduced isocalar/isovector quadrupole RMEs
         to match definitions in intrinsic.
+    04/27/20 (zz): Add deduced isoscalar and isovector M1 observable support.
 
 """
 
@@ -58,7 +58,7 @@ def update_observable_dictionary(self_dict,other_dict):
         other_dict (dict): observable dictionary providing update data
 
     """
-    
+
     observables = set(self_dict.keys()).union(other_dict.keys())
     for name in observables:
         # ensure observable exists in self_dict
@@ -95,20 +95,20 @@ class MFDnResultsData(results_data.ResultsData):
                 qn: (J,g,n)
 
                 values (np.array vector): probabilities
- 
+
 
         native_static_properties (dict): native-calculated static properties
 
             Mapping: property_name -> qn -> value
 
                 property_name:
-    
+
                     "T": native-calculated isospin (only valid in pn-symmetric basis)
-    
+
                     "M1<type>": M1 moments (<type> in [mu,lp,ln,sp,sn])
-    
+
                     "E2<type>": E2 moments (<type> in [p,n])
-    
+
                     "am<type>": native-calculated angular momentum (only
                     valid in pn-symmetric basis???) (<type> in [L,S,Sp,Sn,J])
 
@@ -117,13 +117,13 @@ class MFDnResultsData(results_data.ResultsData):
             Mapping: observable_name -> qn -> value
 
                 observable_name:
-    
+
                     "r<type>": radii (<type> in [p,n,""])
-    
+
                     others taken from TBME filenames, e.g.,
-    
+
                         "TBMEfile(2) = tbme-Trel.bin"
-    
+
                     yields observable name "Trel"
 
         native_transition_properties (dict): MFDn-native transitions
@@ -293,6 +293,24 @@ class MFDnResultsData(results_data.ResultsData):
             value = self.native_static_properties.get("M1",{}).get(qn,default)
             return value
 
+        # trap deduced observables (isoscalar/isovector M1)
+        if (observable in {"Dl0","Dl1"}):
+            Dlp = self.get_moment("Dlp",qn,default,verbose)
+            Dln = self.get_moment("Dln",qn,default,verbose)
+            if (observable =="Dl0"):
+                value = Dlp+Dln
+            else:
+                value = Dlp-Dln
+            return value
+        if (observable in {"Ds0","Ds1"}):
+            Dsp = self.get_moment("Dsp",qn,default,verbose)
+            Dsn = self.get_moment("Dsn",qn,default,verbose)
+            if (observable =="Ds0"):
+                value = Dsp+Dsn
+            else:
+                value = Dsp-Dsn
+            return value
+
         # extract labels
         (J,gex,n) = qn
 
@@ -304,7 +322,7 @@ class MFDnResultsData(results_data.ResultsData):
         else:
             raise(ValueError("unrecognized moment type {}".format(observable)))
         value = rme_prefactor*self.get_rme(observable,(qn,qn))
-        
+
         # else revert to native static moment (may be garbage if obmes were turned off)
         if (np.isnan(value)):
             value = self.native_static_properties.get(observable,{}).get(qn,default)
@@ -387,6 +405,24 @@ class MFDnResultsData(results_data.ResultsData):
             value = Dlp+gp*Dsp+gn*Dsn
             return value
 
+        # trap deduced observables (isoscalar/isovector M1)
+        if (observable in {"Dl0","Dl1"}):
+            Dlp = self.get_rme("Dlp",qn_pair,default,verbose)
+            Dln = self.get_rme("Dln",qn_pair,default,verbose)
+            if (observable =="Dl0"):
+                value = Dlp+Dln
+            else:
+                value = Dlp-Dln
+            return value
+        if (observable in {"Ds0","Ds1"}):
+            Dsp = self.get_rme("Dsp",qn_pair,default,verbose)
+            Dsn = self.get_rme("Dsn",qn_pair,default,verbose)
+            if (observable =="Ds0"):
+                value = Dsp+Dsn
+            else:
+                value = Dsp-Dsn
+            return value
+
         # canonicalize labels
         (qn_pair_canonical,flipped,canonicalization_factor) = tools.canonicalize_Jgn_pair(
             qn_pair,tools.RMEConvention.kEdmonds
@@ -429,7 +465,7 @@ class MFDnResultsData(results_data.ResultsData):
         available transitions) or in block calculations with RMEs.
 
         See get_rme for conventions regarding RME itself.
-    
+
         Example:
             >>> mesh_point.get_rme_matrix("E2p",((2,0),(2,0)),(4,4),verbose=True)
 
@@ -465,9 +501,9 @@ class MFDnResultsData(results_data.ResultsData):
         if (verbose):
             print("    rme matrix")
             print(rme_matrix)
-            
+
         return rme_matrix
-                
+
     def get_rtp(self,observable,qn_pair,default=np.nan,verbose=False):
         """ Retrieve reduced transition probability (RTP).
         """
@@ -491,7 +527,7 @@ class MFDnResultsData(results_data.ResultsData):
     ########################################
     # Updating method
     ########################################
-        
+
     def update(self,other):
         """Merge in data from other MFDnResultsData object.
 
