@@ -195,8 +195,12 @@ def mean_am_sqr(decomposition):
         mean_am2+=am*(am+1)*decomposition[am]
     return mean_am2
 
-def print_decomposition(decomposition,label_format="s",probability_format="8.6f"):
-    """ Print diagnostic output of decomposition, sorted by labels.
+def print_decomposition(decomposition,label_format="",probability_format="8.6f"):
+    """Print diagnostic output of decomposition, sorted by labels.
+
+    Note: Must use label_format="", not label_format="s", for tuple labels (or
+    else get error "unsupported format string passed to tuple.__format__").
+
     """
 
     format_str = "{{:{}}} {{:{}}}".format(label_format,probability_format)
