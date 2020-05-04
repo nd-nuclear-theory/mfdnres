@@ -137,13 +137,50 @@ class MFDnResultsData(results_data.ResultsData):
     Accessors:
        [See definitions below.]
 
-    """
+    ================================================================
 
+    05/03/20 (mac): TODO proposed cleanup of dictionary names
+          
+    Here is a proposed renaming based on:
+
+       <source>_<particle-rank>_<observable-or-property-type>
+
+    with the exceptional case of
+
+       <source=mfdn>_<particle-rank=level>_properties
+
+    for extracted level quantum numbers.
+
+    - - - -
+
+    native_static_properties
+      => mfdn_level_properties (T, am)
+         AND
+         mfdn_one_body_moments (E2, M1)
+
+    native_transition_properties
+      => mfdn_one_body_transitions
+
+    two_body_static_observables
+      => mfdn_two_body_expectation_values
+
+    one_body_static_properties
+      => UNUSED, since postprocessors will always output RMEs labeled by initial and final state
+
+    one_body_transition_properties
+      => postprocessor_one_body_rmes
+
+    PROPOSED
+      => postprocessor_two_body_rmes
+
+    """
+    
     ########################################
     # Initializer
     ########################################
 
     def __init__ (self):
+
         """ Null-initialize standard attributes.
         """
         super().__init__()
