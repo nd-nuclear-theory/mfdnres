@@ -26,6 +26,7 @@
         location "results/res".
     06/26/19 (mac): Rename from res.py to input.py, and incorporate filename
         parsing control from descriptor.py.
+    05/05/20 (mac): Suppress duplicate input directories in slurp_res_files.
 
 """
 
@@ -253,6 +254,7 @@ def slurp_res_files(
     # process argument: upgrade single directory to list
     if (type(res_directory_list) == str):
         res_directory_list = [res_directory_list]
+    res_directory_list = sorted(list(set(res_directory_list)))  # remove duplicate input directories
     if (verbose):
         print("  slurp_res_files: directory list {}".format(res_directory_list))
 
