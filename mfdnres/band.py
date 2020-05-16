@@ -374,7 +374,7 @@ def write_band_table(results_data,filename,band_definition,fields=None,default=n
 def write_network_table(
         results_data,filename,levels,
         J0,transition_operators,
-        allowed_dJ_set={-2,-1},
+        allowed_dJ_set={-2,-1,0},
         energy_cutoff=None
 ):
     """Writes table of E2 RMEs
