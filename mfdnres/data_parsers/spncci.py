@@ -1,4 +1,4 @@
-""" res_parser_spncci
+""" spncci
 
     Provides parser for spncci results files.
 
@@ -10,6 +10,7 @@
     07/09/17 (mac): Created.
     09/17/17 (mac): Fix bool conversion on input.
     01/04/20 (mac): Remove num_eigenvalues as static data (now available as property).
+    05/21/20 (mac): Fix canonicalization factor for storage in parse_observable_rmes.
 """
 
 import itertools
@@ -206,9 +207,9 @@ def parse_observable_rmes(self,tokenized_lines):
         numbers = [[float(x) for x in row] for row in lines]
         matrix = np.array(numbers,dtype=float)
 
-        # canonicalize matrix
+        # canonicalize matrix for storage
         if (flipped):
-            matrix = canonicalization_factor*matrix.transpose()
+            matrix = (1/canonicalization_factor)*matrix.transpose()
 
         # store matrix
         observable_dict = self.observables.setdefault(observable_name,dict())
