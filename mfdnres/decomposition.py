@@ -70,7 +70,7 @@ def generate_decomposition(alphabeta,eigenvalue_label_dict,verbose=False):
         eigenvalue_label_dict (dict): mapping from eigenvalue to labels
 
     Returns:
-        decomposition (dict): probabilities binned by labels (as lists of degenerate labels)
+        decomposition (dict): probabilities binned by label (given as tuple of degenerate labels)
 
     """
 
