@@ -67,7 +67,9 @@ def generate_decomposition(alphabeta,eigenvalue_label_dict,verbose=False):
         alphabeta (tuple): (alpha,beta)
             alpha (np.array of float): alpha matrix elements
             beta (np.array of float): beta matrix elements
-        eigenvalue_label_dict (dict): mapping from eigenvalue to labels
+        eigenvalue_label_dict (dict): mapping of eigenvalue to labels (may be tuple of degenerate labels)
+            eigenvalue (float)
+            labels (int, tuple, etc.)
 
     Returns:
         decomposition (dict): probabilities binned by label (given as tuple of degenerate labels)
@@ -81,13 +83,19 @@ def generate_decomposition(alphabeta,eigenvalue_label_dict,verbose=False):
         (eigval,eigvecs[0, i]**2)
         for i, eigval in enumerate(eigvals)
     ]
+    if (verbose):
+        print("Raw decomposition")
+        print(np.array(raw_decomposition))
     
     # bin Lanczos decomposition
     expected_eigenvalues = sorted(eigenvalue_label_dict.keys())
+    if (verbose):
+        print("Expected eigenvalues -> label groups")
+        for eigenvalue in expected_eigenvalues:
+            print("{} -> {}".format(eigenvalue,eigenvalue_label_dict[eigenvalue]))
     label_groups = []
     for eigenvalue in expected_eigenvalues:
         label_groups.append(eigenvalue_label_dict[eigenvalue])
-        
     bins = histogram.BinMapping.create_bisection_bins(expected_eigenvalues)
     binned_decomposition = histogram.BinMapping(keys=label_groups, bins=bins)
     for eigval, probability in raw_decomposition:
