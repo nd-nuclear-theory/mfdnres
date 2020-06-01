@@ -90,16 +90,20 @@ def generate_decomposition(alphabeta,eigenvalue_label_dict,verbose=False):
     # bin Lanczos decomposition
     expected_eigenvalues = sorted(eigenvalue_label_dict.keys())
     if (verbose):
-        print("Expected eigenvalues -> label groups")
+        print("Expected eigenvalue -> label group")
         for eigenvalue in expected_eigenvalues:
-            print("{} -> {}".format(eigenvalue,eigenvalue_label_dict[eigenvalue]))
+            print("{:+8.3f} -> {}".format(eigenvalue,eigenvalue_label_dict[eigenvalue]))
     label_groups = []
     for eigenvalue in expected_eigenvalues:
         label_groups.append(eigenvalue_label_dict[eigenvalue])
     bins = histogram.BinMapping.create_bisection_bins(expected_eigenvalues)
     binned_decomposition = histogram.BinMapping(keys=label_groups, bins=bins)
-    for eigval, probability in raw_decomposition:
-        binned_decomposition[eigval] += probability
+    for eigenvalue, probability in raw_decomposition:
+        binned_decomposition[eigenvalue] += probability
+    if (verbose):
+        print("Binned results (sorted by eigenvalue)")
+        for eigenvalue in expected_eigenvalues:
+            print("{:+8.3f} : {:8.6f}".format(eigenvalue,binned_decomposition[eigenvalue]))
         
     # convert to dict for well-behaved access using label (rather than eigenvalue) as key
     decomposition = binned_decomposition.as_dict()
@@ -211,7 +215,7 @@ def print_decomposition(decomposition,label_format="",probability_format="8.6f")
 
     """
 
-    format_str = "{{:{}}} {{:{}}}".format(label_format,probability_format)
+    format_str = "{{:{}}} {{:{}}}".format(probability_format,label_format)
     for labels in sorted(decomposition.keys()):
-        print(format_str.format(labels,decomposition[labels]))
+        print(format_str.format(decomposition[labels],labels))
     
