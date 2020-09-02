@@ -16,6 +16,7 @@
     04/05/19 (pjf): Parse obscalc-ob one-body static and transition output.
     10/10/19 (pjf): Store Lanczos residuals.
     01/04/20 (mac): Remove num_eigenvalues as static data (now available as property).
+    07/08/20 (pjf): Fix quantum number types.
 """
 
 import itertools
@@ -210,7 +211,7 @@ def parse_energies(self,tokenized_lines):
         # retrieve entry
         (_,J,n,T,E,error,_,_)=entry
         g = k_parameter_g
-        qn = (J,g,n)
+        qn = (float(J),int(g),int(n))  # 20/07/08 (pjf): Cast explicitly to Python types.
         Jg_pair = (J,g)
 
         # store data from entry
@@ -412,6 +413,9 @@ def parser(in_file,verbose):
 
 # register the parser
 input.register_data_format('mfdn_v15',parser)
+input.register_code_name('mfdn15', 'mfdn_v15')
+input.register_code_name('obscalc', 'mfdn_v15')
+input.register_code_name('obscalc-ob', 'mfdn_v15')
 
 
 if (__name__=="__main__"):
