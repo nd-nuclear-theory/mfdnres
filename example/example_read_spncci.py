@@ -15,6 +15,7 @@
 """
 
 import mfdnres
+import mfdnres.decomposition
 
 ################################################################
 # reading data
@@ -92,6 +93,14 @@ def explore_point(mesh_data):
     print("results_data.decompositions (data for Nex for (1.0,0) space)\n{}".format(results_data.decompositions["Nex"][(1.0,0)]))
     print("results_data.get_decomposition (results for Nex for state (1.0,0,1))\n{}".format(results_data.get_decomposition("Nex",(1.0,0,1))))
     print("results_data.get_decomposition (results for BabySpNCCI for state (1.0,0,1))\n{}".format(results_data.get_decomposition("BabySpNCCI",(1.0,0,1))))
+
+    # process decomposition into dictionary
+    labeled_decomposition = mfdnres.decomposition.labeled_decomposition(
+        results_data.get_decomposition_labels("BabySpNCCI"),
+        results_data.get_decomposition("BabySpNCCI",(1.0,0,1))
+        )
+    print("BabySpNCCI decomposition dictionary (for state (1.0,0,1))")
+    mfdnres.decomposition.print_decomposition(labeled_decomposition)
     
 ################################################################
 # main

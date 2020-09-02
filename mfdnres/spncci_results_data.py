@@ -336,6 +336,38 @@ class SpNCCIResultsData(results_data.ResultsData):
 
         return decomposition
 
+    def get_decomposition_labels(self,decomposition_type):
+        """Retrieve labels for subspaces given in decomposition.
+
+        Label format:
+            for "Nex": Nex
+            for "BabySpNCCI":
+             (Nsigmaex,sigma.lambda,sigma.mu,Nex,omega.lambda,omega.mu,Sp,Sn,S)
+
+        Arguments:
+            decomoposition_type (str): decomposition type ("Nex", "BabySpNCCI")
+
+        Returns:
+            (list): list of labels
+        """
+
+        label_list = []
+        if (decomposition_type == "Nex"):
+            Nmax = self.params["Nmax"]
+            label_list = list(range(Nmax))
+        elif (decomposition_type == "BabySpNCCI"):
+            for full_label in self.baby_spncci_listing:
+                (_,_,
+                 Nsigmaex,_,lambda_sigma,mu_sigma,
+                 Sp,Sn,S,
+                 Nex,_,lambda_omega,mu_omega,
+                 _,_,_
+                ) = full_label
+                label = (Nsigmaex,lambda_sigma,mu_sigma,Nex,lambda_omega,mu_omega,Sp,Sn,S)
+                label_list.append(label)
+                
+        return label_list
+
     ########################################
     # Updating method
     ########################################

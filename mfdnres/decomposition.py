@@ -213,9 +213,99 @@ def print_decomposition(decomposition,label_format="",probability_format="8.6f")
     Note: Must use label_format="", not label_format="s", for tuple labels (or
     else get error "unsupported format string passed to tuple.__format__").
 
+    Arguments:
+        decomposition (dict): mapping from label (typically int or tuple) to probability
+        label_format (str,optional): format descriptor for label
+        probability_format (str,optional): format descriptor for probability
     """
 
     format_str = "{{:{}}} {{:{}}}".format(probability_format,label_format)
     for labels in sorted(decomposition.keys()):
         print(format_str.format(decomposition[labels],labels))
-    
+
+################################################################
+# labeling native decompositions
+################################################################
+
+def labeled_decomposition(label_list,decomposition):
+    """Digest natively-calculated decomposition into dictionary.
+
+    Dictionary is of form:
+
+        (label,)->probability
+
+    Although the native decompositions have no label degeneracies, the label
+    must still be wrapped in a tuple for compatibility with analyses of
+    decompositions where multiple labels may be binned together (e.g., from
+    Lanczos decompositions where different labels have degenerat eigenvalues).
+
+    Arguments:
+        label_list (list): list of individual bin labels (typically int or tuple)
+        decomposition (np.array): one-dimensional array of probabilities
+
+    """
+
+    if (len(label_list) != len(decomposition)):
+        raise ValueError("mismatched lengths for label_list and decomposition")
+
+    decomposition_dict = {
+        (label,) : probability
+        for (label,probability) in zip(label_list,decomposition)
+    }
+        
+    return decomposition_dict    
+        
+################################################################
+# decomposition binning
+################################################################
+
+def label_transformation_u3spsns_to_s(labels):
+    """
+    """
+    (_,_,_,_,_,S) = labels
+    return S
+
+def label_transformation_u3spsns_to_u3(labels):
+    """
+    """
+    (N,lam,mu,_,_,_) = labels
+    return (N,lam,mu)
+
+def label_transformation_baby_spncci_to_s(labels):
+    """
+    """
+    (N_sigma,lambda_sigma,mu_sigma,N_omega,lambda_omega,mu_omega,Sp,Sn,S) = labels
+    return S
+
+def label_transformation_baby_spncci_to_u3s(labels):
+    """
+    """
+    (N_sigma,lambda_sigma,mu_sigma,N_omega,lambda_omega,mu_omega,Sp,Sn,S) = labels
+    return (N_omega,lambda_omega,mu_omega,S)
+
+def label_transformation_baby_spncci_to_sp3rs(labels):
+    """
+    """
+    (N_sigma,lambda_sigma,mu_sigma,N_omega,lambda_omega,mu_omega,Sp,Sn,S) = labels
+    return (N_sigma,lambda_sigma,mu_sigma,S)
+
+def rebinned_decomposition(decomposition,label_transformation):
+    """ Rebin decomposition according to new labeling.
+
+    E.g., may by used to rebin "U3S" to S, by transformation
+    label_transformation_U3S_to_S.
+
+    Arguments:
+        decomposition (dict): mapping from tuple of degenerate labels label (typically int or tuple) to probability
+        label_transformation (callable): function mapping old label to new label
+
+    Returns
+        (dict): rebinned decomposition
+    """
+
+    new_decomposition = {}
+    for (label_list,probability) in decomposition.items():
+        new_label_list = tuple(set(map(label_transformation,label_list)))
+        new_decomposition[new_label_list] = new_decomposition.get(new_label_list,0) + probability
+        
+    return new_decomposition
