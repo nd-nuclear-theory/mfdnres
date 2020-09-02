@@ -16,6 +16,7 @@
     04/05/19 (pjf): Parse obscalc-ob one-body static and transition output.
     10/10/19 (pjf): Store Lanczos residuals.
     01/04/20 (mac): Remove num_eigenvalues as static data (now available as property).
+    06/17/20 (pjf): Add code registration.
     07/08/20 (pjf): Fix quantum number types.
 """
 

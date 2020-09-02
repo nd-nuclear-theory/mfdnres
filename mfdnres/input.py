@@ -27,6 +27,8 @@
     06/26/19 (mac): Rename from res.py to input.py, and incorporate filename
         parsing control from descriptor.py.
     05/05/20 (mac): Suppress duplicate input directories in slurp_res_files.
+    06/17/20 (pjf): Add code registration and detection from filename.
+    09/02/20 (pjf): Add autodetection of filename format.
 
 """
 
@@ -96,7 +98,7 @@ def register_filename_format(format_name,parser):
 # filename parser control
 ################################################################
 
-def parse_filename(filename,filename_format):
+def parse_filename(filename, filename_format=None):
     """Parse results filename.
 
     Only the basename is considered, extracted via os.path.basename,
@@ -130,6 +132,7 @@ def parse_filename(filename,filename_format):
 
     Args:
         filename (str): filename to parse
+        filename_format (str, optional): filename format to match
 
     Returns: (dict) : dictionary with keys for parameters ("run",
         "descriptor", "Z", "N", ...) parsed from filename, plus
@@ -139,8 +142,19 @@ def parse_filename(filename,filename_format):
 
     # parse filename
     basename = os.path.basename(filename)
-    parser = filename_format_parser[filename_format]
-    info = parser(basename)
+    if filename_format is not None:
+        parser = filename_format_parser[filename_format]
+        info = parser(basename)
+    else:
+        for parser in filename_format_parser:
+            try:
+                info = parser(basename)
+            except ValueError:
+                info = {}
+                continue
+            else:
+                break
+
 
     # define nuclide tuple
     info["filename"] = filename
@@ -166,11 +180,30 @@ def register_data_format(format_name,parser):
 
     data_format_parser[format_name] = parser
 
+################################################################
+# code name registry
+################################################################
+
+# global registration variables
+code_name_map = {None: None}
+
+def register_code_name(code_name,format_name):
+    """Register information for deducing res format.
+
+    Args:
+        code_name (str): name for code
+        format_name (str): name for filename format
+
+    """
+    if format_name not in data_format_parser:
+        raise ValueError("unknown format_name: {:s}".format(format_name))
+    code_name_map[code_name] = format_name
+
 ##################################################
 # data file import control
 ##################################################
 
-def read_file(filename,res_format,filename_format=None,verbose=False):
+def read_file(filename,res_format=None,filename_format=None,verbose=False):
     """Extract results from single results file.
 
     Dispatches filename to appropriate filename parser.  Dispatches
@@ -188,7 +221,8 @@ def read_file(filename,res_format,filename_format=None,verbose=False):
 
     Arguments:
         filename (str): filename for results file
-        res_format (str): identifier string for the results file parser to use
+        res_format (str, optional): identifier string for the results file
+            parser to use
         filename_format (str,optional): identifier string for the results
             filename parser to use
         verbose (bool,optional): enable debugging output
@@ -199,10 +233,13 @@ def read_file(filename,res_format,filename_format=None,verbose=False):
     """
 
     # parse results filename for any supplementary run parameters
-    if (filename_format is None):
-        info_from_filename = {}
-    else:
-        info_from_filename = parse_filename(filename,filename_format)
+    info_from_filename = parse_filename(filename,filename_format)
+
+    if res_format is None:
+        if  info_from_filename.get("code_name") is not None:
+            res_format = code_name_map[info_from_filename["code_name"]]
+        else:
+            raise ValueError("unable to deduce res_format")
 
     # parse results file contents for run parameters and data
     if (verbose):
@@ -227,9 +264,11 @@ def read_file(filename,res_format,filename_format=None,verbose=False):
     return results_list
 
 def slurp_res_files(
-        res_directory_list,res_format,
+        res_directory_list,
+        res_format=None,
         filename_format=None,
-        glob_pattern="*.res",verbose=False
+        glob_pattern="*.res",
+        verbose=False
 ):
     """Read all results file in given directories.
 
@@ -239,7 +278,7 @@ def slurp_res_files(
     Arguments:
         res_directory_list (str or list of str): directory or list of directories
             containing files to import
-        res_format (str): identifier string for the results file parser to use
+        res_format (str, optional): identifier string for the results file parser to use
         filename_format (str,optional): identifier string for the results
             filename parser to use
         glob_pattern (str,optional): glob pattern for results filenames to read

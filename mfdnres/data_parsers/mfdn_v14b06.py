@@ -8,6 +8,7 @@
     10/10/16 (mac): Update to return list containing single mesh point.
     04/27/18 (mac): Rename parameter Mj to M.
     03/01/19 (mac): Fix parser failure when transitions are missing.
+    06/17/20 (pjf): Add code registration.
 
 """
 
@@ -385,6 +386,7 @@ def parser(fin,verbose):
 
 # register parser
 input.register_data_format("mfdn_v14b06",parser)
+input.register_code_name('mfdn', 'mfdn_v14b06')
 
 ################################################################
 # test code
