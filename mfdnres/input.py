@@ -29,6 +29,7 @@
     05/05/20 (mac): Suppress duplicate input directories in slurp_res_files.
     06/17/20 (pjf): Add code registration and detection from filename.
     09/02/20 (pjf): Add autodetection of filename format.
+    09/07/20 (pjf): Fix filename parsing.
 
 """
 
@@ -91,6 +92,8 @@ def register_filename_format(format_name,parser):
         parser (callable): function for parsing filename
 
     """
+    if format_name == "ALL":
+        raise ValueError("filename format code ALL is reserved")
 
     filename_format_parser[format_name] = parser
 
@@ -98,7 +101,7 @@ def register_filename_format(format_name,parser):
 # filename parser control
 ################################################################
 
-def parse_filename(filename, filename_format=None):
+def parse_filename(filename, filename_format="ALL"):
     """Parse results filename.
 
     Only the basename is considered, extracted via os.path.basename,
@@ -142,11 +145,14 @@ def parse_filename(filename, filename_format=None):
 
     # parse filename
     basename = os.path.basename(filename)
-    if filename_format is not None:
-        parser = filename_format_parser[filename_format]
-        info = parser(basename)
-    else:
-        for parser in filename_format_parser:
+
+    # disable parsing if filename_format is None
+    if filename_format is None:
+        return {"filename": filename}
+
+    # try all filename formats for special value ALL
+    if filename_format == "ALL":
+        for parser in filename_format_parser.values():
             try:
                 info = parser(basename)
             except ValueError:
@@ -154,11 +160,17 @@ def parse_filename(filename, filename_format=None):
                 continue
             else:
                 break
+    elif filename_format in filename_format_parser:
+        parser = filename_format_parser[filename_format]
+        info = parser(basename)
+    else:
+        raise KeyError("unknown filename_format={}".format(filename_format))
 
 
     # define nuclide tuple
     info["filename"] = filename
-    info["nuclide"] = (info["Z"],info["N"])
+    if ("Z" in info) and ("N" in info):
+        info["nuclide"] = (info["Z"],info["N"])
 
     return info
 
