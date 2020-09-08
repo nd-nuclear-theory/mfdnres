@@ -259,16 +259,22 @@ def labeled_decomposition(label_list,decomposition):
 # decomposition binning
 ################################################################
 
+def label_transformation_u3spsns_to_nex(labels):
+    """
+    """
+    (N,lam,mu,Sp,Sn,S) = labels
+    return N
+
 def label_transformation_u3spsns_to_s(labels):
     """
     """
-    (_,_,_,_,_,S) = labels
+    (N,lam,mu,Sp,Sn,S) = labels
     return S
 
 def label_transformation_u3spsns_to_u3(labels):
     """
     """
-    (N,lam,mu,_,_,_) = labels
+    (N,lam,mu,Sp,Sn,S) = labels
     return (N,lam,mu)
 
 def label_transformation_baby_spncci_to_s(labels):
@@ -277,11 +283,23 @@ def label_transformation_baby_spncci_to_s(labels):
     (N_sigma,lambda_sigma,mu_sigma,N_omega,lambda_omega,mu_omega,Sp,Sn,S) = labels
     return S
 
+def label_transformation_baby_spncci_to_u3(labels):
+    """
+    """
+    (N_sigma,lambda_sigma,mu_sigma,N_omega,lambda_omega,mu_omega,Sp,Sn,S) = labels
+    return (N_omega,lambda_omega,mu_omega)
+
 def label_transformation_baby_spncci_to_u3s(labels):
     """
     """
     (N_sigma,lambda_sigma,mu_sigma,N_omega,lambda_omega,mu_omega,Sp,Sn,S) = labels
     return (N_omega,lambda_omega,mu_omega,S)
+
+def label_transformation_baby_spncci_to_sp3r(labels):
+    """
+    """
+    (N_sigma,lambda_sigma,mu_sigma,N_omega,lambda_omega,mu_omega,Sp,Sn,S) = labels
+    return (N_sigma,lambda_sigma,mu_sigma)
 
 def label_transformation_baby_spncci_to_sp3rs(labels):
     """
@@ -289,7 +307,7 @@ def label_transformation_baby_spncci_to_sp3rs(labels):
     (N_sigma,lambda_sigma,mu_sigma,N_omega,lambda_omega,mu_omega,Sp,Sn,S) = labels
     return (N_sigma,lambda_sigma,mu_sigma,S)
 
-def rebinned_decomposition(decomposition,label_transformation):
+def rebinned_decomposition(decomposition,label_transformation,verbose=False):
     """ Rebin decomposition according to new labeling.
 
     E.g., may by used to rebin "U3S" to S, by transformation
@@ -305,6 +323,8 @@ def rebinned_decomposition(decomposition,label_transformation):
 
     new_decomposition = {}
     for (label_list,probability) in decomposition.items():
+        if (verbose):
+            print(label_transformation,label_list,probability)
         new_label_list = tuple(set(map(label_transformation,label_list)))
         new_decomposition[new_label_list] = new_decomposition.get(new_label_list,0) + probability
         
