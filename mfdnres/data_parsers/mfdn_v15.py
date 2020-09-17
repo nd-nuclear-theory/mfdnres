@@ -348,6 +348,24 @@ def parse_one_body_transitions(self, tokenized_lines):
             transition_dict[Jgn_pair_canonical] = canonicalization_factor*value
 
 
+def parse_one_body_observable(self, tokenized_lines):
+    """Parse obscalc-ob output for an observable
+    """
+    (J0, g0, Tz0, name) = tokenized_lines[0]
+    transition_dict = self.one_body_transition_properties.setdefault(name, dict())
+    for tokenized_line in tokenized_lines[1:]:
+        qnf = (float(tokenized_line[0]), int(tokenized_line[1]), int(tokenized_line[2]))
+        qni = (float(tokenized_line[3]), int(tokenized_line[4]), int(tokenized_line[5]))
+        rme = float(tokenized_line[6])
+
+        # only store canonical pair
+        (Jgn_pair_canonical, flipped, canonicalization_factor) = tools.canonicalize_Jgn_pair(
+            (qnf, qni), tools.RMEConvention.kEdmonds
+        )
+
+        transition_dict[Jgn_pair_canonical] = canonicalization_factor*rme
+
+
 section_handlers = {
     # [CODE]
     "MFDn" : parse_params,
@@ -367,6 +385,7 @@ section_handlers = {
     "Transitions": parse_transitions,
     "Transition one-body observables": parse_one_body_transitions,
     ## "Transition one-body observables": parse_one_body_static_properties,  # WRONG?
+    "One-body observable": parse_one_body_observable,
 
 }
 
