@@ -18,6 +18,7 @@
     01/04/20 (mac): Remove num_eigenvalues as static data (now available as property).
     06/17/20 (pjf): Add code registration.
     07/08/20 (pjf): Fix quantum number types.
+    09/17/20 (zz): Add one body observable parser.
 """
 
 import itertools
