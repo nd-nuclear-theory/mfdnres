@@ -12,6 +12,7 @@
     09/06/18 (pjf): Allow negative M.
     09/06/18 (pjf): Allow hyphens in interaction name.
     12/17/19 (mac): Support format_7_trans (i.e., make diagonalization-related fields optional).
+    06/12/20 (mac): Support optional subset index from format_7_trans.
 
 """
 
@@ -49,6 +50,7 @@ def parser(filename):
         r"(\-lan(?P<lanczos>\d+))?"
         r"(\-tol(?P<tolerance>\d+\.\d+[eE][+-]\d+))?"
         r"((?P<natural_orbital_flag>\-natorb)?\-no(?P<natural_orbital_iteration>\d+))?"
+        r"(\-subset(?P<subset_index>\d+))?"
         # epilog
         r").res"
     )

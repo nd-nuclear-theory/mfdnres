@@ -33,6 +33,7 @@
             params (refactored from tabulate_band_11be_11be-xfer.py).
         - Revise and extend make_level_table_* family of functions.
     07/11/19 (mac): Add mesh_key_listing for mesh diagnostic listing.
+    06/18/20 (pjf): Make sorted_mesh_data only sort, not consolidate.
 """
 
 import functools
@@ -272,15 +273,8 @@ def selected_mesh_data(
         print("  selected_mesh_data: selected mesh points {}".format(len(new_mesh_data)))
     return new_mesh_data
 
-def sorted_mesh_data(
-        mesh_data,key_descriptor,
-        verbose=False
-):
-    """Sort and consolidate mesh data, using specified parameter tuple as
-       key.
-
-    See docstring for make_results_dict, which provides the underlying
-    sorting and consolidation engine.
+def sorted_mesh_data(mesh_data, key_descriptor, verbose=False):
+    """Sort mesh data, using specified parameter tuple as key.
 
     Example:
         # import data
@@ -294,17 +288,12 @@ def sorted_mesh_data(
         verbose (bool,optional): verbose output
 
     Returns:
-        (list): sorted and consolidated list of data objects
+        (list): sorted list of data objects
     """
 
-    results_dict = make_results_dict(
-        mesh_data,key_descriptor,
-        verbose=verbose
-    )
-    new_mesh_data = [
-        results_dict[key]
-        for key in sorted(results_dict.keys())
-        ]
+    key_function = make_key_function(key_descriptor)
+    new_mesh_data = sorted(mesh_data, key=key_function)
+
     return new_mesh_data
 
 ################################################################
@@ -342,10 +331,10 @@ def dict_items(d):
 
 ## def make_subdict_function(keys):
 ##     """ Generate a function to subset a dictionary to the given keys.
-## 
+##
 ##     Arguments:
 ##         keys (list): list of key values
-## 
+##
 ##     Returns:
 ##         subdict_function (callable): function to extract subsetted dictionary
 ##     """
@@ -399,8 +388,8 @@ def merged_mesh(mesh,keys,postprocessor=None,verbose=False):
     parameters used in the sorting key which defines the merge (see "Merge key"
     below).
 
-    Merge key: The key function should return a tuple of key-value pairs, used to
-    distinguish equivalent (for merger) vs. nonequivalent mesh points.  The
+    Merge key: The key function should return a tuple of key-value pairs, used
+    to distinguish equivalent (for merger) vs. nonequivalent mesh points.  The
     params dictionary for each new ResultsData is constructed from the key-value
     items in the tuble returned by the key function.  Therefore, the key-value
     items should include not only the parameters required in the merger, to
@@ -409,13 +398,14 @@ def merged_mesh(mesh,keys,postprocessor=None,verbose=False):
     point, even if it is known a priori that all mesh elements share the same
     value for this parameter making it irrelevant to the merging process (e.g.,
     the "nuclide" parameter should be included if that parameter is later used
-    in filename construction, or the "parity" parameter may be used in mesh
-    selection).
+    in filename construction, or the "parity" parameter may be used in later
+    mesh selection, even when the "Nmax" parameter would be sufficient to
+    distinquish nonequivalent mesh points).
 
     Preservation of original objects: Each ResultsData object in the returned
     mesh is obtained by first defining a new empty object.  Then all ResultsData
     objects to be merged are copied into this empty object by the update method.
-    This ensures that no original ResultsData objects is modified in the
+    This ensures that no original ResultsData object is modified in the
     process.
 
     Example:
@@ -483,7 +473,7 @@ def merged_mesh(mesh,keys,postprocessor=None,verbose=False):
             postprocessor(results_data)
 
     return target_mesh
-        
+
 ################################################################
 # tabulation functions -- observable vs. parameters
 ################################################################

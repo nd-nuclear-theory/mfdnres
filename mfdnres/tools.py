@@ -486,13 +486,22 @@ def canonicalization_prescription_Jg(Jg_pair,rme_convention):
     operator has spherical-harmonic-like conjugation properties (M1,
     E2, etc.).
 
-    Under angular momentum convention, conjugation yields:
+    Under Edmonds convention, conjugation yields:
 
         <J||A_{J0}||J'> = (-)^(J'-J)*Hat(J')/Hat(J)*<J'||A_{J0}||J>
 
-    Under group theory convention, conjugation yields:
+    Under Rose convention, conjugation yields:
 
         <J||A_{J0}||J'> = (-)^(J'-J)*<J'||A_{J0}||J>
+
+    The canonicalization factor returned here, in the event of a flip is
+
+        <||||>_noncanonical(=given) / <||||>_canonical
+
+    That is, it is the "retrieval" factor by which a stored canonical RME has to
+    be multiplied to yield the RME indicated by Jg_pair.  (Thus, beware that the
+    "storage" factor, by which a calculated noncanonical RME would have to be
+    multiplied so as to store a canonical RME is the reciprocal.)
 
     Arguments:
        Jg_pair (tuple): ((J_bra,g_bra),(J_ket,g_ket))
@@ -500,7 +509,7 @@ def canonicalization_prescription_Jg(Jg_pair,rme_convention):
 
     Returns:
         flipped (bool): whether or not flip necessary to canonicalize
-        canonicalization_factor (float): canonicalization phase
+        canonicalization_factor (float): canonicalization phase and normalization factor
 
     """
 
