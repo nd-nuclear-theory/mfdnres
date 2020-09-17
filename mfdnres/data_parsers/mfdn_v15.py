@@ -334,6 +334,8 @@ def parse_one_body_static_properties(self, tokenized_lines):
 
 def parse_one_body_transitions(self, tokenized_lines):
     """Parse obscalc-ob output for transitions.
+
+    LEGACY: Old obscalc-ob format with multiple RMEs per line.
     """
     names = self.params["one_body_observable_names"]
     for tokenized_line in tokenized_lines:
