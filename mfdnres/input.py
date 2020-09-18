@@ -53,8 +53,7 @@ def res_file_directory(username,code,run_number,results_dir="results",res_file_s
             code (str): code name (e.g., "spncci")
             run_number (str): run name "tail" (e.g., "mac0424")
             results_dir (str,optional): name of top-level results directory within GROUP_HOME
-            run_results_are_in_subdir (bool,optional): if results are in subdirectory "results"
-              of run directory (as in an mcscript multi-task run)
+            res_file_subdir (str,optional): name of subdirectory within results directory (can be None for flat structure)
 
         Environment:
             GROUP_HOME: directory name for group top-level results directory

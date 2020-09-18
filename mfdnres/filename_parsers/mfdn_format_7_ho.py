@@ -13,6 +13,7 @@
     09/06/18 (pjf): Allow hyphens in interaction name.
     12/17/19 (mac): Support format_7_trans (i.e., make diagonalization-related fields optional).
     06/12/20 (mac): Support optional subset index from format_7_trans.
+    09/17/20 (mac): Support code names for postprocessor output ("transitions-{ob,tb}").
 
 """
 
@@ -36,7 +37,7 @@ def parser(filename):
     regex = re.compile(
         # prolog
         r"run(?P<run>\w+)"
-        r"\-(?P<code_name>((mfdn)|(obscalc-ob))[^\-]*)"
+        r"\-(?P<code_name>((mfdn)|(obscalc-ob)|(transitions-ob)|(transitions-tb))[^\-]*)"
         r"\-(?P<descriptor>"
         # descriptor contents
         r"Z(?P<Z>\d+)\-N(?P<N>\d+)"

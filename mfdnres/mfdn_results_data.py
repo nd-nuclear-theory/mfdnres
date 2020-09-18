@@ -30,7 +30,7 @@
     04/27/20 (mac): Correct normalization of deduced isocalar/isovector quadrupole RMEs
         to match definitions in intrinsic.
     04/27/20 (zz): Add deduced isoscalar and isovector M1 observable support.
-
+    09/17/20 (mac): Overhaul observable data attribute naming scheme.
 """
 
 import math
@@ -82,9 +82,23 @@ class MFDnResultsData(results_data.ResultsData):
         num_eigenvalues (dict)
         filename (str)
 
+    Naming scheme for obserable attributes:
+
+        <source=mfdn|postprocessor>_<particle-rank=level|ob|tb>_<observable-or-property-type>
+
+            particle-rank:
+               level = level quantum numbers (no associated particle rank)
+               ob = one-body
+               tb = two-body
+
+            Note: The same observable as an "expectation value" or an "RME" will
+            differ by an angular momentum factor, as RMEs are stored under the
+            Edmonds convention for the Wigner-Eckart theorem.
+
+
     Data attributes:
 
-        decompositions (dict): wave function probability decompositions
+        mfdn_level_decompositions (dict): wave function probability decompositions
 
             Mapping: decomposition_name -> qn -> values
 
@@ -96,8 +110,11 @@ class MFDnResultsData(results_data.ResultsData):
 
                 values (np.array vector): probabilities
 
+        mfdn_level_residuals (dict): mfdn Lanczos residuals
 
-        native_static_properties (dict): native-calculated static properties
+            Mapping: qn -> value
+
+        mfdn_level_properties (dict): mfdn extracted mean quantum numbers (J, T)
 
             Mapping: property_name -> qn -> value
 
@@ -105,14 +122,20 @@ class MFDnResultsData(results_data.ResultsData):
 
                     "T": native-calculated isospin (only valid in pn-symmetric basis)
 
+                    "am<type>": native-calculated angular momentum (only
+                    valid in pn-symmetric basis???) (<type> in [L,S,Sp,Sn,J])
+
+        mfdn_ob_moments (dict): mfdn one-body moments (only well-defined for oscillator basis)
+
+            Mapping: observable_name -> qn -> value
+
+                observable_name:
+
                     "M1<type>": M1 moments (<type> in [mu,lp,ln,sp,sn])
 
                     "E2<type>": E2 moments (<type> in [p,n])
 
-                    "am<type>": native-calculated angular momentum (only
-                    valid in pn-symmetric basis???) (<type> in [L,S,Sp,Sn,J])
-
-        two_body_static_observables (dict): two-body static observables
+        mfdn_tb_expectations (dict): two-body static observables
 
             Mapping: observable_name -> qn -> value
 
@@ -126,54 +149,46 @@ class MFDnResultsData(results_data.ResultsData):
 
                     yields observable name "Trel"
 
-        native_transition_properties (dict): MFDn-native transitions
+        mfdn_ob_rmes (dict): MFDn-native transitions
 
-            observable_name -> (qnf,qni) -> value
+            Mapping: observable_name -> (qnf,qni) -> value
 
-        one_body_static_properties (dict): ...
+        postprocessor_ob_rmes (dict): One-body RMEs calculated by postprocessor and obscalc-ob.
 
-        one_body_transition_properties (dict): ...
+            Mapping: observable_name -> (qnf,qni) -> value
+
+        postprocessor_tb_rmes (dict): Two-body RMEs calculated by postprocessor.
+
+            Mapping: observable_name -> (qnf,qni) -> value
 
     Accessors:
        [See definitions below.]
-
-    ================================================================
-
-    05/03/20 (mac): TODO proposed cleanup of dictionary names
-          
-    Here is a proposed renaming based on:
-
-       <source>_<particle-rank>_<observable-or-property-type>
-
-    with the exceptional case of
-
-       <source=mfdn>_<particle-rank=level>_properties
-
-    for extracted level quantum numbers.
-
-    - - - -
-
-    native_static_properties
-      => mfdn_level_properties (T, am)
-         AND
-         mfdn_one_body_moments (E2, M1)
-
-    native_transition_properties
-      => mfdn_one_body_transitions
-
-    two_body_static_observables
-      => mfdn_two_body_expectation_values
-
-    one_body_static_properties
-      => UNUSED, since postprocessors will always output RMEs labeled by initial and final state
-
-    one_body_transition_properties
-      => postprocessor_one_body_rmes
-
-    PROPOSED
-      => postprocessor_two_body_rmes
-
     """
+
+    # Data attribute renaming 09/17/20 (mac)
+    #
+    # decompositions
+    #     => mfdn_level_decompositions
+    # 
+    # native_static_properties  TODO
+    #     => mfdn_level_properties (T, am)
+    #        AND
+    #        mfdn_ob_moments (E2, M1)
+    # 
+    # native_transition_properties
+    #     => mfdn_ob_rmes
+    # 
+    # two_body_static_observables
+    #     => mfdn_tb_expectations
+    # 
+    # one_body_static_properties
+    #     => REMOVED
+    # 
+    # one_body_transition_properties
+    #     => postprocessor_ob_rmes
+    # 
+    # NEW
+    #     => postprocessor_tb_rmes
     
     ########################################
     # Initializer
@@ -184,12 +199,14 @@ class MFDnResultsData(results_data.ResultsData):
         """ Null-initialize standard attributes.
         """
         super().__init__()
-        self.decompositions = {}
-        self.native_static_properties = {}
-        self.two_body_static_observables = {}
-        self.native_transition_properties = {}
-        self.one_body_static_properties = {}
-        self.one_body_transition_properties = {}
+        self.mfdn_level_decompositions = {}
+        self.mfdn_level_residuals = {}
+        self.mfdn_level_properties = {}
+        self.mfdn_ob_moments = {}
+        self.mfdn_ob_rmes = {}
+        self.mfdn_tb_expectations = {}
+        self.postprocessor_ob_rmes = {}
+        self.postprocessor_tb_rmes = {}
 
     ########################################
     # Accessors
@@ -208,7 +225,7 @@ class MFDnResultsData(results_data.ResultsData):
 
         # retrieve decomposition
         try:
-            value = self.native_static_properties["T"][qn]
+            value = self.mfdn_level_properties["T"][qn]
         except:
             return default
 
@@ -231,7 +248,7 @@ class MFDnResultsData(results_data.ResultsData):
 
         # retrieve decomposition
         try:
-            decomposition = self.decompositions[decomposition_type][qn]
+            decomposition = self.mfdn_level_decompositions[decomposition_type][qn]
         except:
             return None
 
@@ -257,7 +274,7 @@ class MFDnResultsData(results_data.ResultsData):
         # extract labels
         (J,gex,n) = qn
 
-        rms_radius = self.two_body_static_observables.get(radius_type,{}).get(qn,default)
+        rms_radius = self.mfdn_tb_expectations.get(radius_type,{}).get(qn,default)
 
         return rms_radius
 
@@ -327,7 +344,7 @@ class MFDnResultsData(results_data.ResultsData):
             # combination of the D terms taken from MFDn.res.  These terms
             # typically have smaller magnitudes but are saved at the same fixed
             # point precision at the physical M1.
-            value = self.native_static_properties.get("M1",{}).get(qn,default)
+            value = self.mfdn_ob_moments.get("M1",{}).get(qn,default)
             return value
 
         # trap deduced observables (isoscalar/isovector M1)
@@ -362,7 +379,7 @@ class MFDnResultsData(results_data.ResultsData):
 
         # else revert to native static moment (may be garbage if obmes were turned off)
         if (np.isnan(value)):
-            value = self.native_static_properties.get(observable,{}).get(qn,default)
+            value = self.mfdn_ob_moments.get(observable,{}).get(qn,default)
 
         return value
 
@@ -390,7 +407,7 @@ class MFDnResultsData(results_data.ResultsData):
             raise ValueError("Invalid angular momentum type name {}".format(am_type))
 
         # extract effective am value
-        value_sqr = self.native_static_properties.get(am_type+"_sqr",{}).get(qn,default)
+        value_sqr = self.mfdn_level_properties.get(am_type+"_sqr",{}).get(qn,default)
         if (value_sqr<0):
             raise ValueError("Invalid squared angular momentum value: {:e}".format(value_sqr))
         value = tools.effective_am(value_sqr)
@@ -476,17 +493,17 @@ class MFDnResultsData(results_data.ResultsData):
         if self.params.get("hw", 0) != 0:
             try:
                 rme = (canonicalization_factor
-                    * self.native_transition_properties[observable][qn_pair_canonical])
+                    * self.mfdn_ob_rmes[observable][qn_pair_canonical])
             except KeyError:
                 try:
                     rme = (canonicalization_factor
-                        * self.one_body_transition_properties[observable][qn_pair_canonical])
+                        * self.postprocessor_ob_rmes[observable][qn_pair_canonical])
                 except KeyError:
                     return default
         else:
             try:
                 rme = (canonicalization_factor
-                    * self.one_body_transition_properties[observable][qn_pair_canonical])
+                    * self.postprocessor_ob_rmes[observable][qn_pair_canonical])
             except KeyError:
                 return default
 
@@ -577,12 +594,13 @@ class MFDnResultsData(results_data.ResultsData):
         super().update(other)
 
         # merge observable dictionaries
-        update_observable_dictionary(self.decompositions,other.decompositions)
-        update_observable_dictionary(self.native_static_properties,other.native_static_properties)
-        update_observable_dictionary(self.two_body_static_observables,other.two_body_static_observables)
-        update_observable_dictionary(self.native_transition_properties,other.native_transition_properties)
-        update_observable_dictionary(self.one_body_static_properties,other.one_body_static_properties)
-        update_observable_dictionary(self.one_body_transition_properties,other.one_body_transition_properties)
+        update_observable_dictionary(self.mfdn_level_decompositions,other.mfdn_level_decompositions)
+        update_observable_dictionary(self.mfdn_level_properties,other.mfdn_level_properties)
+        update_observable_dictionary(self.mfdn_ob_moments,other.mfdn_ob_moments)
+        update_observable_dictionary(self.mfdn_ob_rmes,other.mfdn_ob_rmes)
+        update_observable_dictionary(self.mfdn_tb_expectations,other.mfdn_tb_expectations)
+        update_observable_dictionary(self.postprocessor_ob_rmes,other.postprocessor_ob_rmes)
+        update_observable_dictionary(self.postprocessor_tb_rmes,other.postprocessor_tb_rmes)
 
 #################################################
 # test code

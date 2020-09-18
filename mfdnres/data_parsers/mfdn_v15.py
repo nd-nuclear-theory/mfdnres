@@ -18,7 +18,8 @@
     01/04/20 (mac): Remove num_eigenvalues as static data (now available as property).
     06/17/20 (pjf): Add code registration.
     07/08/20 (pjf): Fix quantum number types.
-    09/17/20 (zz): Add one body observable parser.
+    09/17/20 (zz): Add one-body observable parser.
+    09/17/20 (mac): Update data attribute names.  Add two-body obervable parser.
 """
 
 import itertools
@@ -202,10 +203,7 @@ def parse_energies(self,tokenized_lines):
         )
 
     # set up container for native-calculated isospins
-    self.native_static_properties["T"] = {}
-
-    # set up container for Lanczos residuals
-    self.residuals = {}
+    self.mfdn_level_properties["T"] = {}
 
     # sort energies into energies dictionary
     for entry in table:
@@ -218,8 +216,8 @@ def parse_energies(self,tokenized_lines):
 
         # store data from entry
         self.energies[qn] = E
-        self.residuals[qn] = error
-        self.native_static_properties["T"][qn] = T
+        self.mfdn_level_residuals[qn] = error
+        self.mfdn_level_properties["T"][qn] = T
 
 def parse_decompositions_Nex(self,tokenized_lines):
     """Parse Nex decomposition.
@@ -233,10 +231,10 @@ def parse_decompositions_Nex(self,tokenized_lines):
     true for MFDn parser as well.
 
     """
-    self.decompositions["Nex"] = {}
+    self.mfdn_level_decompositions["Nex"] = {}
     for tokenized_line in tokenized_lines:
         (qn,data) = split_mfdn_results_line(tokenized_line)
-        self.decompositions["Nex"][qn]=data
+        self.mfdn_level_decompositions["Nex"][qn]=data
 
 def parse_generic_static_properties(self,tokenized_lines,container,property_names):
     """Parse generic static properties given list of property names for the data columns.
@@ -260,13 +258,13 @@ def parse_M1_moments(self,tokenized_lines):
     """Parse M1 moments.
     """
     property_names = ["M1","Dlp","Dln","Dsp","Dsn"]
-    parse_generic_static_properties(self,tokenized_lines,self.native_static_properties,property_names)
+    parse_generic_static_properties(self,tokenized_lines,self.mfdn_ob_moments,property_names)
 
 def parse_E2_moments(self,tokenized_lines):
     """Parse E2 moments.
     """
     property_names = ["E2p","E2n"]
-    parse_generic_static_properties(self,tokenized_lines,self.native_static_properties,property_names)
+    parse_generic_static_properties(self,tokenized_lines,self.mfdn_ob_moments,property_names)
 
 def parse_angular_momenta(self,tokenized_lines):
     """Parse squared angular momenta.
@@ -278,21 +276,21 @@ def parse_angular_momenta(self,tokenized_lines):
     else:
         # nonsensical Lp^2 and Ln^2 observables (unclear definition and sometimes negative) added with v15beta01
         property_names = ["L_sqr","S_sqr","Lp_sqr","Sp_sqr","Ln_sqr","Sn_sqr","J_sqr"]
-    parse_generic_static_properties(self,tokenized_lines,self.native_static_properties,property_names)
+    parse_generic_static_properties(self,tokenized_lines,self.mfdn_level_properties,property_names)
 
 def parse_radii(self,tokenized_lines):
     """Parse radii.
     """
     property_names = ["rp","rn","r"]
-    parse_generic_static_properties(self,tokenized_lines,self.two_body_static_observables,property_names)
+    parse_generic_static_properties(self,tokenized_lines,self.mfdn_tb_expectations,property_names)
 
 def parse_other_tbo(self,tokenized_lines):
     """Parse other two-body observables.
     """
     property_names = self.params["tbo_names"][1:]
-    parse_generic_static_properties(self,tokenized_lines,self.two_body_static_observables,property_names)
+    parse_generic_static_properties(self,tokenized_lines,self.mfdn_tb_expectations,property_names)
 
-def parse_transitions(self, tokenized_lines):
+def parse_mfdn_ob_rmes(self, tokenized_lines):
     """Parse native transition output.
     """
     transition_classes = {
@@ -319,21 +317,8 @@ def parse_transitions(self, tokenized_lines):
             transition_dict = self.native_transition_properties.setdefault(transition_type, dict())
             transition_dict[Jgn_pair_canonical] = canonicalization_factor*value
 
-def parse_one_body_static_properties(self, tokenized_lines):
-    """Parse obscalc-ob output for static properties.
-    """
-    names = self.params["one_body_observable_names"]
-    for tokenized_line in tokenized_lines:
-        qn = (float(tokenized_line[0]), int(tokenized_line[1]), int(tokenized_line[2]))
-        data_iterable = map(float, tokenized_line[6:])
-
-        for (property_type, value) in zip(names, data_iterable):
-            property_dict = self.one_body_static_properties.setdefault(property_type, dict())
-            property_dict[qn] = value
-
-
-def parse_one_body_transitions(self, tokenized_lines):
-    """Parse obscalc-ob output for transitions.
+def parse_postprocessor_ob_rmes_legacy(self, tokenized_lines):
+    """Parse obscalc-ob output for transitions (legacy tabular format).
 
     LEGACY: Old obscalc-ob format with multiple RMEs per line.
     """
@@ -349,15 +334,18 @@ def parse_one_body_transitions(self, tokenized_lines):
         )
 
         for (transition_type, value) in zip(names, data_iterable):
-            transition_dict = self.one_body_transition_properties.setdefault(transition_type, dict())
+            transition_dict = self.postprocessor_ob_rmes.setdefault(transition_type, dict())
             transition_dict[Jgn_pair_canonical] = canonicalization_factor*value
 
+def parse_postprocessor_generic_rmes(self,tokenized_lines,container):
+    """Parse generic (ob or tb) postprocessor rmes.
 
-def parse_one_body_observable(self, tokenized_lines):
-    """Parse obscalc-ob output for an observable
+    Arguments:
+        ...
+        container (dict): dictionary to which rmes should be added
     """
     (J0, g0, Tz0, name) = tokenized_lines[0]
-    transition_dict = self.one_body_transition_properties.setdefault(name, dict())
+    rme_dict = container.setdefault(name, dict())
     for tokenized_line in tokenized_lines[1:]:
         qnf = (float(tokenized_line[0]), int(tokenized_line[1]), int(tokenized_line[2]))
         qni = (float(tokenized_line[3]), int(tokenized_line[4]), int(tokenized_line[5]))
@@ -368,8 +356,18 @@ def parse_one_body_observable(self, tokenized_lines):
             (qnf, qni), tools.RMEConvention.kEdmonds
         )
 
-        transition_dict[Jgn_pair_canonical] = canonicalization_factor*rme
+        rme_dict[Jgn_pair_canonical] = canonicalization_factor*rme
 
+
+def parse_postprocessor_ob_rmes(self, tokenized_lines):
+    """Parse obscalc-ob output for a one-body observable.
+    """
+    parse_postprocessor_generic_rmes(self, tokenized_lines, self.postprocessor_ob_rmes)
+
+def parse_postprocessor_tb_rmes(self, tokenized_lines):
+    """Parse postprocessor output (as digested by the scripting) for a two-body observable.
+    """
+    parse_postprocessor_generic_rmes(self, tokenized_lines, self.postprocessor_tb_rmes)
 
 section_handlers = {
     # [CODE]
@@ -387,11 +385,11 @@ section_handlers = {
     "Angular momenta" : parse_angular_momenta,
     "Relative radii" : parse_radii,
     "Other 2-body observables" : parse_other_tbo,
-    "Transitions": parse_transitions,
-    "Transition one-body observables": parse_one_body_transitions,
+    "Transitions": parse_mfdn_ob_rmes,
+    "Transition one-body observables": parse_postprocessor_ob_rmes_legacy,
     ## "Transition one-body observables": parse_one_body_static_properties,  # WRONG?
-    "One-body observable": parse_one_body_observable,
-
+    "One-body observable": parse_postprocessor_ob_rmes,
+    "Two-body observable": parse_postprocessor_tb_rmes,
 }
 
 ################################################################
@@ -439,6 +437,8 @@ input.register_data_format('mfdn_v15',parser)
 input.register_code_name('mfdn15', 'mfdn_v15')
 input.register_code_name('obscalc', 'mfdn_v15')
 input.register_code_name('obscalc-ob', 'mfdn_v15')
+input.register_code_name('transitions-ob', 'mfdn_v15')
+input.register_code_name('transitions-tb', 'mfdn_v15')
 
 
 if (__name__=="__main__"):

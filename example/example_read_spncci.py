@@ -28,7 +28,7 @@ def read_data():
     print("Reading input file...")
     mesh_data = mfdnres.input.read_file(
         "type_specimens/spncci/runmac0420-Z3-N3-JISP16-0-Nsigmamax02-Nmax02.res",
-        "spncci",
+        res_format="spncci",
         filename_format="spncci",
         verbose=True
     )
