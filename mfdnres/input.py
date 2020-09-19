@@ -60,9 +60,13 @@ def res_file_directory(username,code,run_number,results_dir="results",res_file_s
               (e.g., "/afs/crc.nd.edu/group/nuclthy" for shared group results directory,
                or, for local work in your home directory, you may set equal to HOME)
 
-        >>> res_file_directory("mcaprio","spncci","mac0424")
+        >>> res_file_directory("mcaprio","mfdn","mac0563")
 
-            /afs/crc.nd.edu/group/nuclthy/results/mcaprio/spncci/runmac0424/results/res
+            /afs/crc.nd.edu/group/nuclthy/results/mcaprio/mfdn/runmac0563/results/res
+
+        >>> res_file_directory("amccoy","spncci","aem0097",res_file_subdir="results")
+
+            /afs/crc.nd.edu/group/nuclthy/results/amccoy/spncci/runaem0097/results
 
     """
 

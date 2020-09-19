@@ -283,6 +283,12 @@ def label_transformation_baby_spncci_to_s(labels):
     (N_sigma,lambda_sigma,mu_sigma,N_omega,lambda_omega,mu_omega,Sp,Sn,S) = labels
     return S
 
+def label_transformation_baby_spncci_to_nex(labels):
+    """
+    """
+    (N_sigma,lambda_sigma,mu_sigma,N_omega,lambda_omega,mu_omega,Sp,Sn,S) = labels
+    return N_omega
+
 def label_transformation_baby_spncci_to_u3(labels):
     """
     """
