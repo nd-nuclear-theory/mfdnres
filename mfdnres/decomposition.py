@@ -6,6 +6,8 @@ University of Notre Dame
 
 + 10/24/19 (pjf): Created, migrated from diagonalize_alphabeta.py.
 + 02/20/20 (mac): Provide eigenvalue input and overhaul to handle degenerate labels.
++ 09/02/20 (mac): Add labeled_decomposition and rebinned_decomposition.
++ 09/21/20 (mac): Provide decomposition based on truncated number of Lanczos iterations.
 """
 
 import numpy as np
@@ -14,19 +16,28 @@ from . import histogram
 
 import mcscript.utils  # for value_range
 
-def read_lanczos(filename="mfdn_alphabeta.dat", **kwargs):
-    """Read and parse mfdn_alphabeta file into d and e arrays for eigh_tridiagonal
+def read_lanczos(filename="mfdn_alphabeta.dat"):
+    """Read and parse mfdn_alphabeta file into d and e arrays for eigh_tridiagonal.
+
+    Result of calculation with n Lanczos iterations is an alpha vector of length n and
+    beta vector of length n-1.
 
     Arguments:
         filename (str, default "mfdn_alphabeta.dat"): input filename
+
     Returns:
-        (tuple of np.array): diagonal and off-diagonal matrix elements
+        alpha (np.array): vectors of diagonal matrix elements
+        beta (np.array): vectors of off-diagonal matrix elements
+
     """
 
-    alphabeta = np.loadtxt(filename, usecols=(1, 2))
-    return (alphabeta[:, 0], alphabeta[:-1, 1])
+    # extract raw vectors
+    alphabeta_array = np.loadtxt(filename, usecols=(1, 2))
+    (alpha,beta) = (alphabeta_array[:, 0], alphabeta_array[:-1, 1])
+        
+    return (alpha,beta)
 
-def generate_decomposition_LEGACY(labels, expected_eigenvalues, alphabeta, **kwargs):
+def generate_decomposition_LEGACY(labels, expected_eigenvalues, alphabeta):
     """Generate decomposition from Lanczos alpha-beta matrix and expected eigenvalues.
 
     This is the initial implementation which returns "low level" decomposition,
@@ -60,7 +71,7 @@ def generate_decomposition_LEGACY(labels, expected_eigenvalues, alphabeta, **kwa
         
     return (raw_decomposition,binned_decomposition)
 
-def generate_decomposition(alphabeta,eigenvalue_label_dict,verbose=False):
+def generate_decomposition(alphabeta,eigenvalue_label_dict,lanczos_iterations=None,verbose=False):
     """Generate decomposition from Lanczos alpha-beta matrix and expected eigenvalues.
 
     Arguments:
@@ -70,6 +81,7 @@ def generate_decomposition(alphabeta,eigenvalue_label_dict,verbose=False):
         eigenvalue_label_dict (dict): mapping of eigenvalue to labels (may be tuple of degenerate labels)
             eigenvalue (float)
             labels (int, tuple, etc.)
+        lanczos_iterations (int, optional): number of effective lanczos iterations to which to truncate
 
     Returns:
         decomposition (dict): probabilities binned by label (given as tuple of degenerate labels)
@@ -78,6 +90,10 @@ def generate_decomposition(alphabeta,eigenvalue_label_dict,verbose=False):
 
     # generate Lanczos decomposition
     alpha, beta = alphabeta
+    # trim vectors
+    if (lanczos_iterations is not None):
+        (alpha, beta) = (alpha[:lanczos_iterations],beta[:lanczos_iterations-1])
+    
     eigvals, eigvecs = linalg.eigh_tridiagonal(alpha, beta)
     raw_decomposition = [
         (eigval,eigvecs[0, i]**2)
