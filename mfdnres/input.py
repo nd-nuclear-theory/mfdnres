@@ -251,7 +251,7 @@ def read_file(filename,res_format=None,filename_format=None,verbose=False):
     info_from_filename = parse_filename(filename,filename_format)
 
     if res_format is None:
-        if  info_from_filename.get("code_name") is not None:
+        if info_from_filename.get("code_name") is not None:
             res_format = code_name_map[info_from_filename["code_name"]]
         else:
             raise ValueError("unable to deduce res_format")

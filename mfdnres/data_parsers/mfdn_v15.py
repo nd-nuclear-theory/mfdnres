@@ -314,7 +314,7 @@ def parse_mfdn_ob_rmes(self, tokenized_lines):
         # break out each component as a separate transition type
         transition_types = transition_classes[transition_class]
         for (transition_type, value) in zip(transition_types, data):
-            transition_dict = self.native_transition_properties.setdefault(transition_type, dict())
+            transition_dict = self.mfdn_ob_rmes.setdefault(transition_type, dict())
             transition_dict[Jgn_pair_canonical] = canonicalization_factor*value
 
 def parse_postprocessor_ob_rmes_legacy(self, tokenized_lines):
