@@ -57,13 +57,14 @@ def nuclide_str(nuclide):
 
     return "Z{nuclide[0]:02d}-N{nuclide[1]:02d}".format(nuclide=nuclide)
 
-def qn_str(qn):
+def qn_str(qn,qualifier=""):
     """Obtain standard zero-padded string representation of quantum numbers (J,g,n).
 
     Result is intended for use in filenames.  Format is "00.0-0-00".
 
     Arguments:
         qn (tuple): (J,g,n)
+        qualifier (str, optional): "subscript" for quantum number labels
 
     Returns:
         (str): string representation of qn
@@ -71,7 +72,7 @@ def qn_str(qn):
     """
 
     (J,g,n) = qn
-    return "{J:04.1f}-{g:1d}-{n:02d}".format(J=J,g=g,n=n)
+    return "J{qualifier}{J:04.1f}-g{qualifier}{g:1d}-n{qualifier}{n:02d}".format(J=J,g=g,n=n,qualifier=qualifier)
 
 ################################################################
 # line parser for free-form res files
