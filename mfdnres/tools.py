@@ -16,6 +16,7 @@
     04/02/19 (mac): Add filename construction utility dash_padded.
     04/02/19 (mac): Move effective_am in from analysis.
     01/04/20 (mac): Fix canonicalize_Jgn_pair.
+    11/19/20 (mac): Add qn_string.
 
 """
 
@@ -40,6 +41,22 @@ def dash_padded(text):
 
     padded_text = text if (text=="") else ("-"+text)
     return padded_text
+
+def qn_string(qn):
+    """Obtain standard zero-padded string representation of quantum numbers (J,g,n).
+
+    Result is intended for use in filenames.  Format is "00.0-0-00".
+
+    Arguments:
+        qn (tuple): (J,g,n)
+
+    Returns:
+        (str): string representation of qn
+
+    """
+
+    (J,g,n) = qn
+    return "{J:04.1f}-{g:1d}-{n:02d}".format(J=J,g=g,n=n)
 
 ################################################################
 # line parser for free-form res files
