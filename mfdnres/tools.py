@@ -16,7 +16,7 @@
     04/02/19 (mac): Add filename construction utility dash_padded.
     04/02/19 (mac): Move effective_am in from analysis.
     01/04/20 (mac): Fix canonicalize_Jgn_pair.
-    11/19/20 (mac): Add qn_string.
+    11/19/20 (mac): Add nuclide_str and qn_str.
 
 """
 
@@ -42,7 +42,22 @@ def dash_padded(text):
     padded_text = text if (text=="") else ("-"+text)
     return padded_text
 
-def qn_string(qn):
+def nuclide_str(nuclide):
+    """Obtain standard zero-padded string representation of nuclide (Z,N).
+
+    Result is intended for use in filenames.  Format is "Z00-N00".
+
+    Arguments:
+        nuclide (tuple): (Z,N)
+
+    Returns:
+        (str): string representation of nuclide
+
+    """
+
+    return "Z{nuclide[0]:02d}-N{nuclide[1]:02d}".format(nuclide=nuclide)
+
+def qn_str(qn):
     """Obtain standard zero-padded string representation of quantum numbers (J,g,n).
 
     Result is intended for use in filenames.  Format is "00.0-0-00".
