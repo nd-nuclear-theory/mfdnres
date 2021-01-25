@@ -8,6 +8,7 @@ University of Notre Dame
 + 02/20/20 (mac): Provide eigenvalue input and overhaul to handle degenerate labels.
 + 09/02/20 (mac): Add labeled_decomposition and rebinned_decomposition.
 + 09/21/20 (mac): Provide decomposition based on truncated number of Lanczos iterations.
++ 01/25/21 (pjf): Pull raw decomposition generation into its own function.
 """
 
 import numpy as np
@@ -34,8 +35,38 @@ def read_lanczos(filename="mfdn_alphabeta.dat"):
     # extract raw vectors
     alphabeta_array = np.loadtxt(filename, usecols=(1, 2))
     (alpha,beta) = (alphabeta_array[:, 0], alphabeta_array[:-1, 1])
-        
+
     return (alpha,beta)
+
+def generate_raw_decomposition(alphabeta, lanczos_iterations=None):
+    """Generate raw decomposition from Lanczos alpha-beta matrix.
+
+    This does not perform any binning on eigenvalues.
+
+    Arguments:
+        alphabeta (tuple): (alpha,beta)
+            alpha (np.array of float): alpha matrix elements
+            beta (np.array of float): beta matrix elements
+        lanczos_iterations (int, optional): number of effective Lanczos iterations to which to truncate
+
+    Returns:
+        raw_decomposition (list of tuple): (eigenvalue,probability) pairs from Lanczos alphabeta diagonalization
+    """
+    # extract matrix elements
+    alpha, beta = alphabeta
+
+    # trim vectors
+    if (lanczos_iterations is not None):
+        (alpha, beta) = (alpha[:lanczos_iterations],beta[:lanczos_iterations-1])
+
+    # generate Lanczos decomposition
+    eigvals, eigvecs = linalg.eigh_tridiagonal(alpha, beta)
+    raw_decomposition = [
+        (eigval,eigvecs[0, i]**2)
+        for i, eigval in enumerate(eigvals)
+    ]
+
+    return raw_decomposition
 
 def generate_decomposition_LEGACY(labels, expected_eigenvalues, alphabeta):
     """Generate decomposition from Lanczos alpha-beta matrix and expected eigenvalues.
@@ -56,19 +87,14 @@ def generate_decomposition_LEGACY(labels, expected_eigenvalues, alphabeta):
 
     """
     # generate Lanczos decomposition
-    alpha, beta = alphabeta
-    eigvals, eigvecs = linalg.eigh_tridiagonal(alpha, beta)
-    raw_decomposition = [
-        (eigval,eigvecs[0, i]**2)
-        for i, eigval in enumerate(eigvals)
-    ]
-    
+    raw_decomposition = generate_raw_decomposition(alphabeta)
+
     # bin Lanczos decomposition
     bins = histogram.BinMapping.create_bisection_bins(expected_eigenvalues)
     binned_decomposition = histogram.BinMapping(keys=labels, bins=bins)
     for eigval, probability in raw_decomposition:
         binned_decomposition[eigval] += probability
-        
+
     return (raw_decomposition,binned_decomposition)
 
 def generate_decomposition(alphabeta,eigenvalue_label_dict,lanczos_iterations=None,verbose=False):
@@ -81,7 +107,7 @@ def generate_decomposition(alphabeta,eigenvalue_label_dict,lanczos_iterations=No
         eigenvalue_label_dict (dict): mapping of eigenvalue to labels (may be tuple of degenerate labels)
             eigenvalue (float)
             labels (int, tuple, etc.)
-        lanczos_iterations (int, optional): number of effective lanczos iterations to which to truncate
+        lanczos_iterations (int, optional): number of effective Lanczos iterations to which to truncate
 
     Returns:
         decomposition (dict): probabilities binned by label (given as tuple of degenerate labels)
@@ -89,20 +115,11 @@ def generate_decomposition(alphabeta,eigenvalue_label_dict,lanczos_iterations=No
     """
 
     # generate Lanczos decomposition
-    alpha, beta = alphabeta
-    # trim vectors
-    if (lanczos_iterations is not None):
-        (alpha, beta) = (alpha[:lanczos_iterations],beta[:lanczos_iterations-1])
-    
-    eigvals, eigvecs = linalg.eigh_tridiagonal(alpha, beta)
-    raw_decomposition = [
-        (eigval,eigvecs[0, i]**2)
-        for i, eigval in enumerate(eigvals)
-    ]
+    raw_decomposition = generate_raw_decomposition(alphabeta, lanczos_iterations=lanczos_iterations)
     if (verbose):
         print("Raw decomposition")
         print(np.array(raw_decomposition))
-    
+
     # bin Lanczos decomposition
     expected_eigenvalues = sorted(eigenvalue_label_dict.keys())
     if (verbose):
@@ -120,10 +137,10 @@ def generate_decomposition(alphabeta,eigenvalue_label_dict,lanczos_iterations=No
         print("Binned results (sorted by eigenvalue)")
         for eigenvalue in expected_eigenvalues:
             print("{:+8.3f} : {:8.6f}".format(eigenvalue,binned_decomposition[eigenvalue]))
-        
+
     # convert to dict for well-behaved access using label (rather than eigenvalue) as key
     decomposition = binned_decomposition.as_dict()
-        
+
     return decomposition
 
 def eigenvalue_label_dict_am(am_max,verbose=False):
@@ -180,7 +197,7 @@ def read_eigenvalues(filename,verbose=False):
     label_length = table.shape[1]-1  # all but last column constitutes label
     if (verbose):
         print(table)
-        
+
     # collect labels by eigenvalue
     eigenvalue_label_dict = {}
     for row in table:
@@ -194,7 +211,7 @@ def read_eigenvalues(filename,verbose=False):
     # This is necessary so that they can be used as an immutable binning key.
     for eigenvalue in eigenvalue_label_dict:
         eigenvalue_label_dict[eigenvalue] = tuple(eigenvalue_label_dict[eigenvalue])
-    
+
     # diagnostic output
     if (verbose):
         for (eigenvalue,label_list) in eigenvalue_label_dict.items():
@@ -268,9 +285,9 @@ def labeled_decomposition(label_list,decomposition):
         (label,) : probability
         for (label,probability) in zip(label_list,decomposition)
     }
-        
-    return decomposition_dict    
-        
+
+    return decomposition_dict
+
 ################################################################
 # decomposition binning
 ################################################################
@@ -349,5 +366,5 @@ def rebinned_decomposition(decomposition,label_transformation,verbose=False):
             print(label_transformation,label_list,probability)
         new_label_list = tuple(set(map(label_transformation,label_list)))
         new_decomposition[new_label_list] = new_decomposition.get(new_label_list,0) + probability
-        
+
     return new_decomposition
