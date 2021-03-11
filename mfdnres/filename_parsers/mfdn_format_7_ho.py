@@ -17,6 +17,7 @@
     12/01/20 (pjf):
         + Support natural orbital base state information in descriptor.
         + Support "decomp" flag.
+    12/06/20 (pjf): Add additional decomposition descriptor parsing support.
 """
 
 import re
@@ -57,11 +58,20 @@ def parser(filename):
           r"(\-J(?P<J>[\d\.]+)\-g(?P<g>[01])\-n(?P<n>[\d]+))?"
           r"(\-no(?P<natural_orbital_iteration>\d+))?"
         r")?"  # end natorb group
+        r"(\-J(?P<decomp_J>[\d\.]+)\-g(?P<decomp_g>[01])\-n(?P<decomp_n>[\d]+))?"
+        r"(\-op(?P<decomposition_operator>.+)\-dlan(?P<decomposition_lanczos>\d+))?"
         r"(?P<decomposition_flag>\-decomp)?"
         r"(\-subset(?P<subset_index>\d+))?"
         # epilog
         r").(?P<extension>((res)|(out)|(lanczos)))"
     )
+
+    flag_conversions = {
+        "mixed_parity_flag" : (lambda s  :  (s=="x")),
+        "fci_flag" : (lambda s  :  (s=="-fci")),
+        "natural_orbital_flag" : (lambda s  :  (s=="-natorb")),
+        "decomposition_flag" : (lambda s  :  (s=="-decomp")),
+    }
 
     conversions = {
         "Z" : int,
@@ -72,13 +82,11 @@ def parser(filename):
         "lawson" : float,
         "Nmax" : int,
         "Ncut" : int,
-        "mixed_parity_flag" : (lambda s  :  (s=="x")),
-        "fci_flag" : (lambda s  :  (s=="-fci")),
         "M" : float,
         "lanczos" : int,
-        "natural_orbital_flag" : (lambda s  :  (s=="-natorb")),
         "J": float, "g": int, "n": int,
-        "decomposition_flag" : (lambda s  :  (s=="-decomp")),
+        "decomp_J": float, "decomp_g": int, "decomp_n": int,
+        "decomposition_lanczos": int,
         "natural_orbital_iteration" : int
         }
 
@@ -88,12 +96,21 @@ def parser(filename):
     info = match.groupdict()
 
     # convert fields
+    for key,conversion in flag_conversions.items():
+        info[key] = conversion(info[key])
     for key in conversions:
         conversion = conversions[key]
         info[key] = conversion(info[key]) if (info[key] is not None) else None
 
+    # set default natorb iteration
+    if info.get("natural_orbital_iteration") is None:
+        info["natural_orbital_iteration"] = 0
+
     # build natorb base state
     info["natorb_base_state"] = (info.pop("J"), info.pop("g"), info.pop("n"))
+
+    # build decomposition state
+    info["decomposition_state"] = (info.pop("decomp_J"), info.pop("decomp_g"), info.pop("decomp_n"))
 
     return info
 
