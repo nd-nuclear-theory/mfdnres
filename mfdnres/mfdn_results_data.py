@@ -131,7 +131,9 @@ class MFDnResultsData(results_data.ResultsData):
 
                 observable_name:
 
-                    "M1<type>": M1 moments (<type> in [mu,lp,ln,sp,sn])
+                    "M1", "Dlp", "Dln", "Dsp", "Dsn": M1 moments
+
+                       PROPOSED ALTERNATIVE: "M1<type>": M1 moments (<type> in [mu,lp,ln,sp,sn])
 
                     "E2<type>": E2 moments (<type> in [p,n])
 

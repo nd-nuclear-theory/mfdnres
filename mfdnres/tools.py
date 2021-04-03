@@ -262,7 +262,6 @@ def bool_from_str(s):
 
     return bool(int(s))
 
-
 def singleton_of(conversion):
 
     """Generate conversion function to convert a single-entry list of

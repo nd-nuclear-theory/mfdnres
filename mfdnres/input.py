@@ -2,23 +2,25 @@
 
     Import control code for results files.
 
+    Caveat: "input" is also Python built-in function name.
+
     Language: Python 3
 
     Mark A. Caprio
     University of Notre Dame
 
-    5/31/15 (mac): Initiated (as mfdn_res.py).
-    6/5/15 (mac): Allow user-supplied res file parser.
-    6/5/15 (mac): Restructure as subpackage.
-    6/29/17 (jbutler): Added in inheritance for SpNCCI, updated documentation
-    7/7/17 (mac):
+    05/31/15 (mac): Initiated (as mfdn_res.py).
+    06/05/15 (mac): Allow user-supplied res file parser.
+    06/05/15 (mac): Restructure as subpackage.
+    06/29/17 (jbutler): Added in inheritance for SpNCCI, updated documentation
+    07/07/17 (mac):
         - Generalize slurp_res_files to take list of directory names (after old
         analysis.import_res_files.
         - Add directory name generation utility res_file_directory.
-    7/9/17 (mac):
+    07/09/17 (mac):
         - Restore read_file to be simple dispatch function.
         - Extract SpNCCIMeshPointData.
-    10/6/17 (mac): Extract MFDnRunData subclass to mfdn.py.
+    10/06/17 (mac): Extract MFDnRunData subclass to mfdn.py.
     10/10/17 (mac): Extract results data base class to results_data.py.
     09/20/18 (pjf): Store filename in ResultsData.
     02/22/19 (pjf): Store only basename of filename in ResultsData.

@@ -17,5 +17,6 @@ from . import analysis
 
 # optional: user must load
 ## from . import band
-## from . import histogram
+## from . import data
 ## from . import decomposition
+## from . import histogram

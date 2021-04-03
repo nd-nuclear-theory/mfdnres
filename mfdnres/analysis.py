@@ -34,6 +34,8 @@
         - Revise and extend make_level_table_* family of functions.
     07/11/19 (mac): Add mesh_key_listing for mesh diagnostic listing.
     06/18/20 (pjf): Make sorted_mesh_data only sort, not consolidate.
+    03/16/21 (mac): Standardize structured array observable column name as "value".
+    04/02/21 (mac): Add make_obs_table for generic single-observable tabulation.
 """
 
 import functools
@@ -478,8 +480,72 @@ def merged_mesh(mesh,keys,postprocessor=None,verbose=False):
 # tabulation functions -- observable vs. parameters
 ################################################################
 
+# "make table" functions now DEPRECATED in favor of pandas-based analysis in
+# mfdnres.data.
+
+def make_obs_table(mesh_data,key_descriptor,obs_extractor,key_list=None,prune=False):
+    """Generate tabulation of generic observable on parameter mesh.
+
+    The key descriptor is used to provide the parameter columns of the
+    tabulation (and may in general be different from the key which was
+    used for sorting the data, e.g., it might add additional parameter
+    columns).
+
+    It is expected that the mesh data have already been consolidated to make the
+    key values unique.  Only key tuples which are present in both sets of mesh
+    data are retained.
+
+    Results are then sorted by key tuple.
+
+    Data format:
+        param1 param2 ... E
+
+    Arguments:
+        mesh_data (list of ResultsData): data set
+        key_descriptor (tuple of tuple): dtype descriptor for key
+        obs_extractor (callable): function to extract observable value from results data object
+        key_list (list of tuple, optional): key list for data points; defaults to
+            keys for which qn found
+        prune (bool, optional): whether or not to prune nan values from table
+
+    Returns:
+       (np.ndarray): data table as structured array
+
+    """
+
+    # process results into dictionaries
+    results_dict = make_results_dict(mesh_data,key_descriptor)
+
+    # find common keys
+    if (key_list is not None):
+        common_key_list = key_list
+    else:
+        common_key_list = common_keys([results_dict])
+    ## print("Common keys: {}".format(common_key_list))
+
+    # tabulate values
+    key_function = make_key_function(key_descriptor)
+    table_data = []
+    for key in common_key_list:
+        results_data = results_dict[key]
+        value = obs_extractor(results_data)
+        if (prune and np.isnan(value)):
+            continue
+        table_data += [
+            key + (value,)
+        ]
+
+    # convert to structured array
+    table = np.array(
+        table_data,
+        dtype = list(key_descriptor)+[("value",float)]
+     )
+    return table
+
 def make_energy_table(mesh_data,key_descriptor,qn,key_list=None,prune=False):
     """Generate energy tabulation on parameter mesh.
+
+    NOTE: May now be trivially reimplemented in terms of make_obs_table.
 
     The key descriptor is used to provide the parameter columns of the
     tabulation (and may in general be different from the key which was
@@ -504,7 +570,7 @@ def make_energy_table(mesh_data,key_descriptor,qn,key_list=None,prune=False):
         prune (bool, optional): whether or not to prune nan values from table
 
     Returns:
-       (array): data table
+       (np.ndarray): data table as structured array
 
     """
 
@@ -576,7 +642,7 @@ def make_energy_difference_table(
         prune (bool, optional): whether or not to prune nan values from table
 
     Returns:
-       (array): data table
+       (np.ndarray): data table as structured array
 
     """
 
@@ -624,6 +690,8 @@ def make_energy_difference_table(
 def make_radius_table(mesh_data,key_descriptor,radius_type,qn,key_list=None,prune=False):
     """ Generate radius tabulation on parameter mesh.
 
+    NOTE: May now be trivially reimplemented in terms of make_obs_table.
+
     See docstring for make_energy_table for sorting and tabulation conventions.
 
     Arguments:
@@ -633,7 +701,7 @@ def make_radius_table(mesh_data,key_descriptor,radius_type,qn,key_list=None,prun
         qn (tuple): quantum numbers (J,g,n) of level to retrieve
 
     Returns:
-       (array): data table
+       (np.ndarray): data table as structured array
     """
 
    # process results into dictionaries
@@ -661,7 +729,7 @@ def make_radius_table(mesh_data,key_descriptor,radius_type,qn,key_list=None,prun
     # convert to structured array
     table = np.array(
         table_data,
-        dtype = list(key_descriptor)+[("r",float)]
+        dtype = list(key_descriptor)+[("value",float)]
      )
     return table
 
@@ -682,7 +750,7 @@ def make_am_table(mesh_data,key_descriptor,qn):
         qn (tuple): quantum numbers (J,g,n) of level to retrieve
 
     Returns:
-       (array): data table
+       (np.ndarray): data table as structured array
     """
 
     # tabulate values
@@ -707,6 +775,8 @@ def make_am_table(mesh_data,key_descriptor,qn):
 def make_rme_table(mesh_data,key_descriptor,observable,qnf,qni):
     """ Generate reduced matrix element (RME) tabulation on parameter mesh.
 
+    NOTE: May now be trivially reimplemented in terms of make_obs_table.
+
     TODO: Update to sort keys with common_key_list API.
 
     Data format:
@@ -722,7 +792,7 @@ def make_rme_table(mesh_data,key_descriptor,observable,qnf,qni):
         qnf, qni (tuple): quantum numbers (J,g,n) of final and initial levels
 
     Returns:
-       (array): data table
+       (np.ndarray): data table as structured array
     """
 
     # tabulate values
@@ -735,12 +805,14 @@ def make_rme_table(mesh_data,key_descriptor,observable,qnf,qni):
     # convert to structured array
     table = np.array(
         table_data,
-        dtype = list(key_descriptor)+[("RME",float)]
+        dtype = list(key_descriptor)+[("value",float)]
      )
     return table
 
 def make_moment_table(mesh_data,key_descriptor,observable,qn,key_list=None,prune=False):
     """ Generate moment tabulation on parameter mesh.
+
+    NOTE: May now be trivially reimplemented in terms of make_obs_table.
 
     Data format:
         <key> moment
@@ -755,7 +827,7 @@ def make_moment_table(mesh_data,key_descriptor,observable,qn,key_list=None,prune
         qn (tuple): quantum numbers (J,g,n) of level
 
     Returns:
-       (array): data table
+       (np.ndarray): data table as structured array
     """
     # process results into dictionaries
     results_dict = make_results_dict(mesh_data,key_descriptor)
@@ -781,12 +853,14 @@ def make_moment_table(mesh_data,key_descriptor,observable,qn,key_list=None,prune
     # convert to structured array
     table = np.array(
         table_data,
-        dtype = list(key_descriptor)+[("moment",float)]
+        dtype = list(key_descriptor)+[("value",float)]
      )
     return table
 
 def make_rtp_table(mesh_data,key_descriptor,observable,qnf,qni,key_list=None,prune=False,verbose=False):
     """ Generate reduced transition probability (RTP) tabulation on parameter mesh.
+
+    NOTE: May now be trivially reimplemented in terms of make_obs_table.
 
     Data format:
         <key> RTP
@@ -801,7 +875,7 @@ def make_rtp_table(mesh_data,key_descriptor,observable,qnf,qni,key_list=None,pru
         qnf, qni (tuple): quantum numbers (J,g,n) of final and initial levels
 
     Returns:
-       (array): data table
+       (np.ndarray): data table as structured array
     """
 
     # process results into dictionaries
@@ -828,7 +902,7 @@ def make_rtp_table(mesh_data,key_descriptor,observable,qnf,qni,key_list=None,pru
     # convert to structured array
     table = np.array(
         table_data,
-        dtype = list(key_descriptor)+[("RTP",float)]
+        dtype = list(key_descriptor)+[("value",float)]
      )
     return table
 
