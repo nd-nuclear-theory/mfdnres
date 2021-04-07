@@ -12,6 +12,7 @@
       + Implement generic nuclide_observable support (including compount difference/ratio observables)
       + Implement hw scan plotting routines and canned write_hw_scan_plot
     - 04/02/21 (mac): Integrate into mfdnres as mfdnres.data.
+    - 04/06/21 (mac): Support positive Nmax_relative in styling functions.
 
 """
 import os
@@ -404,16 +405,11 @@ def Nmax_dashing(Nmax_relative,base_length=8,exponent_scale=8):
         (tuple): dashing directive
 
     """
-    if Nmax_relative == 0:
+    if Nmax_relative >= 0:
         return (None,None)
     elif Nmax_relative < 0:
         r = 2**(Nmax_relative/exponent_scale)
         return (base_length*r,base_length*(1-r))
-
-    elif Nmax_relative == -4:
-        return (2,2)
-    elif Nmax_relative < -4:
-        return (1,2)
 
     raise ValueError("invalid Nmax_relative {}".format(Nmax_relative))
 
@@ -442,7 +438,10 @@ def Nmax_dashing_scidraw(Nmax_relative):
     raise ValueError("invalid Nmax_relative {}".format(Nmax_relative))
 
 def Nmax_color(Nmax_relative):
-    """ Provide color based on relative Nmax.
+    """Provide color based on relative Nmax.
+
+    Positive Nmax_relative is permitted to allow addition of ad hoc high-Nmax
+    data points.
 
     Arguments:
 
@@ -451,8 +450,9 @@ def Nmax_color(Nmax_relative):
     Returns:
     
         (str): color directive
+
     """
-    if Nmax_relative == 0:
+    if Nmax_relative >= 0:
         return "firebrick"
     elif Nmax_relative < 0:
         return "black"
@@ -471,10 +471,9 @@ def Nmax_symbol_scale(Nmax_relative,exponent_scale=8):
         (float): symbol scale factor (max 1.0)
     """
 
-    if Nmax_relative <= 0:
-        return 2**(Nmax_relative/exponent_scale)
+    return 2**(Nmax_relative/exponent_scale)
 
-    raise ValueError("invalid Nmax_relative {}".format(Nmax_relative))
+    ## raise ValueError("invalid Nmax_relative {}".format(Nmax_relative))
 
 def Nmax_plot_style(Nmax_relative,marker_size=6):
     """
@@ -489,8 +488,11 @@ def Nmax_plot_style(Nmax_relative,marker_size=6):
 
         (dict): kwargs for ax.plot
     """
+
+    Nmax_marker_face_color = None if Nmax_relative <=0 else "white"
     return dict(
         markersize=marker_size*Nmax_symbol_scale(Nmax_relative),
+        markerfacecolor=Nmax_marker_face_color,
         linewidth=1,
         dashes=Nmax_dashing(Nmax_relative),
         color=Nmax_color(Nmax_relative),
