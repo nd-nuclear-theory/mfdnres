@@ -58,11 +58,16 @@ Setup
 
 """
 
+import itertools
+import os
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.backends.backend_pgf
 import numpy as np
 import pandas as pd
 
+# TODO 04/08/21 (mac): Rename mfdnres.data, once new name decided...
 import mfdnres
 import mfdnres.data
 import mfdnres.ncci
@@ -73,19 +78,50 @@ import mfdnres.ncci
 
 # TUTORIAL: Define some sensible defaults for matplotlib...
 
-mpl.rcParams["font.family"] = "serif"
-mpl.rcParams["mathtext.fontset"] = "dejavuserif"
-mpl.rcParams["xtick.labelsize"] = "small"
-mpl.rcParams["ytick.labelsize"] = "small"
-mpl.rcParams["lines.linewidth"] = 1
-mpl.rcParams["axes.prop_cycle"] = mpl.cycler(color=["black"])
-mpl.rcParams["xtick.direction"] = "in"
-mpl.rcParams["xtick.major.pad"] = 1
-mpl.rcParams["ytick.direction"] = "in"
-mpl.rcParams["ytick.major.pad"] = 1
+mpl.rcParams.update(mfdnres.data.SENSIBLE_PLOT_STYLE)
 
 ################################################################
-# control code
+# global mesh and styling definitions
+################################################################
+
+# TUTORIAL: While normally global definitions are to be avoided, sometimes
+# it is desirable to have a uniform set of definitions throughout an
+# analysis.  Here we make some definitions which define itneractions and
+# parameter meshes used throughout the analysis examples below.  To avoid
+# confusion with local variables, we will follow Google Python style
+# convention and use all caps.
+    
+# list of interactions to use: interaction name and Coulomb on/off flag
+INTERACTION_COULOMB_LIST = [
+    ("Daejeon16",1),
+    ("JISP16",1),
+    ("LENPICchi2bi2C",0)
+]
+
+# hw range for each interaction
+HW_RANGE_BY_INTERACTION_COULOMB = {
+    ("Daejeon16",1): (5.,25.),
+    ("JISP16",1): (10.,30.),
+    ("LENPICchi2bi2C",0): (15.,35.),
+}
+
+# matplotlib marker style for each interaction
+MARKER_BY_INTERACTION_COULOMB = {
+    ("Daejeon16",1): "o",
+    ("JISP16",1): "s",
+    ("LENPICchi2bi2C",0): "D",
+}
+
+# lower Nmax cutoff
+NMAX_MIN = 4
+
+# highest Nmax to use for each nuclide
+NMAX_MAX_BY_NUCLIDE = {
+    (4,5): 10
+}
+
+################################################################
+# data input
 ################################################################
 
 def read_data():
@@ -147,16 +183,16 @@ def read_data():
         verbose=False
     )
 
-    # select cases of interest
+    # filter for cases of interest
 
-    # TUTORIAL: Here we can optionally prune out data we don't want to include,
-    # e.g., here we exclude any data with Nmax<4 and data calculated at the
-    # "nonstandard" mesh point hw=7.5.
+    # TUTORIAL: Here we can optionally prune out data we want to completely
+    # exclude from the analysis.  E.g., in this example, we exclude data
+    # calculated at the "nonstandard" mesh point hw=7.5.
     
     mesh_data = [
         results_data
         for results_data in mesh_data
-        if results_data.params["Nmax"]>=4 and results_data.params["hw"]!=7.5
+        if results_data.params["hw"]!=7.5
     ]
     
     # TUTORIAL: To see what our mesh of MFDnResultsData objects looks like
@@ -172,214 +208,95 @@ def read_data():
 
     return mesh_data
 
-def make_tabulations_be2_ratio(mesh_data):
-    """ Generate ratios of "upward" transition B(E2) to "moment" B(E2).
-
-    Legacy: tabulate_obs -> ObservablePlots
-    """
-
-    # content lists
-    interaction_coulomb_list = [("Daejeon16",1),("JISP16",1),("LENPICchi2bi2C",0)]
-    nuclide_transition_pair_list = [
-        
-        # 7Be/7Li transition to moment ratio
-        (((3,4),("E2p",(0.5,1,1),(1.5,1,1))),((3,4),("E2p",(1.5,1,1),(1.5,1,1)))),
-        (((4,3),("E2p",(0.5,1,1),(1.5,1,1))),((4,3),("E2p",(1.5,1,1),(1.5,1,1)))),
-
-        # 8Li transition to moment ratio
-        (((3,5),("E2p",(1.0,0,1),(2.0,0,1))),((3,5),("E2p",(2.0,0,1),(2.0,0,1)))),
-        ##(((3,5),("E2p",(3.0,0,1),(2.0,0,1))),((3,5),("E2p",(2.0,0,1),(2.0,0,1)))),
-
-        # 9Be transition to moment ratio
-        (((4,5),("E2p",(2.5,1,1),(1.5,1,1))),((4,5),("E2p",(1.5,1,1),(1.5,1,1)))),
-        (((4,5),("E2p",(3.5,1,1),(1.5,1,1))),((4,5),("E2p",(1.5,1,1),(1.5,1,1)))),
-        
-    ]
-
-    # tabulate absolute transitions
-    nuclide_transition_set = {
-        nuclide_transition_pair[member]
-        for nuclide_transition_pair in nuclide_transition_pair_list for member in [0,1]
-    }
-    for interaction_coulomb in interaction_coulomb_list:
-        for nuclide_transition in sorted(list(nuclide_transition_set)):
-            tabulate_obs.make_rtp_table_file(
-                mesh_data,interaction_coulomb,nuclide_transition,
-                directory="data/8li-coulex/rtp",
-                verbose=False)
-
-    # tabulate ratios
-    for interaction_coulomb in interaction_coulomb_list:
-        for nuclide_transition_pair in nuclide_transition_pair_list:
-            tabulate_obs.make_rtp_ratio_table_file(
-                mesh_data,interaction_coulomb,nuclide_transition_pair,
-                directory="data/8li-coulex/rtp-ratio",
-                verbose=False
-            )
-
-def make_plots(mesh_data):
-    """ Generate plots for 8Li moment and transition analysis.
-
-    pdftk plot-*-moment-M1-02.0-0-01.pdf plot-*-rtp-M1-02.0-0-01-01.0-0-01.pdf plot-*-rtp-M1-02.0-0-01-03.0-0-01.pdf output tabulate_obs_8li-coulex_m1-COMBO_210316.pdf
-    """
-
-    # content lists
-    interaction_coulomb_list = [("Daejeon16",1),("JISP16",1),("LENPICchi2bi2C",0)]
-    nuclide_observable_list = {
-
-        # energies
-        ((3,5),("energy",(2.0,0,1))) : (-50.,20.),
-        ("diff", ((3,5),("energy",(1.0,0,1))), ((3,5),("energy",(2.0,0,1)))) : (0.,3.),
-        ("diff", ((3,5),("energy",(1.0,0,2))), ((3,5),("energy",(1.0,0,1)))) : (0.,7.),
-        
-        # moments (M1)
-        ((3,5),("moment","M1",(2.0,0,1))) : (0.,2.),
-        ## ((3,5),("M1",(1.0,0,1))),
-        
-        # transitions (M1 downward)
-        ((3,5),("rtp","M1",(2.0,0,1),(1.0,0,1))) : (-3.,0.),
-        ##((3,5),("rtp","M1",(2.0,0,1),(3.0,0,1))),
-
-        # ratios (M1)
-        ("ratio", ((3,5),("rtp","M1",(2.0,0,1),(1.0,0,1))), ((3,5),("momentsqr","M1",(2.0,0,1)))) : (0.,4.),
-
-        # moments (E2)
-        ((3,5),("moment","E2p",(2.0,0,1))) : (0,5),
-        ## ((3,5),("E2p",(1.0,0,1))),
-        
-        # transitions (E2 upward)
-        ((3,5),("rtp","E2p",(1.0,0,1),(2.0,0,1))) : (0,5),
-        ##((3,5),("rtp","E2p",(3.0,0,1),(2.0,0,1))),
-
-        # ratios (E2)
-        ("ratio", ((3,5),("rtp","E2p",(1.0,0,1),(2.0,0,1))), ((3,5),("momentsqr","E2p",(2.0,0,1)))) : (0,0.3),
-
-        ("ratio", ((3,5),("moment","E2p",(1.0,0,1))), ((3,5),("moment","E2p",(2.0,0,1)))) : (0,0.6),
-        
-    }
-
-    # plotting parameters
-    Nmax_max=14
-    hw_range_by_interaction_coulomb = {
-        ("Daejeon16",1): (5,25),
-        ("JISP16",1): (10,30),
-        ("LENPICchi2bi2C",0): (15,35),
-        }
-    
-    data_directory="data"
-
-    # tabulate observables
-    for interaction_coulomb in interaction_coulomb_list:
-        for nuclide_observable in nuclide_observable_list:
-
-            (interaction,coulomb) = interaction_coulomb
-            
-            # generate descriptor
-            descriptor=mfdnres.data.hw_scan_descriptor(interaction_coulomb,nuclide_observable)
-            print(descriptor)
-            
-            # select interaction/coulomb
-            mesh_data_selected = mfdnres.analysis.selected_mesh_data(
-                mesh_data,
-                {"interaction":interaction,"coulomb":coulomb}
-            )
-
-            # tabulate and plot
-            observable_data = mfdnres.data.make_hw_scan_data(
-                mesh_data_selected,nuclide_observable
-                )
-            mfdnres.data.write_hw_scan_data(
-                descriptor,observable_data,
-                directory=data_directory
-            )
-            mfdnres.data.write_hw_scan_plot(
-                descriptor,
-                interaction_coulomb,nuclide_observable,
-                observable_data,
-                hw_range=hw_range_by_interaction_coulomb[interaction_coulomb],
-                observable_range=nuclide_observable_list[nuclide_observable],
-                Nmax_max=Nmax_max,
-                directory=data_directory
-            )
-
-
 ################################################################
-# single plot -- basic example
+# Example: basic single plot
 ################################################################
 
 def make_basic_plot(mesh_data):
     """ Provides a bare-bones example of making a single analysis plot.
+
+    We take the ground state energy from bebands Fig. 6(a) for this example.
+
     """
 
     # TUTORIAL: Here is where the output will go.  Be sure to make this
     # subdirectory, if it doesn't already exist.
     
-    data_directory="data/single"
+    plot_directory="plots/basic"
 
-    # select interaction/coulomb
-
-    # TUTORIAL: The tabulation routines will take care of selecting the nuclide
-    # and iterating over (Nmax,hw).  But right now our mesh contains results
-    # from many interactions.  We have to filter for the interaction of
-    # interest.
-    
-    interaction_coulomb = ("Daejeon16",1)
-    (interaction,coulomb) = interaction_coulomb
-    mesh_data_selected = mfdnres.analysis.selected_mesh_data(
-        mesh_data,
-        {"interaction":interaction,"coulomb":coulomb}
-    )
+    # mesh parameters
+    interaction_coulomb = INTERACTION_COULOMB_LIST[0]  # ("Daejeon16",1)
+    hw_range = HW_RANGE_BY_INTERACTION_COULOMB[interaction_coulomb]  # (5.,25.)
+    nuclide = (4,5)
+    Nmax_max = NMAX_MAX_BY_NUCLIDE[nuclide]  # 10
 
     # define observable
 
     # TUTORIAL: It turns out to be most convenient to group our nuclide and
     # observble together in a tuple.  We usually need to know both together.
-    #
-    # Simple observables have the form:
-    #
-    #     (<observable>, [<operator>], qn, [qn])
-    #
-    # Examples:
-    #
-    #     ("energy", (1.5,1,1))  # energy of first 3/2- state
-    #
-    #     ("rtp", "E2p",  (1.5,1,1),  (2.5,1,1))  # E2 (proton) reduced transition probability B(E2;5/2->3/2)
+    # See the docstring to data.make_hw_scan_data for a summary of the syntax
+    # for observables.
     
     nuclide_observable = ((4,5), ("energy", (1.5,1,1)))
         
     # generate descriptor
 
     # TUTORIAL: The "descriptor" is a standard string representation of the
-    # observable, which we will use in out output filenames.
+    # observable, which we will use in output filenames.
     
     descriptor=mfdnres.data.hw_scan_descriptor(interaction_coulomb,nuclide_observable)
-    print(descriptor)
+
+    # TUTORIAL: To see the descriptors...
+    if False:
+        print(descriptor)
 
     # tabulate
 
     # TUTORIAL: Here we digest the observable data into a pandas.DataFrame
-    # object.  This is basically a "spreadsheet".  The observable values are in
-    # a single column.  The "index" (row label), technically a pandas
-    # "multi-index", is (Nmax,hw).  The column label is "values".
+    # object.  This is basically a "spreadsheet" with just one column,
+    # containing the observable values.  The (Nmax,hw) for each value is given
+    # as a compound row label (technically, a pandas MultiIndex).
 
-    observable_data = mfdnres.data.make_hw_scan_data(
-        mesh_data_selected,nuclide_observable
-        )
-
-    # TUTORIAL: To see the pandas data frame...
-    if False:
-        print(observable_data)
-        exit()
-
-    # prune data
+    # TUTORIAL: The tabulation routine mfdnres.data.make_hw_scan_data will take
+    # care of selecting the nuclide. But our mesh contains results from many
+    # interactions.  We therefore have to explicitly filter for the interaction
+    # of interest, using the optional argument
+    #
+    #    selector =  {"interaction": interaction, "coulomb": coulomb}
+    #
+    # This is equivalent to manually filtering the mesh:
+    #
+    #     mesh_data_selected = mfdnres.analysis.selected_mesh_data(
+    #         mesh_data,
+    #         {"interaction":interaction,"coulomb":coulomb}
+    #     )
 
     # TUTORIAL: In general, we may want to prune to a given window in hw and
-    # Nmax.  E.g., get rid of a stray high-Nmax test run, or extremes in hw.
+    # Nmax.  E.g., this gets rid of stray low-Nmax or high-Nmax test runs, or
+    # extremes in hw beyond the desired plotting range.  We could do this cut
+    # "before" tabulation, by triming the data mesh.  However, instead, we opt
+    # to do this cut "afterwards", by slicing the pandas DataFrame on its
+    # (Nmax,hw) MultiIndex.  The ranges are specified using the optional
+    # arguments
+    #
+    #     Nmax_range, hw_range
+    #
+    # This is equivalent to
+    #
+    #     observable_data = observable_data.loc[(slice(*Nmax_range),slice(*hw_range)),:]
+
+    # TUTORIAL: To see selected mesh and final sliced DataFrame, set
+    # verbose=True.
     
-    hw_range = (5.,25.)
-    Nmax_max = 10
-    observable_data = observable_data.loc[(slice(0,Nmax_max),slice(*hw_range)),:]
-        
+    interaction_coulomb = INTERACTION_COULOMB_LIST[0]  # ("Daejeon16",1)
+    (interaction,coulomb) = interaction_coulomb
+    observable_data = mfdnres.data.make_hw_scan_data(
+        mesh_data,nuclide_observable,
+        selector =  {"interaction": interaction, "coulomb": coulomb},
+        Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range,
+        verbose = False
+        )
+
     # write data
 
     # TUTORIAL: Right here and now we write out the tabular data.  This way we
@@ -389,7 +306,7 @@ def make_basic_plot(mesh_data):
     
     mfdnres.data.write_hw_scan_data(
         descriptor,observable_data,
-        directory=data_directory
+        directory=plot_directory
     )
 
     # make plot
@@ -411,42 +328,28 @@ def make_basic_plot(mesh_data):
         hw_range=hw_range,
         observable_range=observable_range,
         Nmax_max=Nmax_max,
-        directory=data_directory
+        directory=plot_directory,
+        verbose=True
     )
 
 ################################################################
-# mutiple analysis plots
+# Example: series of individual plots
 ################################################################
 
-def make_analysis_plots(mesh_data):
-    """ Make a series of standalone analysis plots.
+def make_plot_series(mesh_data):
+    """ Make a series of standalone plots for analysis purposes.
+
+    We take the observables from bebands Fig. 6 for this example, but with
+    mutltiple interactions.
     """
 
     # TUTORIAL: When you get the error message
     #
-    #    FileNotFoundError: [Errno 2] No such file or directory: 'data/analysis/hw-scan_Daejeon16-1_Z04-N05-energy-01.5-1-01_table.dat'
+    #    FileNotFoundError: [Errno 2] No such file or directory: 'plots/series/hw-scan_Daejeon16-1_Z04-N05-energy-01.5-1-01_table.dat'
     #
     # don't panic.  That's just because you forgot to make this directory...
     
-    data_directory="data/analysis"
-
-    # mesh definitions
-    interaction_coulomb_list = [
-        ("Daejeon16",1),
-        ("JISP16",1),
-        ##("LENPICchi2bi2C",0)
-    ]
-    hw_range_by_interaction_coulomb = {
-        ("Daejeon16",1): (5.,25.),
-        ("JISP16",1): (10.,30.),
-        ("LENPICchi2bi2C",0): (15.,35.),
-    }
-    marker_by_interaction_coulomb = {
-        ("Daejeon16",1): "o",
-        ("JISP16",1): "s",
-        ("LENPICchi2bi2C",0): "D",
-    }
-    Nmax_max = 10
+    plot_directory="plots/series"
 
     # observable definitions
 
@@ -458,7 +361,8 @@ def make_analysis_plots(mesh_data):
     # differences or ratios of other (simple) observables.  The descriptor
     # string, plot labels, etc., will also be automatically constructed out of
     # those for the individual simple observables, as well.
-    
+
+    nuclide = (4,5)  # for choosing Nmax_max
     nuclide_observable_list = {
 
         # energies
@@ -477,38 +381,31 @@ def make_analysis_plots(mesh_data):
     }
 
     # tabulate and plot
-    for interaction_coulomb in interaction_coulomb_list:
+    for interaction_coulomb in INTERACTION_COULOMB_LIST:
         for nuclide_observable in nuclide_observable_list:
 
-            # select interaction/coulomb
             (interaction,coulomb) = interaction_coulomb
-            mesh_data_selected = mfdnres.analysis.selected_mesh_data(
-                mesh_data,
-                {"interaction":interaction,"coulomb":coulomb}
-            )
 
             # generate descriptor
-
             descriptor=mfdnres.data.hw_scan_descriptor(interaction_coulomb,nuclide_observable)
-            print(descriptor)
 
             # tabulate
+            hw_range = HW_RANGE_BY_INTERACTION_COULOMB[interaction_coulomb]
+            Nmax_max = NMAX_MAX_BY_NUCLIDE[nuclide]
             observable_data = mfdnres.data.make_hw_scan_data(
-                mesh_data_selected,nuclide_observable
+                mesh_data,nuclide_observable,
+                selector =  {"interaction": interaction, "coulomb": coulomb},
+                Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range
             )
             
             # TUTORIAL: To see the pandas data frames...
             if False:
                 print(observable_data)
-
-            # prune data
-            hw_range = hw_range_by_interaction_coulomb[interaction_coulomb]
-            observable_data = observable_data.loc[(slice(0,Nmax_max),slice(*hw_range)),:]
         
             # write data
             mfdnres.data.write_hw_scan_data(
                 descriptor,observable_data,
-                directory=data_directory
+                directory=plot_directory
             )
 
             # make plot
@@ -526,15 +423,341 @@ def make_analysis_plots(mesh_data):
                 hw_range=hw_range,
                 observable_range=observable_range,
                 Nmax_max=Nmax_max,
-                directory=data_directory
+                directory=plot_directory,
+                verbose=True
             )
+
+################################################################
+# Example: make multipage survey plot
+################################################################
+
+def make_survey_plot(mesh_data):
+    """Make a multipanel survey of observables for multiple interactions.
+
+    We take a sampling of excitation energies in the same nuclide as our
+    observable set, but these observables could also typically represent a
+    survey across multiple nuclides.
+
+    """
+
+    plot_directory="plots/survey"
+
+    # figure layout parameters
+    num_rows = 3
+    num_cols = len(INTERACTION_COULOMB_LIST)
+    figsize = np.array((3,2))*np.array((num_cols,num_rows))
+
+    # figure contents
+    nuclide = (4,5)
+    qn_ref = (1.5,1,1)  # reference state for Ex
+    qn_list = [
+        # yrast band
+        ## (1.5,1,1),
+        (2.5,1,1),
+        (3.5,1,1),
+        (4.5,1,1),
+        # yrare band
+        (0.5,1,1),
+        (1.5,1,2),
+        (2.5,1,2),
+        (3.5,1,2),
+    ]
+        
+    # initialize multipage pdf file
+    pdf_file_name = os.path.join(
+        plot_directory,
+        "survey.pdf"
+    )
+    print(pdf_file_name)
+    pdf = mpl.backends.backend_pgf.PdfPages(pdf_file_name)
+
+    # for each page of observables
+    for qn_sublist in mfdnres.data.partitions(qn_list,num_rows):
+
+        # initialize figure for page
+        fig = plt.figure(figsize=figsize)
+        gs = fig.add_gridspec(nrows=num_rows, ncols=num_cols, hspace=0., wspace=0.)
+
+        # for each row
+        for (row,qn) in enumerate(qn_sublist):
+        
+            observable_data_by_col = {}
+            
+            # define observable
+            nuclide_observable = ("diff", (nuclide, ("energy", qn)), (nuclide, ("energy", qn_ref)))
+
+            # first pass over columns -- tabulate
+            for (col,interaction_coulomb) in enumerate(INTERACTION_COULOMB_LIST):
+
+                (interaction,coulomb) = interaction_coulomb
+
+                # generate descriptor
+                descriptor=mfdnres.data.hw_scan_descriptor(interaction_coulomb,nuclide_observable)
+
+                # tabulate
+                hw_range = HW_RANGE_BY_INTERACTION_COULOMB[interaction_coulomb]
+                Nmax_max = NMAX_MAX_BY_NUCLIDE[nuclide]
+                observable_data = mfdnres.data.make_hw_scan_data(
+                    mesh_data,nuclide_observable,
+                    selector =  {"interaction": interaction, "coulomb": coulomb},
+                    Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range
+                )
+                
+                # write data
+                mfdnres.data.write_hw_scan_data(
+                    descriptor,observable_data,
+                    directory=plot_directory
+                )
+
+                # save data for plotting
+                observable_data_by_col[col] = observable_data
+                
+            # second pass over columns -- find common y-axis range
+            observable_range = (0,0)
+            for (col,interaction_coulomb) in enumerate(INTERACTION_COULOMB_LIST):
+                observable_data = observable_data_by_col[col]
+                observable_range = (min(observable_data.min()["value"],observable_range[0]),max(observable_data.max()["value"],observable_range[1]))
+
+            # third pass over columns -- plot
+            for (col,interaction_coulomb) in enumerate(INTERACTION_COULOMB_LIST):
+                observable_data = observable_data_by_col[col]
+
+                # construct axes
+                ax = fig.add_subplot(gs[row, col])
+            
+                # draw axes
+                hw_range = HW_RANGE_BY_INTERACTION_COULOMB[interaction_coulomb]
+                mfdnres.data.set_up_hw_scan_axes(
+                    ax,
+                    nuclide_observable,
+                    hw_range,
+                    observable_range,
+                    observable_range_extension=(0.05,0.10)
+                )
+
+                # eliminate labels from interior panel edges
+                if not ax.is_last_row():
+                    ax.set_xlabel(None)
+                    ax.set_xticklabels([])
+                if not ax.is_first_col():
+                    ax.set_ylabel(None)
+                    ax.set_yticklabels([])
+
+                # make panel label
+                mfdnres.data.add_observable_panel_label(
+                    ax,
+                    interaction_coulomb,
+                    nuclide_observable
+                )
+
+                # make plot
+                mfdnres.data.add_hw_scan_plot(ax,observable_data,Nmax_max)
+                
+        # finalize figure for page
+        pdf.savefig()
+        plt.close()
+                    
+    # finalize multipage pdf
+    pdf.close()
     
+################################################################
+# Example: heterogeneous multipanel plot
+################################################################
+
+def make_multipanel_plot(mesh_data):
+    """Make a custom multipanel plot (with some observables overlaid).
+
+    We roughly reproduce bebands Fig. 6 for this example, sans some annotations.
+
+    """
+
+    plot_directory="plots/multipanel"
+
+    # plot contents
+    interaction_coulomb = INTERACTION_COULOMB_LIST[0]
+    nuclide = (4,5)
+    Nmax_max = NMAX_MAX_BY_NUCLIDE[nuclide]
+    panel_letter_by_panel = {
+        # TODO 04/08/21 (mac): Implement generic panel letter generator function
+        # a la SciDraw Multipanel.
+        (0,0): "a",
+        (1,0): "b",
+        (0,1): "c",
+        (1,1): "d",
+        }
+    panel_label_text_by_panel = {
+        (0,0): "$E$",
+        (1,0): "$\Delta E$",
+        (0,1): "$B(E2)$",
+        (1,1): "$B(E2)$ ratio",
+        }
+    observable_range_by_panel = {
+        (0,0): (-60.,-43.),
+        (1,0): (0.,5.),
+        (0,1): (0.,25.),
+        (1,1): (0.,5.),
+        }
+    nuclide_observable_list_by_panel = {
+
+        (0,0): [
+            # energies
+            ((4,5), ("energy", (1.5,1,1))),
+            ((4,5), ("energy", (2.5,1,1))),
+        ],
+
+        (1,0): [
+        # excitation energy
+        ("diff", ((4,5), ("energy", (2.5,1,1))), ((4,5), ("energy", (1.5,1,1)))),
+        ],
+
+        (0,1): [
+            # B(E2)s
+            ((4,5), ("rtp", "E2p", (1.5,1,1), (2.5,1,1))),
+            ((4,5), ("rtp", "E2p", (1.5,1,1), (3.5,1,1))),
+        ],
+
+        (1,1): [
+            # B(E2) ratio
+            (
+                "ratio",
+                ((4,5), ("rtp", "E2p", (1.5,1,1), (2.5,1,1))),
+                ((4,5), ("rtp", "E2p", (1.5,1,1), (3.5,1,1)))
+            ),
+        ],
+    }
+
+    # figure layout parameters
+    panel_size = (3.,2.)
+    dimensions = (2,2)
+    figsize = np.array(panel_size)*np.array(dimensions)
+
+    # initialize figure
+    fig = plt.figure(figsize=figsize)
+    gs = fig.add_gridspec(*dimensions, hspace=0., wspace=0.25)
+
+    for (row, col) in itertools.product(range(2),range(2)):
+
+        nuclide_observable_list = nuclide_observable_list_by_panel[(row, col)]
+
+        # find range parameters
+        hw_range = HW_RANGE_BY_INTERACTION_COULOMB[interaction_coulomb]
+        observable_range = observable_range_by_panel[(row, col)]
+
+        # construct axes
+        ax = fig.add_subplot(gs[row, col])
+        
+        # draw axes
+
+        # TUTORIAL: All observables in each panel are of the same type (e.g.,
+        # all are energies), so we can simply pick the first observable in the list, to use as a
+        # "representative" observable for defining the y axis label.
+
+        # TUTORIAL: We also use the optional arguments
+        #
+        #     hw_range_extension=(0.05,0.05),
+        #     observable_range_extension=(0.05,0.05),
+        #
+        # to set bigger (5% or 10%) margins on the specified x and y axis ranges.
+
+        # TODO 04/08/21 (mac): provide manual tick control a la CustomTicks,
+        # since hw axis ticks are awful here
+        
+        mfdnres.data.set_up_hw_scan_axes(
+            ax,
+            nuclide_observable_list[0],
+            hw_range,
+            observable_range,
+            hw_range_extension=(0.15,0.15),
+            observable_range_extension=(0.05,0.05),
+        )
+
+        # eliminate labels from interior panel edges
+        if not ax.is_last_row():
+            ##ax.get_xaxis().get_label().set_visible(False)
+            ax.set_xlabel(None)
+            ax.set_xticklabels([])
+
+        # panel letter
+        ax.annotate(
+            "({})".format(panel_letter_by_panel[(row, col)]),
+            xy=(0.05,0.95),xycoords="axes fraction",
+            horizontalalignment="left",
+            verticalalignment="top",
+            fontsize="small"
+        )
+
+        # panel label
+        ax.annotate(
+            panel_label_text_by_panel[(row, col)],
+            xy=(0.90,0.90),xycoords="axes fraction",
+            multialignment="left",
+            horizontalalignment="right",
+            verticalalignment="top",
+            bbox=dict(boxstyle="round",facecolor="white")
+        )
+            
+        # tabulate and plot each observable
+        for plot_index, nuclide_observable in enumerate(nuclide_observable_list):
+
+            # generate descriptor
+            descriptor=mfdnres.data.hw_scan_descriptor(interaction_coulomb,nuclide_observable)
+
+            # tabulate
+            (interaction,coulomb) = interaction_coulomb
+            observable_data = mfdnres.data.make_hw_scan_data(
+                mesh_data,nuclide_observable,
+                selector =  {"interaction": interaction, "coulomb": coulomb},
+                Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range
+            )
+        
+            # write data
+            mfdnres.data.write_hw_scan_data(
+                descriptor,observable_data,
+                directory=plot_directory
+            )
+
+            # add plot
+
+            # TUTORIAL: To override the default styling for the curves, we use
+            # the optional argument Nmax_plot_style_kw.  This provides "hooks"
+            # to control various plot attributes as functions of Nmax (see
+            # mfdnres.data.Nmax_plot_style).  In particular, to replicate the
+            # bebands figure, we override the default dashing, so that it no
+            # longer reflects Nmax, but rather is used to distinguish plots of
+            # different observables.
+            
+            if plot_index==0:
+                dashing = (None,None)
+            else:
+                dashing = (1,1)
+            mfdnres.data.add_hw_scan_plot(
+                ax,
+                observable_data,
+                Nmax_max=Nmax_max,
+                Nmax_plot_style_kw = dict(marker_size=4, Nmax_dashing=(lambda Nmax_relative : dashing))
+            )
+            
+    # finalize plot
+    figure_file_name = os.path.join(
+        plot_directory,
+        "multipanel.pdf"
+        )
+    print(figure_file_name)
+    plt.savefig(figure_file_name)
+    plt.close()
             
 ################################################################
 # main
 ################################################################
 
-mesh_data=read_data()
+def main():    
 
-##make_basic_plot(mesh_data)
-make_analysis_plots(mesh_data)
+    mesh_data=read_data()
+
+    make_basic_plot(mesh_data)
+    make_plot_series(mesh_data)
+    make_survey_plot(mesh_data)
+    make_multipanel_plot(mesh_data)
+
+if __name__ == "__main__":
+    main()

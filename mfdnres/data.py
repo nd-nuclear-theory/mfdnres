@@ -7,12 +7,15 @@
 
     - 03/16/21 (mac): Created, as ncci_plot.py.
     - 03/18/21 (mac):
-      + Implement pandas-based tabulation as wrapper around mfdnres.analysis.make_<observable>_table
-      + Implement pandas-based write_hw_scan_plot
-      + Implement generic nuclide_observable support (including compount difference/ratio observables)
-      + Implement hw scan plotting routines and canned write_hw_scan_plot
+        + Implement pandas-based tabulation as wrapper around mfdnres.analysis.make_<observable>_table
+        + Implement pandas-based write_hw_scan_plot
+        + Implement generic nuclide_observable support (including compount difference/ratio observables)
+        + Implement hw scan plotting routines and canned write_hw_scan_plot
     - 04/02/21 (mac): Integrate into mfdnres as mfdnres.data.
     - 04/06/21 (mac): Support positive Nmax_relative in styling functions.
+    - 04/08/21 (mac):
+        + Support mesh selection and slicing in make_hw_scan_data.
+        + Support styling overrides in Nmax_plot_style.
 
 """
 import os
@@ -30,13 +33,22 @@ from . import (
 # global plot styling
 ################################################################
 
-## def init_plt_rc():
-##     """ Set global plot styling parameters.
-##     """
-##     plt.rc('font', family='serif')
-##     plt.rc('mathtext', fontset='dejavuserif')
-##     plt.rc('xtick', labelsize='small')
-##     plt.rc('ytick', labelsize='small')
+# Options for mpl.rcParams:
+#
+#     >>> mpl.rcParams.update(mfdnres.data.SENSIBLE_PLOT_STYLE)
+
+SENSIBLE_PLOT_STYLE = {
+    "font.family": "serif",
+    "mathtext.fontset": "dejavuserif",
+    "lines.linewidth": 1,
+    "axes.prop_cycle": mpl.cycler(color=["black"]),
+    "xtick.labelsize": "small",
+    "xtick.direction": "in",
+    "xtick.major.pad": 1,
+    "ytick.labelsize": "small",
+    "ytick.direction": "in",
+    "ytick.major.pad": 1,
+}
 
 ################################################################
 # range utility
@@ -59,6 +71,40 @@ def extend_interval_relative(bounds,extensions):
     b = np.array(bounds)
     e = np.array(extensions)
     return b+e*np.array([-1,+1])*(b[1]-b[0])
+
+################################################################
+# partitioning iterable
+################################################################
+
+def partitions(iterable, r):
+    """Generator function to decompose iterable into tuples of length r.
+
+    The iteration may end with one final shorter tuple containing any residual
+    elements.
+
+    >>> list(partitions(range(10),3))
+
+    [(0, 1, 2), (3, 4, 5), (6, 7, 8), (9,)]
+
+
+    TODO 04/08/21 (mac): Reimplement more elegantly in terms of next()
+    calls to iterable.
+
+    Arguments:
+
+        iterable (iterable): iterable from which to take items
+
+        r (int): sublist length
+
+    Yields:
+
+        (tuple): group of (up to) r elements
+
+    """
+    pool = tuple(iterable)
+    while len(pool) > 0:
+        yield pool[:r]
+        pool = pool[r:]
 
 ################################################################
 # observable parsing
@@ -459,6 +505,28 @@ def Nmax_color(Nmax_relative):
 
     raise ValueError("invalid Nmax_relative {}".format(Nmax_relative))
 
+def Nmax_marker_face_color(Nmax_relative):
+    """Provide face color based on relative Nmax.
+
+    Positive Nmax_relative is permitted to allow addition of ad hoc high-Nmax
+    data points.
+
+    Arguments:
+
+        Nmax_relative (int): Nmax-Nmax_max
+
+    Returns:
+    
+        (str): color directive
+
+    """
+    if Nmax_relative > 0:
+        return "white"
+    else:
+        return None
+
+    raise ValueError("invalid Nmax_relative {}".format(Nmax_relative))
+
 def Nmax_symbol_scale(Nmax_relative,exponent_scale=8):
     """ Provide symbol scale based on relative Nmax.
 
@@ -475,8 +543,17 @@ def Nmax_symbol_scale(Nmax_relative,exponent_scale=8):
 
     ## raise ValueError("invalid Nmax_relative {}".format(Nmax_relative))
 
-def Nmax_plot_style(Nmax_relative,marker_size=6):
-    """
+def Nmax_plot_style(
+        Nmax_relative,
+        marker_size=6,
+        Nmax_symbol_scale=Nmax_symbol_scale,
+        Nmax_marker_face_color=Nmax_marker_face_color,
+        Nmax_dashing=Nmax_dashing,
+        Nmax_color=Nmax_color
+):
+    """Provide plot styling kwargs based on relative Nmax.
+
+    The various optional arguments control how styling details are determined.
 
     Arguments:
 
@@ -484,16 +561,19 @@ def Nmax_plot_style(Nmax_relative,marker_size=6):
 
         marker_size (float,optional): base marker size for maximal Nmax
 
+        Nmax_symbol_scale, ... (callable, optional): functions to provide
+            specific styling parameters as function of relative Nmax
+
     Returns:
 
         (dict): kwargs for ax.plot
+
     """
 
-    Nmax_marker_face_color = None if Nmax_relative <=0 else "white"
     return dict(
         markersize=marker_size*Nmax_symbol_scale(Nmax_relative),
-        markerfacecolor=Nmax_marker_face_color,
-        linewidth=1,
+        markerfacecolor=Nmax_marker_face_color(Nmax_relative),
+        ## linewidth=1,
         dashes=Nmax_dashing(Nmax_relative),
         color=Nmax_color(Nmax_relative),
         )
@@ -518,37 +598,80 @@ def hw_scan_descriptor(interaction_coulomb,nuclide_observable):
 
     return descriptor
 
-def make_hw_scan_data(mesh_data,nuclide_observable,verbose=False):
-    """ Tabulate generic observable for hw scan.
+def make_hw_scan_data(
+        mesh_data,nuclide_observable,
+        selector=None,Nmax_range=None,hw_range=None,
+        verbose=False):
+    """Tabulate generic observable for hw scan.
+
+    Simple observables:
+
+        ("energy", qn)
+        ("isospin", qn)
+        ("radius", operator, qn)
+        ("moment", operator, qn)
+        ("momentsqr", operator, qn)
+        ("rtp", operator, qnf, qni)  # reduced transition probability
+
+        Note that order of arguments (qnf, qni) for a transition is based on the
+        bra-ket order in the corresponding matrix element <f|O|i>.
+
+        Operators are as defined in the MFDnResultsData accessors:
+            "M1","Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1",  # M1 type
+            "E2p","E2n","E20","E21"  # E2 type
+
+    Compound observables:
+
+        ("diff", obs1, obs2)  # obs1-obs2
+        ("ratio", obs1, obs2)  # obs1/obs2
+
+    Examples:
+    
+        ("energy", (1.5,1,1))  # energy of first 3/2- state
+    
+        ("rtp", "E2p",  (1.5,1,1),  (2.5,1,1))  # E2 (proton) reduced transition probability B(E2;5/2->3/2)
+
 
     Tabulation format:
         Nmax hw value
 
     Arguments:
         mesh_data (list of ResultsData): data set to include
-        ##interaction_coulomb (tuple): (interaction,use_coulomb)
-        nuclide_observable (tuple): (nuclide,observable)
-          observable: (observable_type,observable_operator,(Jf,gf,nf),...)
+        nuclide_observable (tuple): simple (nuclide,observable) or compound thereof
+            nuclide (tuple): (Z,N)
+            observable (tuple): (observable_type,observable_operator,(Jf,gf,nf),...)
+        selector (dict): parameter-value pairs for selection using analysis.selected_mesh_data,
+            e.g., {"interaction":interaction,"coulomb":coulomb}
 
     Returns:
         observable_data (np.array): scan data, with rows (Nmax,hw,value)
+
     """
 
     # trap compound observable
     if nuclide_observable[0] in {"diff","ratio"}:
         (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
+        data1 = make_hw_scan_data(mesh_data,nuclide_observable1,selector=selector,Nmax_range=Nmax_range,hw_range=hw_range)
+        data2 = make_hw_scan_data(mesh_data,nuclide_observable2,selector=selector,Nmax_range=Nmax_range,hw_range=hw_range)
         if arithmetic_operation == "diff":
-            return make_hw_scan_data(mesh_data,nuclide_observable1)-make_hw_scan_data(mesh_data,nuclide_observable2)
+            return data1-data2
         elif arithmetic_operation == "ratio":
-            return make_hw_scan_data(mesh_data,nuclide_observable1)/make_hw_scan_data(mesh_data,nuclide_observable2)
+            return data1/data2
 
     # unpack arguments
     (nuclide,observable) = nuclide_observable
     (observable_type,observable_operator,observable_qn_list) = unpack_observable(observable)
 
     # select nuclide
-    mesh_data_selected = analysis.selected_mesh_data(mesh_data,{"nuclide":nuclide})
-    analysis.mesh_key_listing(mesh_data_selected,("nuclide","interaction","coulomb","hw","Nmax","parity"),verbose=verbose)
+    full_selector = {"nuclide":nuclide}
+    if selector is not None:
+        full_selector.update(selector)
+    mesh_data_selected = analysis.selected_mesh_data(mesh_data,full_selector)
+    analysis.mesh_key_listing(
+        mesh_data_selected,
+        ("nuclide","interaction","coulomb","hw","Nmax","parity"),
+        verbose=verbose
+    )
 
     # generate table
 
@@ -594,7 +717,15 @@ def make_hw_scan_data(mesh_data,nuclide_observable,verbose=False):
 
     # drop nan values
     observable_data = observable_data[observable_data["value"].notna()]
-    
+
+    # slice on (Nmax,hw)
+    Nmax_slice = slice(None) if Nmax_range is None else slice(*Nmax_range)
+    hw_slice = slice(None) if hw_range is None else slice(*hw_range)
+    observable_data = observable_data.loc[(Nmax_slice,hw_slice),:]  # pandas MultiIndex slicing
+
+    if verbose:
+        print(observable_data)
+
     return observable_data
 
 def write_hw_scan_data(descriptor,observable_data,directory="data",format_str_obs="9.5f"):
@@ -675,8 +806,13 @@ def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**kwarg
         bbox=dict(boxstyle="round",facecolor="white")
     )
         
-def add_hw_scan_plot(ax,observable_data,Nmax_max):
-    """ Add hw scan plot to axes.
+def add_hw_scan_plot(
+        ax,observable_data,Nmax_max,
+        marker=".",
+        Nmax_plot_style_kw={},
+        Nmax_plot_style=Nmax_plot_style
+):
+    """Add hw scan plot to axes.
 
     Arguments:
     
@@ -685,13 +821,22 @@ def add_hw_scan_plot(ax,observable_data,Nmax_max):
         observable_data (pd.DataFrame): data multi-indexed by (Nmax,hw)
 
         Nmax_max (int): highest Nmax for styling purposes
+
+        marker (str): matplotlib marker specifier
+
+        Nmax_plot_style_kw (dict, optional): styling options to pass through to plot styling function
+
+        Nmax_plot_style (callable, optional): function to provide styling kwargs
+            as function of Nmax_relative (rarely needed, since normally instead
+            can simply use Nmax_plot_style_kw)
+
     """
 
     for Nmax, group in observable_data.reset_index().groupby("Nmax"):
         ax.plot(
             group["hw"],group["value"],
-            marker=".",
-            **Nmax_plot_style(Nmax-Nmax_max)
+            marker=marker,
+            **Nmax_plot_style(Nmax-Nmax_max,**Nmax_plot_style_kw)
         )
 
 def write_hw_scan_plot(
@@ -702,7 +847,8 @@ def write_hw_scan_plot(
         hw_range_extension=(0.02,0.02),
         observable_range_extension=(0.02,0.02),
         figsize=(6,4),
-        directory="data"
+        directory=".",
+        verbose=False
 ):
     """ Generate full "canned" hw scan plot.
 
@@ -755,6 +901,8 @@ def write_hw_scan_plot(
         directory,
         "{}_plot.pdf".format(descriptor)
         )
+    if verbose:
+        print(figure_file_name)
     plt.savefig(figure_file_name)
     plt.close()
         
