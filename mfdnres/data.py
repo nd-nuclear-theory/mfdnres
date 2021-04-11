@@ -38,16 +38,26 @@ from . import (
 #     >>> mpl.rcParams.update(mfdnres.data.SENSIBLE_PLOT_STYLE)
 
 SENSIBLE_PLOT_STYLE = {
+    # font
     "font.family": "serif",
     "mathtext.fontset": "dejavuserif",
+    # lines
     "lines.linewidth": 1,
     "axes.prop_cycle": mpl.cycler(color=["black"]),
+    # ticks
     "xtick.labelsize": "small",
     "xtick.direction": "in",
     "xtick.major.pad": 1,
     "ytick.labelsize": "small",
     "ytick.direction": "in",
     "ytick.major.pad": 1,
+    # legend
+    "legend.labelspacing": 0.,  # compact spacing of entries
+    "legend.frameon": False,  # no frame or background
+    "legend.fancybox": False,  # no rounded corners (if turn frame back on)
+    "legend.framealpha": None,  # no transparency (if turn frame back on)
+    "legend.edgecolor": "black",
+    "legend.fontsize": "small",
 }
 
 ################################################################
@@ -209,7 +219,7 @@ ELEMENT_SYMBOLS = [
     "Uun","Uuu","Uub"
 ]
 
-def isotope_symbol(nuclide,as_tuple=False):
+def isotope(nuclide,as_tuple=False):
     """Generate text label component for nuclide.
 
     Arguments:
@@ -261,7 +271,7 @@ def make_nuclide_text(nuclide_observable,as_tuple=False):
 
     (nuclide,observable) = nuclide_observable
 
-    return isotope_symbol(nuclide,as_tuple=as_tuple)
+    return isotope(nuclide,as_tuple=as_tuple)
 
 def make_qn_text(qn):
     """ Generate text label component for quantum numbers.
@@ -762,7 +772,7 @@ def set_up_hw_scan_axes(
 
     Arguments:
     
-        ax (mpl): descriptor string to use in filename
+        ax (mpl.axes.Axes): axes object
 
         nuclide_observable (tuple): standard nuclide/observable pair or compound
 
@@ -784,7 +794,7 @@ def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**kwarg
 
     Arguments:
     
-        ax (mpl): axes object
+        ax (mpl.axes.Axes): axes object
 
         interaction_coulomb (tuple): interaction/coulomb specifier
 
@@ -816,7 +826,7 @@ def add_hw_scan_plot(
 
     Arguments:
     
-        ax (mpl): descriptor string to use in filename
+        ax (mpl.axes.Axes): axes object
 
         observable_data (pd.DataFrame): data multi-indexed by (Nmax,hw)
 
