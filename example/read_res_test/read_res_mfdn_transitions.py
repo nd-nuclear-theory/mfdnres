@@ -1,4 +1,4 @@
-"""example_read_mfdn_transitions.py
+"""read_res_mfdn_transitions.py
 
     Provides simple example of reading and accessing MFDn transitions run results.
 

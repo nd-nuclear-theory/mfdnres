@@ -1,4 +1,4 @@
-"""example_read_spncci.py
+"""read_res_spncci.py
 
     Provides simple example of reading and accessing SpNCCI run results.
 

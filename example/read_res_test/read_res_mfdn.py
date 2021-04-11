@@ -1,9 +1,9 @@
-"""example_read_mfdn.py
+"""read_res_mfdn.py
 
     Provides simple example of reading and accessing MFDn run results.
 
     Required test data:
-        TODO
+        type_specimens/mfdn/v15-h2/runmfdn13-mfdn15-Z3-N3-Daejeon16-coul1-hw15.000-a_cm40-Nmax02-Mj1.0-lan200-tol1.0e-06.res
 
     Mark A. Caprio
     University of Notre Dame
@@ -11,6 +11,7 @@
     Language: Python 3
 
     - 09/17/20 (mac): Created.
+    - 04/10/21 (mac): Update example file.
 
 """
 
@@ -27,8 +28,7 @@ def read_data():
 
     print("Reading input file...")
     mesh_data = mfdnres.input.read_file(
-        #TODO replace with type specimen file
-        "/home/mcaprio/results/mcaprio/mfdn/runmac0512/results/res/runmac0512-mfdn15-Z3-N3-JISP16-coul1-hw15.000-a_cm50-Nmax02-Mj1.0-lan2500-tol1.0e-04.res",
+        "type_specimens/mfdn/v15-h2/runmfdn13-mfdn15-Z3-N3-Daejeon16-coul1-hw15.000-a_cm40-Nmax02-Mj1.0-lan200-tol1.0e-06.res",
         res_format="mfdn_v15",
         filename_format="mfdn_format_7_ho",
         verbose=True

@@ -1,4 +1,4 @@
-"""analysis_test_merged_mesh.py
+"""merge_mesh_test.py
 
     Testbed for mesh merger.
 

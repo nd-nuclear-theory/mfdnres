@@ -166,6 +166,7 @@ def read_data():
     # TUTORIAL: To see what our initial, raw mesh of MFDnResultsData objects looks like...
     if False:
         print(mesh_data)
+    if False:
         for results_data in mesh_data:
             print(results_data.params)
         exit()
