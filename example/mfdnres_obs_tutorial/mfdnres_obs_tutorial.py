@@ -55,6 +55,8 @@ Setup
   University of Notre Dame
 
     - 04/07/21 (mac): Created, drawing on tabulate_obs_8li-coulex.py and emratio_obs.py.
+    - 04/08/21 (mac): Clean up mfdnres.data interface.  Add survey and multipanel examples.
+    - 04/10/21 (mac): Use os.makedirs.  Add experimental use of mfdnres.ticks.
 
 """
 
@@ -67,16 +69,16 @@ import matplotlib.backends.backend_pgf
 import numpy as np
 import pandas as pd
 
-# TODO 04/08/21 (mac): Rename mfdnres.data, once new name decided...
 import mfdnres
-import mfdnres.data
+import mfdnres.ticks
+import mfdnres.data  # TODO 04/08/21 (mac): Rename mfdnres.data, once new name decided...
 import mfdnres.ncci
 
 ################################################################
 # global plot styling
 ################################################################
 
-# TUTORIAL: Define some sensible defaults for matplotlib...
+# TUTORIAL: Define some sensible plot styling defaults for matplotlib...
 
 mpl.rcParams.update(mfdnres.data.SENSIBLE_PLOT_STYLE)
 
@@ -220,10 +222,10 @@ def make_basic_plot(mesh_data):
 
     """
 
-    # TUTORIAL: Here is where the output will go.  Be sure to make this
-    # subdirectory, if it doesn't already exist.
+    # TUTORIAL: Here is where the output will go.
     
     plot_directory="plots/basic"
+    os.makedirs(plot_directory, exist_ok=True)
 
     # mesh parameters
     interaction_coulomb = INTERACTION_COULOMB_LIST[0]  # ("Daejeon16",1)
@@ -344,13 +346,8 @@ def make_plot_series(mesh_data):
     mutltiple interactions.
     """
 
-    # TUTORIAL: When you get the error message
-    #
-    #    FileNotFoundError: [Errno 2] No such file or directory: 'plots/series/hw-scan_Daejeon16-1_Z04-N05-energy-01.5-1-01_table.dat'
-    #
-    # don't panic.  That's just because you forgot to make this directory...
-    
     plot_directory="plots/series"
+    os.makedirs(plot_directory, exist_ok=True)
 
     # observable definitions
 
@@ -442,6 +439,7 @@ def make_survey_plot(mesh_data):
     """
 
     plot_directory="plots/survey"
+    os.makedirs(plot_directory, exist_ok=True)
 
     # figure layout parameters
     num_rows = 3
@@ -573,6 +571,7 @@ def make_multipanel_plot(mesh_data):
     """
 
     plot_directory="plots/multipanel"
+    os.makedirs(plot_directory, exist_ok=True)
 
     # plot contents
     interaction_coulomb = INTERACTION_COULOMB_LIST[0]
@@ -647,6 +646,22 @@ def make_multipanel_plot(mesh_data):
         # construct axes
         ax = fig.add_subplot(gs[row, col])
         
+        # set manual ticks (experimental interface)
+
+        # TUTORIAL: I am in the process of implementing manual control over tick
+        # mark intervals, a la CustomTicks.  The interface is still under
+        # development.  But you can see that matplotlib's default hw ticks, for
+        # the plot range we set below, is atrocious (major tick marks at 10 and
+        # 20, with no minor ticks at all).  Compare bebands Fig. 6, where major
+        # ticks are in steps of 5, with minor ticks in steps of 2.5 (i.e., 2
+        # subintervals).  To override the default ticks on the hw axis, enable
+        # the following (experimental) code...
+
+        if False:
+            major_ticks, minor_ticks = mfdnres.ticks.linear_tick_locations(0,50,5,2)
+            ax.set_xticks(major_ticks)
+            ax.set_xticks(minor_ticks, minor=True)
+
         # draw axes
 
         # TUTORIAL: All observables in each panel are of the same type (e.g.,
@@ -662,7 +677,7 @@ def make_multipanel_plot(mesh_data):
 
         # TODO 04/08/21 (mac): provide manual tick control a la CustomTicks,
         # since hw axis ticks are awful here
-        
+
         mfdnres.data.set_up_hw_scan_axes(
             ax,
             nuclide_observable_list[0],
@@ -671,7 +686,7 @@ def make_multipanel_plot(mesh_data):
             hw_range_extension=(0.15,0.15),
             observable_range_extension=(0.05,0.05),
         )
-
+        
         # eliminate labels from interior panel edges
         if not ax.is_last_row():
             ##ax.get_xaxis().get_label().set_visible(False)

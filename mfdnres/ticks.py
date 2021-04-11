@@ -1,4 +1,4 @@
-"""custom_ticks.py
+"""ticks.py
 
     Custom tick mark generation for linear, log, and general nonlinear axes.
 
