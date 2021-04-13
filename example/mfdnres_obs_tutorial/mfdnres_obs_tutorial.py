@@ -107,6 +107,13 @@ HW_RANGE_BY_INTERACTION_COULOMB = {
     ("LENPICchi2bi2C",0): (15.,35.),
 }
 
+# special preferred hw for each interaction
+HW_BY_INTERACTION_COULOMB = {
+    ("Daejeon16",1): 15.,
+    ("JISP16",1): 20.,
+    ("LENPICchi2bi2C",0): 25.,
+}
+
 # matplotlib marker style for each interaction
 MARKER_BY_INTERACTION_COULOMB = {
     ("Daejeon16",1): "o",
@@ -761,7 +768,118 @@ def make_multipanel_plot(mesh_data):
     print(figure_file_name)
     plt.savefig(figure_file_name)
     plt.close()
+
+################################################################
+# teardrop plot
+################################################################
+
+EXPT_M1_MOMENT_BY_NUCLIDE = {
+    # M1 moment (with uncertainty); from Stone 2005
+    (4,5): (-1.177,None),
+    }
+
+def make_teardrop_plot(mesh_data):
+    """ Generate "teardrop" plot showing convergence of observables with Nmax at fixed hw.
+    """
+
+    # plotting parameters
+    plot_directory="plots/teardrop"
+    os.makedirs(plot_directory, exist_ok=True)
+
+    # plot contents
+    nuclide = (4,5)
+    nuclide_observable_list = [
+        ((4,5), ("moment", "M1", (1.5,1,1))),
+        ((4,5), ("moment", "Dlp", (1.5,1,1))),
+        ((4,5), ("moment", "Dln", (1.5,1,1))),
+        ((4,5), ("moment", "Dsp", (1.5,1,1))),
+        ((4,5), ("moment", "Dsn", (1.5,1,1))),
+        ]
+
+    # initialize plot
+    figsize = (6,4)
+    observable_range = (-1.75,1)
+    observable_range_extension = (0.02,0.02)
+    marker_size = 6
+    num_panels = len(nuclide_observable_list)
+    fig = plt.figure(figsize=figsize)
+    gs = fig.add_gridspec(nrows=1, ncols=num_panels, hspace=0., wspace=0.)
+
+    # tabulate observables
+    for (observable_index,nuclide_observable) in enumerate(nuclide_observable_list):
+
+        # construct axes
+        row = 0
+        col = observable_index
+        ax = fig.add_subplot(gs[row, col])
+        ax.set_xlim(0,1)
+        ax.set_xticks([])
+        ax.set_axisbelow(b=True)
+        ax.set_ylabel(mfdnres.data.make_observable_axis_label_text(nuclide_observable))
+        ax.set_ylim(*mfdnres.data.extend_interval_relative(observable_range,observable_range_extension))
+        ax.grid(axis="y",linewidth=0.5,linestyle=":",color="gray")
+        mfdnres.data.suppress_interior_labels(ax)
+        if not ax.is_first_col():
+            ax.tick_params(axis="y", length=0)
+        
+        # label for observable
+        ax.annotate(
+            r"${}$".format(mfdnres.data.make_observable_text(nuclide_observable)),
+            xy=(0.5,0),
+            xycoords=("axes fraction","axes fraction"),
+            multialignment="left",
+            horizontalalignment="center",
+            verticalalignment="bottom"
+        )
+
+        # experimental value marker
+        if observable_index==0:
+            mfdnres.data.add_expt_marker_band(ax,(0.1,0.9),EXPT_M1_MOMENT_BY_NUCLIDE[nuclide])
+        
+        for (interaction_index,interaction_coulomb) in enumerate(INTERACTION_COULOMB_LIST):
+
+            (interaction,coulomb) = interaction_coulomb
+
+            hw = HW_BY_INTERACTION_COULOMB[interaction_coulomb]
+            Nmax_max = NMAX_MAX_BY_NUCLIDE[nuclide]
+            observable_data = mfdnres.data.make_hw_scan_data(
+                mesh_data,nuclide_observable,
+                selector =  {"interaction": interaction, "coulomb": coulomb},
+                Nmax_range = (NMAX_MIN,Nmax_max), hw_range = (hw,hw)
+            )
             
+            # plot data
+            plot_data = observable_data.reset_index()
+            plot_data["x"] = 0.3+0.2*interaction_index
+            plot_data["s"] = (marker_size*((plot_data["Nmax"]-Nmax_max).transform(mfdnres.data.Nmax_symbol_scale)))**2
+            plot_data["c"] = (plot_data["Nmax"]-Nmax_max).transform(mfdnres.data.Nmax_color)
+            ##print(plot_data)
+            ax.plot(
+                "x","value",
+                data=plot_data,
+                marker=None,
+                zorder=2.1
+            )
+            ax.scatter(
+                "x","value",
+                s="s",c="c",
+                ##c=plot_data["c"],s=plot_data["s"],
+                data=plot_data,
+                edgecolors="black",
+                marker=MARKER_BY_INTERACTION_COULOMB[interaction_coulomb],
+                zorder=2.2
+            )
+
+
+    # finalize plot
+    figure_file_name = os.path.join(
+        plot_directory,
+        "teardrop.pdf"
+        )
+    print(figure_file_name)
+    plt.savefig(figure_file_name)
+    plt.close()
+    
 ################################################################
 # main
 ################################################################
@@ -774,6 +892,7 @@ def main():
     make_plot_series(mesh_data)
     make_survey_plot(mesh_data)
     make_multipanel_plot(mesh_data)
+    make_teardrop_plot(mesh_data)
 
 if __name__ == "__main__":
     main()
