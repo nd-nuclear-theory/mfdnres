@@ -16,6 +16,7 @@
     - 04/08/21 (mac):
         + Support mesh selection and slicing in make_hw_scan_data.
         + Support styling overrides in Nmax_plot_style.
+    - 04/13/21 (mac): Add add_expt_marker_band.
 
 """
 import os
@@ -59,6 +60,24 @@ SENSIBLE_PLOT_STYLE = {
     "legend.edgecolor": "black",
     "legend.fontsize": "small",
 }
+
+################################################################
+# multipanel utilities
+################################################################
+
+def suppress_interior_labels(ax):
+    """ Suppress axis and tick labels on interior axes.
+
+    Arguments:
+    
+        ax (mpl.axes.Axes): axes object
+    """    
+    if not ax.is_last_row():
+        ax.set_xlabel(None)
+        ax.set_xticklabels([])
+    if not ax.is_first_col():
+        ax.set_ylabel(None)
+        ax.set_yticklabels([])
 
 ################################################################
 # range utility
@@ -916,3 +935,33 @@ def write_hw_scan_plot(
     plt.savefig(figure_file_name)
     plt.close()
         
+################################################################
+# plot annotations
+################################################################
+
+def add_expt_marker_band(ax,x_range,y_with_error,facecolor="lightgray",edgecolor="black",color="black"):
+    """ Add marker indicating value with error band (rectangle) and central value (line).
+
+    Arguments:
+    
+        ax (mpl.axes.Axes): axes object
+
+        x_range (tuple of float): (x1,x2) range
+
+        y_with_error (tuple of float): (y,dy) values; dy may be None
+
+        facecolor, edgecolor, color (optional): pass-through color options
+
+    """
+
+    (y,y_error) = y_with_error
+    (x0,x1) = x_range
+    if y_error is not None:
+        ax.fill(
+            [x0,x1,x1,x0],
+            [y-y_error,y-y_error,y+y_error,y+y_error],
+            edgecolor=edgecolor,linewidth=0.5,
+            facecolor=facecolor
+        )
+    ax.hlines(y,*x_range,color=color,linewidth=1)
+
