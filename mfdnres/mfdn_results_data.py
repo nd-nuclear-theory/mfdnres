@@ -254,6 +254,9 @@ class MFDnResultsData(results_data.ResultsData):
         except:
             return None
 
+        if verbose:
+            print("{} {} {}".format(decomposition_type,qn,decomposition))
+            
         return decomposition
 
     def get_radius(self,radius_type,qn,default=np.nan):

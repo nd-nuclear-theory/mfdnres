@@ -17,6 +17,7 @@
         + Support mesh selection and slicing in make_hw_scan_data.
         + Support styling overrides in Nmax_plot_style.
     - 04/13/21 (mac): Add add_expt_marker_band.
+    - 04/24/21 (mac): Add unary "minus" compound observable.
 
 """
 import os
@@ -186,6 +187,12 @@ def nuclide_observable_descriptor(nuclide_observable):
             nuclide_observable_descriptor(nuclide_observable1),
             nuclide_observable_descriptor(nuclide_observable2)
         )
+    elif nuclide_observable[0] in {"minus"}:
+        (arithmetic_operation,nuclide_observable1) = nuclide_observable
+        return r"{}_{}".format(
+            arithmetic_operation,
+            nuclide_observable_descriptor(nuclide_observable1),
+        )
 
     # unpack arguments
     (nuclide,observable) = nuclide_observable
@@ -279,15 +286,21 @@ def make_nuclide_text(nuclide_observable,as_tuple=False):
     # trap compound observable
     if nuclide_observable[0] in {"diff","ratio"}:
         (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
-        same_nuclide = (nuclide_observable1[0]==nuclide_observable2[0])
+        same_nuclide = (nuclide_observable1[0]==nuclide_observable2[0])  # CAVEAT: test fails to "see through" a unary "minus" compound observable
         if same_nuclide:
-            return make_nuclide_text(nuclide_observable1)
+            nuclide_text = make_nuclide_text(nuclide_observable1)
+            return nuclide_text
         else:
-            return r"{}/{}".format(
+            nuclide_text = r"{}/{}".format(
                 make_nuclide_text(nuclide_observable1,as_tuple=as_tuple),
                 make_nuclide_text(nuclide_observable2,as_tuple=as_tuple)
             )
-
+            return nuclide_text
+    elif nuclide_observable[0] in {"minus"}:
+        (arithmetic_operation,nuclide_observable1) = nuclide_observable
+        nuclide_text = make_nuclide_text(nuclide_observable1,as_tuple=as_tuple)
+        return nuclide_text
+    
     (nuclide,observable) = nuclide_observable
 
     return isotope(nuclide,as_tuple=as_tuple)
@@ -337,7 +350,14 @@ def make_observable_text(nuclide_observable):
             arithmetic_symbol,
             make_observable_text(nuclide_observable2)
         )
-    
+    elif nuclide_observable[0] in {"minus"}:
+        (arithmetic_operation,nuclide_observable1) = nuclide_observable
+        arithmetic_symbol = "-"
+        return r"{}{}".format(
+            arithmetic_symbol,
+            make_observable_text(nuclide_observable1),
+        )
+
     # unpack arguments
     (nuclide,observable) = nuclide_observable
     (observable_type,observable_operator,observable_qn_list) = unpack_observable(observable)
@@ -354,12 +374,13 @@ def make_observable_text(nuclide_observable):
     elif observable_type == "radius":
         pass  # TODO
     elif observable_type in {"moment","momentsqr"}:
+        # TODO 04/21/21 (mac): make dimensionless for "Q" but dimensional for square "(eQ)^2" used in ratio
         if observable_operator == "M1":
             observable_str = r"\mu"
         elif observable_operator in {"Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
             observable_str = r"\mu_{{{}}}".format(observable_operator[1:])
         elif observable_operator in {"E2p","E2n","E20","E21"}:
-            observable_str = r"eQ_{{{}}}".format(observable_operator[2:])
+            observable_str = r"Q_{{{}}}".format(observable_operator[2:])
         qn_str = make_qn_text(observable_qn_list[0])
         label = r"{}({})".format(observable_str,qn_str)
         if observable_type == "momentsqr":
@@ -374,6 +395,10 @@ def make_observable_text(nuclide_observable):
         qn_str_1 = make_qn_text(observable_qn_list[0])
         qn_str_2 = make_qn_text(observable_qn_list[1])
         label = r"B({};{}\rightarrow{})".format(observable_str,qn_str_2,qn_str_1)  # <1|O|2> = 2->1
+    elif observable_type == "Nex-probability":
+        observable_str = r"P(N_{\mathrm{ex}})"  # TODO include value of Nex
+        qn_str = make_qn_text(observable_qn_list[0])
+        label = r"{}({})".format(observable_str,qn_str)
     else:
         raise(ValueError("unrecognized observable type {}".format(observable_type)))
                                                 
@@ -381,7 +406,7 @@ def make_observable_text(nuclide_observable):
 
 HW_AXIS_LABEL_TEXT = r"$\hbar\omega~(\mathrm{MeV})$"
 
-def make_observable_axis_label_text(nuclide_observable,bare_math_mode_text=False):
+def make_observable_axis_label_text(nuclide_observable):
     """ Generate axis label (with units) for observable.
 
     Arguments:
@@ -390,15 +415,18 @@ def make_observable_axis_label_text(nuclide_observable,bare_math_mode_text=False
 
     Returns:
     
-        label (str): label string, to be interpreted as mpl text
+        label (str): label string, to be interpreted in math mode
     """
     # trap compound observable
     if nuclide_observable[0] in {"diff","ratio"}:
         (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
         if arithmetic_operation == "diff":
-            return r"$\Delta {}$".format(make_observable_axis_label_text(nuclide_observable1,bare_math_mode_text=True))
+            return r"\Delta {}".format(make_observable_axis_label_text(nuclide_observable1))
         elif arithmetic_operation == "ratio":
-            return r"Ratio"
+            return r"\mathrm{Ratio}"
+    elif nuclide_observable[0] in {"minus"}:
+        (arithmetic_operation,nuclide_observable1) = nuclide_observable
+        return make_observable_axis_label_text(nuclide_observable1)
 
     # unpack arguments
     (nuclide,observable) = nuclide_observable
@@ -419,8 +447,8 @@ def make_observable_axis_label_text(nuclide_observable,bare_math_mode_text=False
             observable_str = r"\mu"
             units_str = r"\mu_N"
         elif observable_operator in {"E2p","E2n","E20","E21"}:
-            observable_str = r"eQ"
-            units_str = r"e\,\mathrm{fm}^{2}"
+            observable_str = r"Q"  ## r"eQ"
+            units_str = r"\mathrm{fm}^{2}"  ## r"e\,\mathrm{fm}^{2}"
         if observable_type == "momentsqr":
             observable_str = r"({})^2".format(observable_str)
     elif observable_type == "rtp":
@@ -430,6 +458,9 @@ def make_observable_axis_label_text(nuclide_observable,bare_math_mode_text=False
         elif observable_operator in {"E2p","E2n","E20","E21"}:
             observable_str = r"B(E2)"
             units_str = r"e^2\,\mathrm{fm}^{4}"
+    elif observable_type == "Nex-probability":
+        observable_str = r"P(N_{\mathrm{ex}})"
+        units_str = None
     else:
         raise(ValueError("unrecognized observable type {}".format(observable_type)))
 
@@ -437,8 +468,6 @@ def make_observable_axis_label_text(nuclide_observable,bare_math_mode_text=False
         label = r"{}~({})".format(observable_str,units_str)
     else:
         label = observable_str
-    if not bare_math_mode_text:
-        label = r"${}$".format(label)
 
     return label
 
@@ -611,7 +640,7 @@ def Nmax_plot_style(
 # hw scan
 ################################################################
 
-def hw_scan_descriptor(interaction_coulomb,nuclide_observable):
+def hw_scan_descriptor(interaction_coulomb,nuclide_observable,verbose=False):
     """ Generate standard descriptor string for a (nuclide,observable) pair.
 
     Arguments:
@@ -620,6 +649,10 @@ def hw_scan_descriptor(interaction_coulomb,nuclide_observable):
     Returns:
         descriptor (str): descriptor string
     """
+
+    if verbose:
+        print("Generating hw_scan_descriptor: {} {}".format(interaction_coulomb,nuclide_observable))
+        
     descriptor="hw-scan_{interaction_coulomb[0]:s}-{interaction_coulomb[1]:1d}_{nuclide_observable_descriptor}".format(
         interaction_coulomb=interaction_coulomb,
         nuclide_observable_descriptor=nuclide_observable_descriptor(nuclide_observable)
@@ -641,6 +674,7 @@ def make_hw_scan_data(
         ("moment", operator, qn)
         ("momentsqr", operator, qn)
         ("rtp", operator, qnf, qni)  # reduced transition probability
+        ("Nex-probability", index, qn)  # e.g., for even Nmax, index=0 -> Nmax=0, index=1->Nmax=2
 
         Note that order of arguments (qnf, qni) for a transition is based on the
         bra-ket order in the corresponding matrix element <f|O|i>.
@@ -653,6 +687,7 @@ def make_hw_scan_data(
 
         ("diff", obs1, obs2)  # obs1-obs2
         ("ratio", obs1, obs2)  # obs1/obs2
+        ("minus", obs1)  # -obs1
 
     Examples:
     
@@ -686,7 +721,11 @@ def make_hw_scan_data(
             return data1-data2
         elif arithmetic_operation == "ratio":
             return data1/data2
-
+    elif nuclide_observable[0] in {"minus"}:
+        (arithmetic_operation,nuclide_observable1) = nuclide_observable
+        data1 = make_hw_scan_data(mesh_data,nuclide_observable1,selector=selector,Nmax_range=Nmax_range,hw_range=hw_range)
+        return -data1
+    
     # unpack arguments
     (nuclide,observable) = nuclide_observable
     (observable_type,observable_operator,observable_qn_list) = unpack_observable(observable)
@@ -706,7 +745,14 @@ def make_hw_scan_data(
 
     # NOTE: May ultimately supplant analysis.make_obs_table ndarray step with
     # direct construction of pandas data frame.
-    
+
+    def Nex_probability_extractor(results_data):
+        decomposition = results_data.get_decomposition("Nex",*observable_qn_list)
+        if decomposition is None:
+            return np.nan
+        else:
+            return decomposition[observable_operator]
+        
     KEY_DESCRIPTOR_NMAX_HW = (("Nmax",int),("hw",float))
     if observable_type == "energy":
         table = analysis.make_obs_table(
@@ -737,6 +783,11 @@ def make_hw_scan_data(
         table = analysis.make_obs_table(
             mesh_data_selected,KEY_DESCRIPTOR_NMAX_HW,
             lambda results_data : results_data.get_rtp(observable_operator,tuple(observable_qn_list))
+        )
+    elif observable_type == "Nex-probability":
+        table = analysis.make_obs_table(
+            mesh_data_selected,KEY_DESCRIPTOR_NMAX_HW,
+            Nex_probability_extractor
         )
     else:
         raise(ValueError("unrecognized observable type {}".format(observable_type)))
@@ -804,7 +855,7 @@ def set_up_hw_scan_axes(
     """
     ax.set_xlabel(HW_AXIS_LABEL_TEXT)
     ax.set_xlim(*extend_interval_relative(hw_range,hw_range_extension))
-    ax.set_ylabel(make_observable_axis_label_text(nuclide_observable))
+    ax.set_ylabel(r"${}$".format(make_observable_axis_label_text(nuclide_observable)))
     if (observable_range is not None) and np.isfinite(observable_range[0]).all():
         ax.set_ylim(*extend_interval_relative(observable_range,observable_range_extension))
 
