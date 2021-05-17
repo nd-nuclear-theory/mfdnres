@@ -254,7 +254,7 @@ def make_basic_plot(mesh_data):
     # TUTORIAL: The "descriptor" is a standard string representation of the
     # observable, which we will use in output filenames.
     
-    descriptor=mfdnres.data.hw_scan_descriptor(interaction_coulomb,nuclide_observable)
+    descriptor = mfdnres.data.hw_scan_descriptor(interaction_coulomb,nuclide_observable)
 
     # TUTORIAL: To see the descriptors...
     if False:
@@ -304,7 +304,7 @@ def make_basic_plot(mesh_data):
         mesh_data,nuclide_observable,
         selector =  {"interaction": interaction, "coulomb": coulomb},
         Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range,
-        verbose = False
+        verbose = True
         )
 
     # write data
@@ -682,9 +682,6 @@ def make_multipanel_plot(mesh_data):
         #
         # to set bigger (5% or 10%) margins on the specified x and y axis ranges.
 
-        # TODO 04/08/21 (mac): provide manual tick control a la CustomTicks,
-        # since hw axis ticks are awful here
-
         mfdnres.data.set_up_hw_scan_axes(
             ax,
             nuclide_observable_list[0],
@@ -889,10 +886,10 @@ def main():
     mesh_data=read_data()
 
     make_basic_plot(mesh_data)
-    make_plot_series(mesh_data)
-    make_survey_plot(mesh_data)
-    make_multipanel_plot(mesh_data)
-    make_teardrop_plot(mesh_data)
+    ## make_plot_series(mesh_data)
+    ## make_survey_plot(mesh_data)
+    ## make_multipanel_plot(mesh_data)
+    ## make_teardrop_plot(mesh_data)
 
 if __name__ == "__main__":
     main()
