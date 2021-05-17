@@ -54,7 +54,7 @@ SENSIBLE_PLOT_STYLE = {
     "ytick.direction": "in",
     "ytick.major.pad": 1,
     # legend
-    "legend.labelspacing": 0.,  # compact spacing of entries
+    "legend.labelspacing": 0.2,  # compact spacing of entries
     "legend.frameon": False,  # no frame or background
     "legend.fancybox": False,  # no rounded corners (if turn frame back on)
     "legend.framealpha": None,  # no transparency (if turn frame back on)
@@ -119,6 +119,14 @@ def partitions(iterable, r):
 
     TODO 04/08/21 (mac): Reimplement more elegantly in terms of next()
     calls to iterable.
+
+    NOTE 05/16/21 (mac): Compare note from Python Library help for zip():
+
+    "The left-to-right evaluation order of the iterables is guaranteed. This
+    makes possible an idiom for clustering a data series into n-length groups
+    using zip(*[iter(s)]*n). This repeats the same iterator n times so that each
+    output tuple has the result of n calls to the iterator. This has the effect
+    of dividing the input into n-length chunks."
 
     Arguments:
 
@@ -605,7 +613,7 @@ def Nmax_plot_style(
         Nmax_relative,
         marker_size=6,
         Nmax_symbol_scale=Nmax_symbol_scale,
-        Nmax_marker_face_color=Nmax_marker_face_color,
+        Nmax_marker_face_color=None,
         Nmax_dashing=Nmax_dashing,
         Nmax_color=Nmax_color
 ):
@@ -630,7 +638,7 @@ def Nmax_plot_style(
 
     return dict(
         markersize=marker_size*Nmax_symbol_scale(Nmax_relative),
-        markerfacecolor=Nmax_marker_face_color(Nmax_relative),
+        markerfacecolor=(None if Nmax_marker_face_color is None else Nmax_marker_face_color(Nmax_relative)),
         ## linewidth=1,
         dashes=Nmax_dashing(Nmax_relative),
         color=Nmax_color(Nmax_relative),
