@@ -17,6 +17,7 @@
         + Support mesh selection and slicing in make_hw_scan_data.
         + Support styling overrides in Nmax_plot_style.
     - 04/13/21 (mac): Add add_expt_marker_band.
+    - 04/15/20 (pjf): Add missing element symbols.
     - 04/24/21 (mac): Add unary "minus" compound observable.
 
 """
@@ -70,9 +71,9 @@ def suppress_interior_labels(ax):
     """ Suppress axis and tick labels on interior axes.
 
     Arguments:
-    
+
         ax (mpl.axes.Axes): axes object
-    """    
+    """
     if not ax.is_last_row():
         ax.set_xlabel(None)
         ax.set_xticklabels([])
@@ -88,7 +89,7 @@ def suppress_interior_labels(ax):
 #
 # ExtendInterval[PRange:{_?NumericQ,_?NumericQ},PDiff:{_?NumericQ,_?NumericQ},Mode:(Abs|Absolute)]:=
 #   PRange+PDiff*{-1,+1};
-# 
+#
 # ExtendInterval[PRange:{_?NumericQ,_?NumericQ},PFrac:{_?NumericQ,_?NumericQ},Mode:Scaled]:=
 #   PRange+PFrac*{-1,+1}*-Subtract@@PRange;
 
@@ -162,7 +163,7 @@ def unpack_observable(observable):
     Returns:
 
         observable_type (str): "energy", ...
-    
+
         observable_operator (str): "M1", ..., or None for energy
 
         observable_qn_list (list of tuple): [(J1,g1,n1),...]
@@ -219,7 +220,7 @@ def nuclide_observable_descriptor(nuclide_observable):
         descriptor_template = "Z{nuclide[0]:02d}-N{nuclide[1]:02d}-{observable_type}-{qn_list_str}"
     else:
         descriptor_template = "Z{nuclide[0]:02d}-N{nuclide[1]:02d}-{observable_type}-{observable_operator}-{qn_list_str}"
-        
+
     descriptor=descriptor_template.format(
             nuclide=nuclide,
             observable_type=observable_type,
@@ -229,7 +230,7 @@ def nuclide_observable_descriptor(nuclide_observable):
         )
 
     return descriptor
-    
+
 ################################################################
 # text labels
 ################################################################
@@ -253,8 +254,8 @@ ELEMENT_SYMBOLS = [
     "Ce","Pr","Nd","Pm","Sm","Eu","Gd","Tb","Dy","Ho","Er","Tm","Yb",
     "Lu","Hf","Ta","W","Re","Os","Ir","Pt","Au","Hg","Tl","Pb","Bi","Po",
     "At","Rn","Fr","Ra","Ac","Th","Pa","U","Np","Pu","Am","Cm","Bk","Cf",
-    "Es","Fm","Md","No","Lr","Rf","Db","Sg","Bh","Hs","Mt",
-    "Uun","Uuu","Uub"
+    "Es","Fm","Md","No","Lr","Rf","Db","Sg","Bh","Hs","Mt","Ds","Rg","Cn",
+    "Nh","Fl","Mc","Lv","Ts","Og"
 ]
 
 def isotope(nuclide,as_tuple=False):
@@ -267,7 +268,7 @@ def isotope(nuclide,as_tuple=False):
         as_tuple (bool, optional): return (Z,N) label rather than standard nuclide symbol
 
     Returns:
-    
+
         label (str): label string, to be interpreted in math mode
 
     """
@@ -280,7 +281,7 @@ def isotope(nuclide,as_tuple=False):
     else:
         label = r"^{{{}}}\mathrm{{{}}}".format(A,element_symbol)
     return label
-    
+
 def make_nuclide_text(nuclide_observable,as_tuple=False):
     """Generate text label component for nuclide.
 
@@ -291,7 +292,7 @@ def make_nuclide_text(nuclide_observable,as_tuple=False):
         as_tuple (bool, optional): return (Z,N) label rather than standard nuclide symbol
 
     Returns:
-    
+
         label (str): label string, to be interpreted in math mode
 
     """
@@ -325,7 +326,7 @@ def make_qn_text(qn):
         qn (tuple): (J,g,n) quantum numbers
 
     Returns:
-    
+
         label (str): label string, to be interpreted in math mode
     """
 
@@ -346,10 +347,10 @@ def make_observable_text(nuclide_observable):
         nuclide_observable (tuple): standard nuclide/observable pair or compound
 
     Returns:
-    
+
         label (str): label string, to be interpreted in math mode
     """
-   
+
     # trap compound observable
     if nuclide_observable[0] in {"diff","ratio"}:
         (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
@@ -413,7 +414,7 @@ def make_observable_text(nuclide_observable):
         label = r"{}({})".format(observable_str,qn_str)
     else:
         raise(ValueError("unrecognized observable type {}".format(observable_type)))
-                                                
+
     return label
 
 HW_AXIS_LABEL_TEXT = r"$\hbar\omega~(\mathrm{MeV})$"
@@ -487,11 +488,11 @@ def make_interaction_text(interaction_coulomb):
     """ Interaction text.
 
     Arguments:
-    
+
         interaction_coulomb (tuple): interaction/coulomb specifier
 
     Returns:
-    
+
         label (str): label string, to be interpreted in math mode
     """
     label = r"\mathrm{{{}}}".format(interaction_coulomb[0])
@@ -564,7 +565,7 @@ def Nmax_color(Nmax_relative):
         Nmax_relative (int): Nmax-Nmax_max
 
     Returns:
-    
+
         (str): color directive
 
     """
@@ -586,7 +587,7 @@ def Nmax_marker_face_color(Nmax_relative):
         Nmax_relative (int): Nmax-Nmax_max
 
     Returns:
-    
+
         (str): color directive
 
     """
@@ -702,9 +703,9 @@ def make_hw_scan_data(
         ("minus", obs1)  # -obs1
 
     Examples:
-    
+
         ("energy", (1.5,1,1))  # energy of first 3/2- state
-    
+
         ("rtp", "E2p",  (1.5,1,1),  (2.5,1,1))  # E2 (proton) reduced transition probability B(E2;5/2->3/2)
 
 
@@ -825,7 +826,7 @@ def write_hw_scan_data(descriptor,observable_data,directory="data",format_str_ob
     Write hw scan table for one or more observables.
 
     Arguments:
-    
+
         descriptor (str): descriptor string to use in filename
 
         observable_data (pd.DataFrame): data multi-indexed by (Nmax,hw)
@@ -853,7 +854,7 @@ def set_up_hw_scan_axes(
     """ Set up axes.
 
     Arguments:
-    
+
         ax (mpl.axes.Axes): axes object
 
         nuclide_observable (tuple): standard nuclide/observable pair or compound
@@ -875,7 +876,7 @@ def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**kwarg
     """ Add observable panel label to plot.
 
     Arguments:
-    
+
         ax (mpl.axes.Axes): axes object
 
         interaction_coulomb (tuple): interaction/coulomb specifier
@@ -897,7 +898,7 @@ def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**kwarg
         verticalalignment="bottom",
         bbox=dict(boxstyle="round",facecolor="white")
     )
-        
+
 def add_hw_scan_plot(
         ax,observable_data,Nmax_max,
         marker=".",
@@ -907,7 +908,7 @@ def add_hw_scan_plot(
     """Add hw scan plot to axes.
 
     Arguments:
-    
+
         ax (mpl.axes.Axes): axes object
 
         observable_data (pd.DataFrame): data multi-indexed by (Nmax,hw)
@@ -945,7 +946,7 @@ def write_hw_scan_plot(
     """ Generate full "canned" hw scan plot.
 
     Arguments:
-    
+
         descriptor (str): descriptor string to use in filename
 
         interaction_coulomb (tuple): interaction/coulomb specifier
@@ -997,7 +998,7 @@ def write_hw_scan_plot(
         print(figure_file_name)
     plt.savefig(figure_file_name)
     plt.close()
-        
+
 ################################################################
 # plot annotations
 ################################################################
@@ -1006,7 +1007,7 @@ def add_expt_marker_band(ax,x_range,y_with_error,facecolor="lightgray",edgecolor
     """ Add marker indicating value with error band (rectangle) and central value (line).
 
     Arguments:
-    
+
         ax (mpl.axes.Axes): axes object
 
         x_range (tuple of float): (x1,x2) range
