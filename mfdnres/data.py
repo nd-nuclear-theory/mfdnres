@@ -93,11 +93,15 @@ def suppress_interior_labels(ax):
 #   PRange+PFrac*{-1,+1}*-Subtract@@PRange;
 
 def extend_interval(bounds,extensions):
+    """ Extend bounds (2-vector) by extensions (scalar or 2-vector).
+    """
     b = np.array(bounds)
     e = np.array(extensions)
     return b+e*np.array([-1,+1])
 
 def extend_interval_relative(bounds,extensions):
+    """ Extend bounds (2-vector) by relative extensions (scalar or 2-vector).
+    """
     b = np.array(bounds)
     e = np.array(extensions)
     return b+e*np.array([-1,+1])*(b[1]-b[0])
