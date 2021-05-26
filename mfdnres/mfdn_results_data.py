@@ -31,6 +31,7 @@
         to match definitions in intrinsic.
     04/27/20 (zz): Add deduced isoscalar and isovector M1 observable support.
     09/17/20 (mac): Overhaul observable data attribute naming scheme.
+    05/25/25 (mac): Add "E2" as alias for "E2p", for consistency in plot observable labeling.
 """
 
 import math
@@ -302,8 +303,8 @@ class MFDnResultsData(results_data.ResultsData):
 
         Arguments:
             observable (str): moment type ("E2p", "E2n", "Dlp", "Dln", "Dsp",
-                "Dsn", ...), as well as deduced cases ("E20", "E21", "M1",
-                "M1-native")
+                "Dsn", ...), as well as deduced cases ("E20", "E21", "E2" as alias for "E2p",
+                "M1", "M1-native")
             qn (tuple): quantum numbers for state
             default (float,optional): default value to return for missing observable
 
@@ -331,6 +332,10 @@ class MFDnResultsData(results_data.ResultsData):
                 value = E2p+E2n
             else:
                 value = E2p-E2n
+            return value
+        elif (observable == "E2"):
+            E2p = self.get_moment("E2p",qn,default,verbose)
+            value = E2p
             return value
         elif (observable == "M1"):
             Dsp = self.get_moment("Dsp",qn,default,verbose)
@@ -437,7 +442,7 @@ class MFDnResultsData(results_data.ResultsData):
 
         Arguments:
             observable (str): operator type ("E2p", "E2n", "Dlp", "Dln",
-                "Dsp", "Dsn", ...), as well as deduced cases ("E20", "E21","M1")
+                "Dsp", "Dsn", ...), as well as deduced cases ("E20", "E21", "E2" as alias for "E2p", "M1")
             qn_pair (tuple): quantum numbers for states (qn_bra,qn_ket)
             default (float,optional): default value to return for missing observable
 
@@ -454,6 +459,10 @@ class MFDnResultsData(results_data.ResultsData):
                 value = E2p+E2n
             else:
                 value = E2p-E2n
+            return value
+        elif (observable == "E2"):
+            E2p = self.get_rme("E2p",qn_pair,default,verbose)
+            value = E2p
             return value
         elif (observable == "M1"):
             Dsp = self.get_rme("Dsp",qn_pair,default,verbose)

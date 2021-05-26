@@ -815,7 +815,7 @@ def make_teardrop_plot(mesh_data):
         ax.set_ylabel(mfdnres.data.make_observable_axis_label_text(nuclide_observable))
         ax.set_ylim(*mfdnres.data.extend_interval_relative(observable_range,observable_range_extension))
         ax.grid(axis="y",linewidth=0.5,linestyle=":",color="gray")
-        mfdnres.data.suppress_interior_labels(ax)
+        mfdnres.multipanel.suppress_interior_labels(ax)
         if not ax.is_first_col():
             ax.tick_params(axis="y", length=0)
         

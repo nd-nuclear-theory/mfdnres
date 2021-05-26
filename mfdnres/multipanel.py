@@ -12,6 +12,7 @@
     University of Notre Dame
 
     - 05/23/21 (mac): Created.
+    - 05/25/21 (mac): Move in suppress_interior_labels from data.py.
 
 """
 
@@ -25,9 +26,7 @@ import matplotlib.pyplot as plt
 # helper functions
 ################################################################
 
-# TODO provide panel lettering helper function
-
-def panel_index(dimensions,panel_indices,direction="x",shift=0):
+def panel_index(dimensions,panel_indices,direction="horizontal",shift=0):
     """ Recover counting index for panel.
 
     Arguments:
@@ -36,7 +35,7 @@ def panel_index(dimensions,panel_indices,direction="x",shift=0):
 
         panel_indices (tuple of int): array indices (row,col) in multipanel grid
 
-        direction (str, optional): most-rapidly varying index ("x" or "y") for iteration
+        direction (str, optional): most-rapidly varying index ("horizontal" or "vertical") for iteration
 
         shift (int, optional): shift to panel indexing
 
@@ -46,9 +45,9 @@ def panel_index(dimensions,panel_indices,direction="x",shift=0):
 
     """
     row, col = panel_indices
-    if direction=="x":
+    if direction=="horizontal":
         panel_index = row*dimensions[1]+col
-    elif direction=="y":
+    elif direction=="vertical":
         panel_index = col*dimensions[0]+row
     else:
         raise(ValueError("unrecognized direction {}".format(direction)))
@@ -58,7 +57,7 @@ def panel_index(dimensions,panel_indices,direction="x",shift=0):
 
 def panel_letter(
         dimensions,panel_indices,
-        direction="x",
+        direction="horizontal",
         base = "a",
         shift = 0,
         delimiters = ("(",")"),
@@ -79,7 +78,7 @@ def panel_letter(
 
         base (str, optional): base panel letter (must be single character)
 
-        direction (str, optional): most-rapidly varying index ("x" or "y") for iteration
+        direction (str, optional): most-rapidly varying index ("horizontal" or "vertical") for iteration
 
         shift (int, optional): shift to panel indexing
 
@@ -166,6 +165,28 @@ def multipanel_fig_gs(
     )
 
     return fig, gs
+
+################################################################
+# multipanel utilities
+################################################################
+
+def suppress_interior_labels(ax):
+    """ Suppress axis and tick labels on interior axes.
+
+    Arguments:
+
+        ax (mpl.axes.Axes): axes object
+    """
+    if not ax.is_last_row():
+        ax.set_xlabel(None)
+        ax.set_xticklabels([])
+    if not ax.is_first_col():
+        ax.set_ylabel(None)
+        ax.set_yticklabels([])
+
+################################################################
+# main
+################################################################
 
 def main():    
     pass

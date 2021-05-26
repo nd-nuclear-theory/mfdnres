@@ -19,6 +19,7 @@
     - 04/13/21 (mac): Add add_expt_marker_band.
     - 04/15/20 (pjf): Add missing element symbols.
     - 04/24/21 (mac): Add unary "minus" compound observable.
+    - 05/25/21 (mac): Add Nmax_label_text.  Rename make_qn_text to qn_text.
 
 """
 import os
@@ -62,24 +63,6 @@ SENSIBLE_PLOT_STYLE = {
     "legend.edgecolor": "black",
     "legend.fontsize": "small",
 }
-
-################################################################
-# multipanel utilities
-################################################################
-
-def suppress_interior_labels(ax):
-    """ Suppress axis and tick labels on interior axes.
-
-    Arguments:
-
-        ax (mpl.axes.Axes): axes object
-    """
-    if not ax.is_last_row():
-        ax.set_xlabel(None)
-        ax.set_xticklabels([])
-    if not ax.is_first_col():
-        ax.set_ylabel(None)
-        ax.set_yticklabels([])
 
 ################################################################
 # range utility
@@ -232,7 +215,7 @@ def nuclide_observable_descriptor(nuclide_observable):
     return descriptor
 
 ################################################################
-# text labels
+# basic text labels
 ################################################################
 
 # FigText.m
@@ -282,8 +265,35 @@ def isotope(nuclide,as_tuple=False):
         label = r"^{{{}}}\mathrm{{{}}}".format(A,element_symbol)
     return label
 
+def qn_text(qn):
+    """ Generate text label component for quantum numbers.
+
+    Arguments:
+
+        qn (tuple): (J,g,n) quantum numbers
+
+    Returns:
+
+        label (str): label string, to be interpreted in math mode
+    """
+
+    # am.HalfInt.Str() is missing in Python
+    ## J = am.HalfInt(int(2*qn[0]),2)
+    twice_J=int(2*qn[0])
+    J_str = "{}/2".format(twice_J) if twice_J % 2 else twice_J//2
+    P_str = "+" if qn[1]==0 else "-"
+    n = qn[2]
+    label = r"{}^{}_{}".format(J_str,P_str,n)
+    return label
+
+HW_AXIS_LABEL_TEXT = r"$\hbar\omega~(\mathrm{MeV})$"
+
+################################################################
+# text labels derived from plotting parameters
+################################################################
+
 def make_nuclide_text(nuclide_observable,as_tuple=False):
-    """Generate text label component for nuclide.
+    """Generate text label component for nuclide, given nuclide_observable.
 
     Arguments:
 
@@ -318,29 +328,8 @@ def make_nuclide_text(nuclide_observable,as_tuple=False):
 
     return isotope(nuclide,as_tuple=as_tuple)
 
-def make_qn_text(qn):
-    """ Generate text label component for quantum numbers.
-
-    Arguments:
-
-        qn (tuple): (J,g,n) quantum numbers
-
-    Returns:
-
-        label (str): label string, to be interpreted in math mode
-    """
-
-    # am.HalfInt.Str() is missing in Python
-    ## J = am.HalfInt(int(2*qn[0]),2)
-    twice_J=int(2*qn[0])
-    J_str = "{}/2".format(twice_J) if twice_J % 2 else twice_J//2
-    P_str = "+" if qn[1]==0 else "-"
-    n = qn[2]
-    label = r"{}^{}_{}".format(J_str,P_str,n)
-    return label
-
 def make_observable_text(nuclide_observable):
-    """ Generate text label for observable.
+    """ Generate text label for observable, given nuclide_observable.
 
     Arguments:
 
@@ -378,49 +367,56 @@ def make_observable_text(nuclide_observable):
     # construct label
     if observable_type == "energy":
         observable_str = r"E"
-        qn_str = make_qn_text(observable_qn_list[0])
+        qn_str = qn_text(observable_qn_list[0])
         label = r"{}({})".format(observable_str,qn_str)
     elif observable_type == "isospin":
         observable_str = r"\bar{T}"
-        qn_str = make_qn_text(observable_qn_list[0])
+        qn_str = qn_text(observable_qn_list[0])
         label = r"{}({})".format(observable_str,qn_str)
     elif observable_type == "radius":
         pass  # TODO
-    elif observable_type in {"moment","momentsqr"}:
-        # TODO 04/21/21 (mac): make dimensionless for "Q" but dimensional for square "(eQ)^2" used in ratio
+    elif observable_type=="moment":
         if observable_operator == "M1":
             observable_str = r"\mu"
         elif observable_operator in {"Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
             observable_str = r"\mu_{{{}}}".format(observable_operator[1:])
-        elif observable_operator in {"E2p","E2n","E20","E21"}:
+        elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
             observable_str = r"Q_{{{}}}".format(observable_operator[2:])
-        qn_str = make_qn_text(observable_qn_list[0])
+        qn_str = qn_text(observable_qn_list[0])
         label = r"{}({})".format(observable_str,qn_str)
-        if observable_type == "momentsqr":
-            label = r"[{}]^2".format(label)
+    elif observable_type=="momentsqr":
+        # Assumption is that momentsqr will be taken in ratio with an rtp, so,
+        # for squared E moments, want to include the e unit.
+        if observable_operator == "M1":
+            observable_str = r"\mu"
+        elif observable_operator in {"Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
+            observable_str = r"\mu_{{{}}}".format(observable_operator[1:])
+        elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
+            observable_str = r"eQ_{{{}}}".format(observable_operator[2:])
+        qn_str = qn_text(observable_qn_list[0])
+        label = r"{}({})".format(observable_str,qn_str)
+        label = r"[{}]^2".format(label)
     elif observable_type == "rtp":
         if observable_operator == "M1":
             observable_str = r"M1"
         elif observable_operator in {"Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
             observable_str = r"M1_{{{}}}".format(observable_operator[1:])
-        elif observable_operator in {"E2p","E2n","E20","E21"}:
+        elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
             observable_str = r"E2_{{{}}}".format(observable_operator[2:])
-        qn_str_1 = make_qn_text(observable_qn_list[0])
-        qn_str_2 = make_qn_text(observable_qn_list[1])
+        qn_str_1 = qn_text(observable_qn_list[0])
+        qn_str_2 = qn_text(observable_qn_list[1])
         label = r"B({};{}\rightarrow{})".format(observable_str,qn_str_2,qn_str_1)  # <1|O|2> = 2->1
     elif observable_type == "Nex-probability":
         observable_str = r"P(N_{\mathrm{ex}})"  # TODO include value of Nex
-        qn_str = make_qn_text(observable_qn_list[0])
+        qn_str = qn_text(observable_qn_list[0])
         label = r"{}({})".format(observable_str,qn_str)
     else:
         raise(ValueError("unrecognized observable type {}".format(observable_type)))
 
     return label
 
-HW_AXIS_LABEL_TEXT = r"$\hbar\omega~(\mathrm{MeV})$"
-
 def make_observable_axis_label_text(nuclide_observable):
-    """ Generate axis label (with units) for observable.
+    """ Generate axis label (with units) for observable, given nuclide_observable.
 
     Arguments:
 
@@ -455,20 +451,27 @@ def make_observable_axis_label_text(nuclide_observable):
     elif observable_type == "radius":
         observable_str = r"r"
         units_str = r"\mathrm{fm}"
-    elif observable_type in {"moment","momentsqr"}:
+    elif observable_type =="moment":
         if observable_operator in {"M1","Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
             observable_str = r"\mu"
             units_str = r"\mu_N"
-        elif observable_operator in {"E2p","E2n","E20","E21"}:
+        elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
             observable_str = r"Q"  ## r"eQ"
             units_str = r"\mathrm{fm}^{2}"  ## r"e\,\mathrm{fm}^{2}"
-        if observable_type == "momentsqr":
-            observable_str = r"({})^2".format(observable_str)
+    elif observable_type =="momentsqr":
+        # Assumption is that momentsqr will be taken in ratio with an rtp, so,
+        # for squared E moments, want to include the e unit.
+        if observable_operator in {"M1","Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
+            observable_str = r"\mu^2"
+            units_str = r"\mu_N^2"
+        elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
+            observable_str = r"(eQ)^2"
+            units_str = r"e^2\,\mathrm{fm}^{4}"
     elif observable_type == "rtp":
         if observable_operator in {"M1","Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
             observable_str = r"B(M1)"
             units_str = r"\mu_N"
-        elif observable_operator in {"E2p","E2n","E20","E21"}:
+        elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
             observable_str = r"B(E2)"
             units_str = r"e^2\,\mathrm{fm}^{4}"
     elif observable_type == "Nex-probability":
@@ -485,7 +488,7 @@ def make_observable_axis_label_text(nuclide_observable):
     return label
 
 def make_interaction_text(interaction_coulomb):
-    """ Interaction text.
+    """ Make interaction text, given interaction_coulomb.
 
     Arguments:
 
@@ -496,6 +499,27 @@ def make_interaction_text(interaction_coulomb):
         label (str): label string, to be interpreted in math mode
     """
     label = r"\mathrm{{{}}}".format(interaction_coulomb[0])
+    return label
+
+def Nmax_label_text(Nmax_highlight,Nmax_max):
+    """ Generate Nmax label of form Nmax=* or Nmax=*(*).
+
+    Arguments:
+
+        Nmax_highlight (int): last "full scan" Nmax
+
+        Nmax_max (int): last Nmax
+
+    Returns:
+    
+        label (str): label string, to be interpreted in math mode
+
+    """
+    if Nmax_highlight==Nmax_max:
+        Nmax_combo_text = "{:d}".format(Nmax_max)
+    else:
+        Nmax_combo_text = "{:d}({:d})".format(Nmax_highlight,Nmax_max)
+    label = "N_{{\mathrm{{max}}}}={}".format(Nmax_combo_text)
     return label
 
 ################################################################
