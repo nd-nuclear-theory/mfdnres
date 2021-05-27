@@ -170,17 +170,19 @@ def multipanel_fig_gs(
 # multipanel utilities
 ################################################################
 
-def suppress_interior_labels(ax):
+def suppress_interior_labels(ax,axis="both"):
     """ Suppress axis and tick labels on interior axes.
 
     Arguments:
 
         ax (mpl.axes.Axes): axes object
+
+        axis (str, optional): which axis to act on ("x", "y", or "both")
     """
-    if not ax.is_last_row():
+    if axis in {"x","both"} and not ax.is_last_row():
         ax.set_xlabel(None)
         ax.set_xticklabels([])
-    if not ax.is_first_col():
+    if axis in {"y","both"} and not ax.is_first_col():
         ax.set_ylabel(None)
         ax.set_yticklabels([])
 
