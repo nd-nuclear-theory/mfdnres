@@ -9,6 +9,8 @@ University of Notre Dame
 + 09/02/20 (mac): Add labeled_decomposition and rebinned_decomposition.
 + 09/21/20 (mac): Provide decomposition based on truncated number of Lanczos iterations.
 + 01/25/21 (pjf): Pull raw decomposition generation into its own function.
++ 03/29/21 (zz): Add a function to canonicalize a nuclide and add support for reading canonicalized nuclei files in read_eigenvalues.
++ 05/05/21 (zz): Add rebinning functions for U3LS, Sp3R and Sp3RS.
 """
 
 import numpy as np
@@ -177,7 +179,7 @@ def eigenvalue_label_dict_Nex(Nmax,verbose=False):
         }
     return eigenvalue_label_dict
 
-def read_eigenvalues(filename,verbose=False):
+def read_eigenvalues(filename,swap=False,verbose=False):
     """Read table mapping irrep labels to Casimir eigenvalues.
 
     Eigenvalue degeneracies are allowed.
@@ -201,7 +203,10 @@ def read_eigenvalues(filename,verbose=False):
     # collect labels by eigenvalue
     eigenvalue_label_dict = {}
     for row in table:
-        label = tuple(row[:-1])
+        if swap:
+            label = tuple(list(row[:3])+list(row[4:2:-1])+list(row[5:-1])) # swap row[3] and row[4]
+        else:
+            label = tuple(row[:-1])
         eigenvalue = row[-1]
         eigenvalue_label_dict.setdefault(eigenvalue,[])
         eigenvalue_label_dict[eigenvalue].append(label)
@@ -310,6 +315,36 @@ def label_transformation_u3spsns_to_u3(labels):
     (N,lam,mu,Sp,Sn,S) = labels
     return (N,lam,mu)
 
+def label_transformation_u3spsns_to_u3s(labels):
+    """
+    """
+    (N,lam,mu,Sp,Sn,S) = labels
+    return (N,lam,mu,S)
+
+def label_transformation_u3lspsns_to_nex(labels):
+    """
+    """
+    (N,lam,mu,Sp,Sn,S,L) = labels
+    return N
+
+def label_transformation_u3lspsns_to_s(labels):
+    """
+    """
+    (N,lam,mu,Sp,Sn,S,L) = labels
+    return S
+
+def label_transformation_u3lspsns_to_l(labels):
+    """
+    """
+    (N,lam,mu,Sp,Sn,S,L) = labels
+    return L
+
+def label_transformation_u3lspsns_to_u3ls(labels):
+    """
+    """
+    (N,lam,mu,Sp,Sn,S,L) = labels
+    return (N,lam,mu,S,L)
+
 def label_transformation_baby_spncci_to_s(labels):
     """
     """
@@ -368,3 +403,18 @@ def rebinned_decomposition(decomposition,label_transformation,verbose=False):
         new_decomposition[new_label_list] = new_decomposition.get(new_label_list,0) + probability
 
     return new_decomposition
+
+def canonicalize_nuclide(nuclide):
+    """ Canonicalize nuclide, swap Z and N if Z>N.
+
+    Arguments:
+        nuclide: (Z, N) for the nuclide
+
+    Returns:
+        canonical_nuclide (tuple): canonicalized nuclide
+        swap (bool):  whether swapping N and Z is needed for canonicalizing
+    """
+
+    canonical_nuclide = tuple(sorted(nuclide))
+    swap = (canonical_nuclide != nuclide)
+    return (canonical_nuclide,swap)
