@@ -144,8 +144,14 @@ def multipanel_fig_gs(
 
     """
 
+    if x_panel_sizes is None:
+        x_panel_sizes = dimensions[1]*[1.]
+    if y_panel_sizes is None:
+        y_panel_sizes = dimensions[0]*[1.]
+    total_relative_sizes = np.array([sum(x_panel_sizes),sum(y_panel_sizes)])
     if canvas_size is None:
-        canvas_size = np.array(panel_size)*np.array(tuple(reversed(dimensions)))
+        ## canvas_size = np.array(panel_size)*np.array(tuple(reversed(dimensions)))
+        canvas_size = np.array(panel_size)*total_relative_sizes
         canvas_size += np.array(panel_size)*np.array((x_panel_gaps,y_panel_gaps))*(np.array(tuple(reversed(dimensions)))-1)
     x_main_length, y_main_length = canvas_size
     x_margin, y_margin = canvas_margin
@@ -170,7 +176,7 @@ def multipanel_fig_gs(
 # multipanel utilities
 ################################################################
 
-def suppress_interior_labels(ax,axis="both"):
+def suppress_interior_labels(ax,axis="both",show_axis_label=False,show_tick_labels=False):
     """ Suppress axis and tick labels on interior axes.
 
     Arguments:
@@ -178,13 +184,22 @@ def suppress_interior_labels(ax,axis="both"):
         ax (mpl.axes.Axes): axes object
 
         axis (str, optional): which axis to act on ("x", "y", or "both")
+
+        show_axis_label (bool, optional): whether or not to still permit axis label
+
+        show_tick_labels (bool, optional): whether or not to still permit tick labels
+
     """
     if axis in {"x","both"} and not ax.is_last_row():
-        ax.set_xlabel(None)
-        ax.set_xticklabels([])
+        if not show_axis_label:
+            ax.set_xlabel(None)
+        if not show_tick_labels:
+            ax.set_xticklabels([])
     if axis in {"y","both"} and not ax.is_first_col():
-        ax.set_ylabel(None)
-        ax.set_yticklabels([])
+        if not show_axis_label:
+            ax.set_ylabel(None)
+        if not show_tick_labels:
+            ax.set_yticklabels([])
 
 ################################################################
 # main
