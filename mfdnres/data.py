@@ -20,6 +20,8 @@
     - 04/15/20 (pjf): Add missing element symbols.
     - 04/24/21 (mac): Add unary "minus" compound observable.
     - 05/25/21 (mac): Add Nmax_label_text.  Rename make_qn_text to qn_text.
+    - 06/14/21 (mac): Add options to qn_text to control subscript/superscript.
+    - 07/14/21 (mac): Support asymmetric error in add_expt_marker_band and add add_data_marker.
 
 """
 import os
@@ -265,12 +267,14 @@ def isotope(nuclide,as_tuple=False):
         label = r"^{{{}}}\mathrm{{{}}}".format(A,element_symbol)
     return label
 
-def qn_text(qn):
+def qn_text(qn,show_parity=True,show_index=True):
     """ Generate text label component for quantum numbers.
 
     Arguments:
 
         qn (tuple): (J,g,n) quantum numbers
+        show_parity (bool, optional): whether or not to show parity (subscript)
+        show_index (bool, optional): whether or not to show index (subscript)
 
     Returns:
 
@@ -281,9 +285,16 @@ def qn_text(qn):
     ## J = am.HalfInt(int(2*qn[0]),2)
     twice_J=int(2*qn[0])
     J_str = "{}/2".format(twice_J) if twice_J % 2 else twice_J//2
-    P_str = "+" if qn[1]==0 else "-"
-    n = qn[2]
-    label = r"{}^{}_{}".format(J_str,P_str,n)
+    if show_parity:
+        P_str = "+" if qn[1]==0 else "-"
+    else:
+        P_str = ""
+    if show_index:
+        n_str = "{:d}".format(qn[2])
+    else:
+        n_str = ""
+        
+    label = r"{{{}}}^{{{}}}_{{{}}}".format(J_str,P_str,n_str)
     return label
 
 HW_AXIS_LABEL_TEXT = r"$\hbar\omega~(\mathrm{MeV})$"
@@ -1028,7 +1039,7 @@ def write_hw_scan_plot(
 ################################################################
 
 def add_expt_marker_band(ax,x_range,y_with_error,facecolor="lightgray",edgecolor="black",color="black"):
-    """ Add marker indicating value with error band (rectangle) and central value (line).
+    """Add marker indicating value with error band (rectangle) and central value (line).
 
     Arguments:
 
@@ -1036,20 +1047,67 @@ def add_expt_marker_band(ax,x_range,y_with_error,facecolor="lightgray",edgecolor
 
         x_range (tuple of float): (x1,x2) range
 
-        y_with_error (tuple of float): (y,dy) values; dy may be None
+        y_with_error (float or tuple): (y,dy) given as y, (y,None), (y,dy), or
+           (y,(dy_plus,dy_minus)), where all errors should have *positive*
+           values (in keeping with the conventions of Axes.errorbar)
 
         facecolor, edgecolor, color (optional): pass-through color options
 
     """
 
-    (y,y_error) = y_with_error
     (x0,x1) = x_range
+    if type(y_with_error)==tuple:
+        (y,y_error) = y_with_error
+    else:
+        y = y_with_error
+        y_error = None
+    if type(y_error)==tuple:
+        dy_plus, dy_minus = y_error
+    else:
+        dy_plus = y_error
+        dy_minus = y_error
     if y_error is not None:
+        y0 = y-dy_minus
+        y1 = y+dy_plus
         ax.fill(
             [x0,x1,x1,x0],
-            [y-y_error,y-y_error,y+y_error,y+y_error],
+            [y0,y0,y1,y1],
             edgecolor=edgecolor,linewidth=0.5,
             facecolor=facecolor
         )
     ax.hlines(y,*x_range,color=color,linewidth=1)
+
+def add_data_marker(ax,x,y_with_error,errorbar_kw=dict()):
+    """Add marker indicating value with error band (rectangle) and central value (line).
+
+    Arguments:
+
+        ax (mpl.axes.Axes): axes object
+
+        x (float): x coordinate
+
+        y_with_error (float or tuple): (y,dy) given as y, (y,None), (y,dy), or
+           (y,(dy_plus,dy_minus)), where all errors should have *positive*
+           values (in keeping with the conventions of Axes.errorbar)
+
+        errorbar_kw (dict, optional): options to Axes.errorbar
+
+    """
+
+    if type(y_with_error)==tuple:
+        (y,y_error) = y_with_error
+    else:
+        y = y_with_error
+        y_error = None
+    if type(y_error)==tuple:
+        dy_plus, dy_minus = y_error
+    else:
+        dy_plus = y_error
+        dy_minus = y_error
+    if y_error is None:
+        yerr = None
+    else:
+        ## yerr = [y_error]  # for symmetric error bars
+        yerr = [[dy_plus],[dy_minus]]
+    ax.errorbar([x],[y],yerr=yerr,**errorbar_kw)
 
