@@ -385,7 +385,14 @@ def make_observable_text(nuclide_observable):
         qn_str = qn_text(observable_qn_list[0])
         label = r"{}({})".format(observable_str,qn_str)
     elif observable_type == "radius":
-        pass  # TODO
+        if observable_operator == "rp":
+            observable_str = r"r_p"
+        elif observable_operator == "rn":
+            observable_str = r"r_n"
+        elif observable_operator == "r":
+            observable_str = r"r"
+        qn_str = qn_text(observable_qn_list[0])
+        label = r"{}({})".format(observable_str,qn_str)
     elif observable_type=="moment":
         if observable_operator == "M1":
             observable_str = r"\mu"
@@ -1038,7 +1045,12 @@ def write_hw_scan_plot(
 # plot annotations
 ################################################################
 
-def add_expt_marker_band(ax,x_range,y_with_error,facecolor="lightgray",edgecolor="black",color="black"):
+def add_expt_marker_band(
+        ax,x_range,y_with_error,
+        color="black",linewidth=1,
+        error_facecolor="lightgray",error_edgecolor="black",error_linewidth=0.5,
+        error_full_rectangle=False
+):
     """Add marker indicating value with error band (rectangle) and central value (line).
 
     Arguments:
@@ -1051,7 +1063,11 @@ def add_expt_marker_band(ax,x_range,y_with_error,facecolor="lightgray",edgecolor
            (y,(dy_plus,dy_minus)), where all errors should have *positive*
            values (in keeping with the conventions of Axes.errorbar)
 
-        facecolor, edgecolor, color (optional): pass-through color options
+        color, linewidth (optional): styling parameters for central value
+
+        error_facecolor, error_edgecolor, error_linewidth (optional): styling parameters error band
+
+        error_full_rectangle (bool, optional): draw full rectangle for error band, instead of just top and bottom lines
 
     """
 
@@ -1066,16 +1082,29 @@ def add_expt_marker_band(ax,x_range,y_with_error,facecolor="lightgray",edgecolor
     else:
         dy_plus = y_error
         dy_minus = y_error
+
+    # error band
     if y_error is not None:
         y0 = y-dy_minus
         y1 = y+dy_plus
-        ax.fill(
-            [x0,x1,x1,x0],
-            [y0,y0,y1,y1],
-            edgecolor=edgecolor,linewidth=0.5,
-            facecolor=facecolor
-        )
-    ax.hlines(y,*x_range,color=color,linewidth=1)
+        if error_full_rectangle:
+            ax.fill(
+                [x0,x1,x1,x0],
+                [y0,y0,y1,y1],
+                edgecolor=error_edgecolor,linewidth=error_linewidth,
+                facecolor=error_facecolor
+            )
+        else:
+            ax.fill(
+                [x0,x1,x1,x0],
+                [y0,y0,y1,y1],
+                edgecolor=error_edgecolor,linewidth=0,
+                facecolor=error_facecolor
+            )
+            ax.hlines([y0,y1],*x_range,color=error_edgecolor,linewidth=error_linewidth)
+
+    # central value
+    ax.hlines(y,*x_range,color=color,linewidth=linewidth)
 
 def add_data_marker(ax,x,y_with_error,errorbar_kw=dict()):
     """Add marker indicating value with error band (rectangle) and central value (line).
