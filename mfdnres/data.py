@@ -22,8 +22,10 @@
     - 05/25/21 (mac): Add Nmax_label_text.  Rename make_qn_text to qn_text.
     - 06/14/21 (mac): Add options to qn_text to control subscript/superscript.
     - 07/14/21 (mac): Support asymmetric error in add_expt_marker_band and add add_data_marker.
-
+    - 09/21/21 (mac): Refactor tabulation to use extensible observable registry.
 """
+
+import collections
 import os
 
 import matplotlib as mpl
@@ -300,6 +302,121 @@ def qn_text(qn,show_parity=True,show_index=True):
 HW_AXIS_LABEL_TEXT = r"$\hbar\omega~(\mathrm{MeV})$"
 
 ################################################################
+# observable registry
+################################################################
+
+Observable = collections.namedtuple('Observable', ["extractor_generator", "observable_label_generator", "axis_label_generator"])
+
+# Each field of Observable is a callable, with signature...
+#
+#    Arguments:
+#
+#        nuclide (tuple)
+#
+#        observable_operator (str)
+#
+#        observable_qn_list (list of tuple)
+#
+#     Returns:
+#
+#         For extractor_generator:
+#    
+#            extractor (callable): results_data (MFDnResultsData) -> observable value (float, np.array, or np.nan)
+#    
+#         For observable_label_generator:
+#    
+#             label (str): label string, to be interpreted in math mode
+#    
+#         For axis_label_generator:
+#    
+#             observable (str): observable label string, to be interpreted in math mode
+#             units (str): units string, to be interpreted in math mode, or None
+
+# extractor registry
+OBSERVABLE_BY_OBSERVABLE_TYPE = {}
+
+def register_observable(observable_type, observable):
+    """Register information for extracting observable.
+
+    Args:
+        observable_type (str): identifier for observable
+        observable (Observable): callables to generate extractor and plotting labels
+
+    """
+
+    OBSERVABLE_BY_OBSERVABLE_TYPE[observable_type] = observable
+
+################################################################
+# observable implementations
+################################################################
+
+# TODO 09/21/21 (mac): Finish extracting observable label definitions from
+# if-then traps into observable definitions.
+
+# energy
+def energy_extractor(nuclide,observable_operator,observable_qn_list):
+    return lambda results_data : results_data.get_energy(*observable_qn_list)
+
+def energy_observable_label(nuclide,observable_operator,observable_qn_list):
+    observable_str = r"E"
+    qn_str = qn_text(observable_qn_list[0])
+    label = r"{}({})".format(observable_str,qn_str)
+    return label
+
+def energy_axis_label(nuclide,observable_operator,observable_qn_list):
+    return (r"E", r"\mathrm{MeV}")
+
+OBSERVABLE_BY_OBSERVABLE_TYPE["energy"] = Observable(energy_extractor, energy_observable_label, energy_axis_label)
+
+# isospin
+
+def isospin_extractor(nuclide,observable_operator,observable_qn_list):
+    return lambda results_data : results_data.get_isospin(*observable_qn_list)
+
+OBSERVABLE_BY_OBSERVABLE_TYPE["isospin"] = Observable(isospin_extractor, None, None)
+
+# radius
+
+def radius_extractor(nuclide,observable_operator,observable_qn_list):
+    return lambda results_data : results_data.get_radius(observable_operator,*observable_qn_list)
+
+OBSERVABLE_BY_OBSERVABLE_TYPE["radius"] = Observable(radius_extractor, None, None)
+
+def moment_extractor(nuclide,observable_operator,observable_qn_list):
+    return lambda results_data : results_data.get_moment(observable_operator,*observable_qn_list)
+
+# moment
+
+OBSERVABLE_BY_OBSERVABLE_TYPE["moment"] = Observable(moment_extractor, None, None)
+
+def moment_sqr_extractor(nuclide,observable_operator,observable_qn_list):
+    return lambda results_data : results_data.get_moment(observable_operator,*observable_qn_list)**2
+
+OBSERVABLE_BY_OBSERVABLE_TYPE["moment_sqr"] = Observable(moment_sqr_extractor, None, None)
+
+# rtp
+
+def rtp_extractor(nuclide,observable_operator,observable_qn_list):
+    return lambda results_data : results_data.get_rtp(observable_operator,tuple(observable_qn_list))
+
+OBSERVABLE_BY_OBSERVABLE_TYPE["rtp"] = Observable(rtp_extractor, None, None)
+
+# Nex-probability
+
+def Nex_probability_extractor(observable_operator,observable_qn_list):
+    
+    def extractor(results_data):
+        decomposition = results_data.get_decomposition("Nex",*observable_qn_list)
+        if decomposition is None:
+            return np.nan
+        else:
+            return decomposition[observable_operator]
+
+    return extractor
+
+OBSERVABLE_BY_OBSERVABLE_TYPE["Nex-probability"] = Observable(Nex_probability_extractor, None, None)
+
+################################################################
 # text labels derived from plotting parameters
 ################################################################
 
@@ -376,11 +493,7 @@ def make_observable_text(nuclide_observable):
     (observable_type,observable_operator,observable_qn_list) = unpack_observable(observable)
 
     # construct label
-    if observable_type == "energy":
-        observable_str = r"E"
-        qn_str = qn_text(observable_qn_list[0])
-        label = r"{}({})".format(observable_str,qn_str)
-    elif observable_type == "isospin":
+    if observable_type == "isospin":
         observable_str = r"\bar{T}"
         qn_str = qn_text(observable_qn_list[0])
         label = r"{}({})".format(observable_str,qn_str)
@@ -428,6 +541,8 @@ def make_observable_text(nuclide_observable):
         observable_str = r"P(N_{\mathrm{ex}})"  # TODO include value of Nex
         qn_str = qn_text(observable_qn_list[0])
         label = r"{}({})".format(observable_str,qn_str)
+    elif observable_type in OBSERVABLE_BY_OBSERVABLE_TYPE:
+        label = OBSERVABLE_BY_OBSERVABLE_TYPE[observable_type].observable_label_generator(nuclide,observable_operator,observable_qn_list)
     else:
         raise(ValueError("unrecognized observable type {}".format(observable_type)))
 
@@ -460,10 +575,7 @@ def make_observable_axis_label_text(nuclide_observable):
     (observable_type,observable_operator,observable_qn_list) = unpack_observable(observable)
 
     # construct label
-    if observable_type == "energy":
-        observable_str = r"E"
-        units_str = r"\mathrm{MeV}"
-    elif observable_type == "isospin":
+    if observable_type == "isospin":
         observable_str = r"\bar{T}"
         units_str = None
     elif observable_type == "radius":
@@ -495,6 +607,8 @@ def make_observable_axis_label_text(nuclide_observable):
     elif observable_type == "Nex-probability":
         observable_str = r"P(N_{\mathrm{ex}})"
         units_str = None
+    elif observable_type in OBSERVABLE_BY_OBSERVABLE_TYPE:
+        (observable_str, units_str) = OBSERVABLE_BY_OBSERVABLE_TYPE[observable_type].axis_label_generator(nuclide,observable_operator,observable_qn_list)
     else:
         raise(ValueError("unrecognized observable type {}".format(observable_type)))
 
@@ -756,9 +870,11 @@ def make_hw_scan_data(
 
     Arguments:
         mesh_data (list of ResultsData): data set to include
+
         nuclide_observable (tuple): simple (nuclide,observable) or compound thereof
             nuclide (tuple): (Z,N)
             observable (tuple): (observable_type,observable_operator,(Jf,gf,nf),...)
+
         selector (dict): parameter-value pairs for selection using analysis.selected_mesh_data,
             e.g., {"interaction":interaction,"coulomb":coulomb}
 
@@ -801,51 +917,12 @@ def make_hw_scan_data(
     # NOTE: May ultimately supplant analysis.make_obs_table ndarray step with
     # direct construction of pandas data frame.
 
-    def Nex_probability_extractor(results_data):
-        decomposition = results_data.get_decomposition("Nex",*observable_qn_list)
-        if decomposition is None:
-            return np.nan
-        else:
-            return decomposition[observable_operator]
-        
     KEY_DESCRIPTOR_NMAX_HW = (("Nmax",int),("hw",float))
-    if observable_type == "energy":
-        table = analysis.make_obs_table(
-            mesh_data_selected,KEY_DESCRIPTOR_NMAX_HW,
-            lambda results_data : results_data.get_energy(*observable_qn_list)
-        )
-    elif observable_type == "isospin":
-        table = analysis.make_obs_table(
-            mesh_data_selected,KEY_DESCRIPTOR_NMAX_HW,
-            lambda results_data : results_data.get_isospin(*observable_qn_list)
-        )
-    elif observable_type == "radius":
-        table = analysis.make_obs_table(
-            mesh_data_selected,KEY_DESCRIPTOR_NMAX_HW,
-            lambda results_data : results_data.get_radius(observable_operator,*observable_qn_list)
-        )
-    elif observable_type == "moment":
-        table = analysis.make_obs_table(
-            mesh_data_selected,KEY_DESCRIPTOR_NMAX_HW,
-            lambda results_data : results_data.get_moment(observable_operator,*observable_qn_list)
-        )
-    elif observable_type == "momentsqr":
-        table = analysis.make_obs_table(
-            mesh_data_selected,KEY_DESCRIPTOR_NMAX_HW,
-            lambda results_data : results_data.get_moment(observable_operator,*observable_qn_list)**2
-        )
-    elif observable_type == "rtp":
-        table = analysis.make_obs_table(
-            mesh_data_selected,KEY_DESCRIPTOR_NMAX_HW,
-            lambda results_data : results_data.get_rtp(observable_operator,tuple(observable_qn_list))
-        )
-    elif observable_type == "Nex-probability":
-        table = analysis.make_obs_table(
-            mesh_data_selected,KEY_DESCRIPTOR_NMAX_HW,
-            Nex_probability_extractor
-        )
+    if observable_type in OBSERVABLE_BY_OBSERVABLE_TYPE:
+        extractor = OBSERVABLE_BY_OBSERVABLE_TYPE[observable_type].extractor_generator(nuclide,observable_operator,observable_qn_list)
+        table = analysis.make_obs_table(mesh_data_selected,KEY_DESCRIPTOR_NMAX_HW,extractor)
     else:
-        raise(ValueError("unrecognized observable type {}".format(observable_type)))
+        raise(ValueError("unrecognized observable type {} (not in {})".format(observable_type,list(OBSERVABLE_BY_OBSERVABLE_TYPE.keys()))))
 
     # convert to DataFrame
     observable_data = pd.DataFrame(table).set_index(["Nmax","hw"])

@@ -173,6 +173,26 @@ def read_data():
     )
 
     # TUTORIAL: To see what our initial, raw mesh of MFDnResultsData objects looks like...
+    #
+    # Note: A typical results_data object will contain a params dictionary like the following:
+    #
+    #   {'Version': 15, 'Revision': 'v15b01-34-gd651299', 'ndiags': 9, 'MPIranks': 45,
+    #   'OMPthreads': 64, 'Nprotons': 4, 'Nneutrons': 5, 'TwoMj': 1, 'parity': -1,
+    #   'Nmin': 0, 'Nmax': 8, 'DeltaN': 2, 'WTmax': 13.1, 'M': 0.5, 'nuclide': (4, 5),
+    #   'A': 9, 'dimension': 63003395, 'numnonzero': 45472165505, 'Hrank': 2, 'hbomeg':
+    #   8.0, 'fmass': 938.92, 'TBMEfile': ['tbme-rrel2.bin', 'tbme-Ncm.bin'], 'hw': 8.0,
+    #   'tbo_names': ['rrel2', 'Ncm'], 'numTBops': 2, 'run': 'mac0543', 'code_name':
+    #   'mfdn15', 'descriptor':
+    #   'Z4-N5-Daejeon16-coul1-hw08.000-a_cm50-Nmax08-Mj0.5-lan1500-tol1.0e-04', 'Z': 4,
+    #   'N': 5, 'interaction': 'Daejeon16', 'coulomb': 1, 'lawson': 50.0, 'Ncut': None,
+    #   'mixed_parity_flag': False, 'fci_flag': False, 'lanczos': 1500, 'tolerance':
+    #   '1.0e-04', 'natural_orbital_flag': False, 'natural_orbital_iteration': 0,
+    #   'decomposition_operator': None, 'decomposition_lanczos': None,
+    #   'decomposition_flag': False, 'subset_index': None, 'extension': 'res',
+    #   'natorb_base_state': (None, None, None), 'decomposition_state': (None, None,
+    #   None), 'filename':
+    #   '/home/mcaprio/results/mcaprio/mfdn/runmac0543/results/res/runmac0543-mfdn15-Z4-N5-Daejeon16-coul1-hw08.000-a_cm50-Nmax08-Mj0.5-lan1500-tol1.0e-04.res'}
+
     if False:
         print(mesh_data)
     if False:
@@ -304,7 +324,7 @@ def make_basic_plot(mesh_data):
         mesh_data,nuclide_observable,
         selector =  {"interaction": interaction, "coulomb": coulomb},
         Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range,
-        verbose = True
+        verbose = False
         )
 
     # write data
@@ -665,9 +685,7 @@ def make_multipanel_plot(mesh_data):
         # the following (experimental) code...
 
         if False:
-            major_ticks, minor_ticks = mfdnres.ticks.linear_tick_locations(0,50,5,2)
-            ax.set_xticks(major_ticks)
-            ax.set_xticks(minor_ticks, minor=True)
+            mfdnres.ticks.set_ticks(ax,"x",mfdnres.ticks.linear_ticks(0,50,5,2))
 
         # draw axes
 
