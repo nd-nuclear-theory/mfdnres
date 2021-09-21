@@ -13,8 +13,11 @@
     University of Notre Dame
 
     - 04/08/21 (mac): Created.
+    - 09/07/21 (mac): Add set_ticks().
 
 """
+
+import warnings
 
 import matplotlib as mpl
 ##import matplotlib.pyplot as plt
@@ -187,12 +190,15 @@ def approx_in_range(x,interval,tolerance=1e-10):
 # 
 #   ];
 
-def linear_tick_locations(
+def linear_ticks(
         x1,x2,major_spacing,minor_subdivisions,
         minor_index_range=None,
         minor_index_transformation=None
 ):
     """Construct lists of major and minor tick locations.
+
+    This is primarily intended as a "helper" function for set_linear_ticks() and
+    should not normally need to be called by the user.
 
     Arguments:
 
@@ -261,6 +267,45 @@ def linear_tick_locations(
 
     return major_location_list, minor_location_list
 
+def linear_tick_locations(*args,**kwargs):
+    """ Legacy name for linear_ticks.
+    """
+    warnings.warn("linear_tick_locations() has been renamed to linear_ticks()", DeprecationWarning)
+    return linear_ticks(*args,**kwargs)
+                          
+def set_ticks(
+        ax,axis,major_minor_ticks
+):
+    """Apply ticks to axis.
+
+    Beware that applying ticks beyond the axis range (limits) will stretch the
+    limits, which may need to then be reset.
+
+    FUTURE: provide support for tick label formatting
+
+    Arguments:
+
+        ax (mpl.Axes.axes): axes
+
+        axis (str): axis on which to operate ("x" or "y")
+
+        major_minor_ticks (tuple):
+            major_ticks (list): major tick locations
+            minor_ticks (list): minor tick locations
+
+    """
+
+    if axis == "x":
+        ticks_setter = ax.set_xticks
+    elif axis == "y":
+        ticks_setter = ax.set_yticks
+    else:
+        raise(ValueError("Unrecognized direction ({})".format(direction)))
+
+    (major_ticks,minor_ticks) = major_minor_ticks
+    ticks_setter(major_ticks)
+    ticks_setter(minor_ticks, minor=True)
+    
 def main():    
 
     print(linear_tick_locations(0,10,2,4))
