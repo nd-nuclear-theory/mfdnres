@@ -321,7 +321,7 @@ Observable = collections.namedtuple('Observable', ["extractor_generator", "obser
 #
 #         For extractor_generator:
 #    
-#            extractor (callable): results_data (MFDnResultsData) -> observable value (float, np.array, or np.nan)
+#             extractor (callable): results_data (MFDnResultsData) -> observable value (float, np.array, or np.nan)
 #    
 #         For observable_label_generator:
 #    
@@ -354,6 +354,7 @@ def register_observable(observable_type, observable):
 # if-then traps into observable definitions.
 
 # energy
+
 def energy_extractor(nuclide,observable_operator,observable_qn_list):
     return lambda results_data : results_data.get_energy(*observable_qn_list)
 
@@ -366,40 +367,68 @@ def energy_observable_label(nuclide,observable_operator,observable_qn_list):
 def energy_axis_label(nuclide,observable_operator,observable_qn_list):
     return (r"E", r"\mathrm{MeV}")
 
-OBSERVABLE_BY_OBSERVABLE_TYPE["energy"] = Observable(energy_extractor, energy_observable_label, energy_axis_label)
+register_observable("energy", Observable(energy_extractor, energy_observable_label, energy_axis_label))
 
 # isospin
 
 def isospin_extractor(nuclide,observable_operator,observable_qn_list):
     return lambda results_data : results_data.get_isospin(*observable_qn_list)
 
-OBSERVABLE_BY_OBSERVABLE_TYPE["isospin"] = Observable(isospin_extractor, None, None)
+register_observable("isospin", Observable(isospin_extractor, None, None))
 
 # radius
 
 def radius_extractor(nuclide,observable_operator,observable_qn_list):
     return lambda results_data : results_data.get_radius(observable_operator,*observable_qn_list)
 
-OBSERVABLE_BY_OBSERVABLE_TYPE["radius"] = Observable(radius_extractor, None, None)
+register_observable("radius", Observable(radius_extractor, None, None))
+
+# moment
 
 def moment_extractor(nuclide,observable_operator,observable_qn_list):
     return lambda results_data : results_data.get_moment(observable_operator,*observable_qn_list)
 
-# moment
+register_observable("moment", Observable(moment_extractor, None, None))
 
-OBSERVABLE_BY_OBSERVABLE_TYPE["moment"] = Observable(moment_extractor, None, None)
+# moment_sqr
 
 def moment_sqr_extractor(nuclide,observable_operator,observable_qn_list):
     return lambda results_data : results_data.get_moment(observable_operator,*observable_qn_list)**2
 
-OBSERVABLE_BY_OBSERVABLE_TYPE["moment_sqr"] = Observable(moment_sqr_extractor, None, None)
+register_observable("moment_sqr", Observable(moment_sqr_extractor, None, None))
 
 # rtp
 
 def rtp_extractor(nuclide,observable_operator,observable_qn_list):
     return lambda results_data : results_data.get_rtp(observable_operator,tuple(observable_qn_list))
 
-OBSERVABLE_BY_OBSERVABLE_TYPE["rtp"] = Observable(rtp_extractor, None, None)
+def rtp_observable_label(nuclide,observable_operator,observable_qn_list):
+    if observable_operator == "M1":
+        observable_str = r"M1"
+    elif observable_operator in {"Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
+        observable_str = r"M1_{{{}}}".format(observable_operator[1:])
+    elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
+        observable_str = r"E2_{{{}}}".format(observable_operator[2:])
+    elif observable_operator in {"E0p","E0n","E00","E01","E0"}:
+        observable_str = r"E0_{{{}}}".format(observable_operator[2:])
+    qn_str_1 = qn_text(observable_qn_list[0])
+    qn_str_2 = qn_text(observable_qn_list[1])
+    label = r"B({};{}\rightarrow{})".format(observable_str,qn_str_2,qn_str_1)  # <1|O|2> = 2->1
+    return label
+
+def rtp_axis_label(nuclide,observable_operator,observable_qn_list):
+    if observable_operator in {"M1","Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
+        observable_str = r"B(M1)"
+        units_str = r"\mu_N"
+    elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
+        observable_str = r"B(E2)"
+        units_str = r"e^2\,\mathrm{fm}^{4}"
+    elif observable_operator in {"E0p","E0n","E00","E01","E0"}:
+        observable_str = r"B(E0)"
+        units_str = r"e^2\,\mathrm{fm}^{4}"
+    return (observable_str, units_str)
+
+register_observable("rtp", Observable(rtp_extractor, rtp_observable_label, rtp_axis_label))
 
 # Nex-probability
 
@@ -414,7 +443,7 @@ def Nex_probability_extractor(observable_operator,observable_qn_list):
 
     return extractor
 
-OBSERVABLE_BY_OBSERVABLE_TYPE["Nex-probability"] = Observable(Nex_probability_extractor, None, None)
+register_observable("Nex-probability", Observable(Nex_probability_extractor, None, None))
 
 ################################################################
 # text labels derived from plotting parameters
@@ -527,16 +556,6 @@ def make_observable_text(nuclide_observable):
         qn_str = qn_text(observable_qn_list[0])
         label = r"{}({})".format(observable_str,qn_str)
         label = r"[{}]^2".format(label)
-    elif observable_type == "rtp":
-        if observable_operator == "M1":
-            observable_str = r"M1"
-        elif observable_operator in {"Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
-            observable_str = r"M1_{{{}}}".format(observable_operator[1:])
-        elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
-            observable_str = r"E2_{{{}}}".format(observable_operator[2:])
-        qn_str_1 = qn_text(observable_qn_list[0])
-        qn_str_2 = qn_text(observable_qn_list[1])
-        label = r"B({};{}\rightarrow{})".format(observable_str,qn_str_2,qn_str_1)  # <1|O|2> = 2->1
     elif observable_type == "Nex-probability":
         observable_str = r"P(N_{\mathrm{ex}})"  # TODO include value of Nex
         qn_str = qn_text(observable_qn_list[0])
@@ -596,13 +615,6 @@ def make_observable_axis_label_text(nuclide_observable):
             units_str = r"\mu_N^2"
         elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
             observable_str = r"(eQ)^2"
-            units_str = r"e^2\,\mathrm{fm}^{4}"
-    elif observable_type == "rtp":
-        if observable_operator in {"M1","Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
-            observable_str = r"B(M1)"
-            units_str = r"\mu_N"
-        elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
-            observable_str = r"B(E2)"
             units_str = r"e^2\,\mathrm{fm}^{4}"
     elif observable_type == "Nex-probability":
         observable_str = r"P(N_{\mathrm{ex}})"
@@ -835,7 +847,8 @@ def make_hw_scan_data(
         verbose=False):
     """Tabulate generic observable for hw scan.
 
-    Simple observables:
+    Simple observables generically have the form
+    (<type>,[<operator>],<qn1>,[<qn2>]):
 
         ("energy", qn)
         ("isospin", qn)

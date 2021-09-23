@@ -451,8 +451,9 @@ class MFDnResultsData(results_data.ResultsData):
 
         """
 
-        # trap deduced observables (isoscalar/isovector E2 or physical M1)
+        # trap deduced observables
         if (observable in {"E20","E21"}):
+            # isoscalar/isovector E2
             E2p = self.get_rme("E2p",qn_pair,default,verbose)
             E2n = self.get_rme("E2n",qn_pair,default,verbose)
             if (observable =="E20"):
@@ -461,10 +462,26 @@ class MFDnResultsData(results_data.ResultsData):
                 value = E2p-E2n
             return value
         elif (observable == "E2"):
+            # physical E2 (alias for E2p)
             E2p = self.get_rme("E2p",qn_pair,default,verbose)
             value = E2p
             return value
+        elif (observable in {"E00","E01"}):
+            # isoscalar/isovector E0
+            E0p = self.get_rme("E0p",qn_pair,default,verbose)
+            E0n = self.get_rme("E0n",qn_pair,default,verbose)
+            if (observable =="E00"):
+                value = E0p+E0n
+            else:
+                value = E0p-E0n
+            return value
+        elif (observable == "E0"):
+            # physical E0 (alias for E0p)
+            E0p = self.get_rme("E0p",qn_pair,default,verbose)
+            value = E0p
+            return value
         elif (observable == "M1"):
+            # physical M1
             Dsp = self.get_rme("Dsp",qn_pair,default,verbose)
             Dsn = self.get_rme("Dsn",qn_pair,default,verbose)
             Dlp = self.get_rme("Dlp",qn_pair,default,verbose)
