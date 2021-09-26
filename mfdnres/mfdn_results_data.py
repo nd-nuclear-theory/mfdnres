@@ -31,7 +31,8 @@
         to match definitions in intrinsic.
     04/27/20 (zz): Add deduced isoscalar and isovector M1 observable support.
     09/17/20 (mac): Overhaul observable data attribute naming scheme.
-    05/25/25 (mac): Add "E2" as alias for "E2p", for consistency in plot observable labeling.
+    05/25/21 (mac): Add "E2" as alias for "E2p", for consistency in plot observable labeling.
+    09/25/21 (mac): Add single-species radii relative to own center of mass in get_radius().
 """
 
 import math
@@ -268,8 +269,12 @@ class MFDnResultsData(results_data.ResultsData):
         if it still even does that in v15).
 
         Arguments:
-            radius_type (str): radius type rp/rn/r
+
+            radius_type (str): radius type ("rp", "rn", "r"), as well as deduced
+                cases ("rp-single-species", "rn-single-species")
+
             qn (tuple): quantum numbers for state
+
             default (float,optional): default value to return for missing observable
 
         Returns:
@@ -280,6 +285,26 @@ class MFDnResultsData(results_data.ResultsData):
         # extract labels
         (J,gex,n) = qn
 
+        # trap deduced observables (single species radii relative to own center
+        # of mass)
+        #
+        # Relation to MFDn output observables "r_pp" and "r_nn" deduced from
+        # cshalo [PRC 90, 034305 (2014)] (A5).
+        if (radius_type == "rp-single-species"):
+            nuclide = self.params["nuclide"]
+            Np, Nn = nuclide
+            A = sum(nuclide)
+            rpp = self.mfdn_tb_expectations.get("rpp",{}).get(qn,default)
+            value = A/Np*rpp
+            return value
+        elif (radius_type == "rn-single-species"):
+            nuclide = self.params["nuclide"]
+            Np, Nn = nuclide
+            A = sum(nuclide)
+            rnn = self.mfdn_tb_expectations.get("rnn",{}).get(qn,default)
+            value = A/Nn*rnn
+            return value
+        
         rms_radius = self.mfdn_tb_expectations.get(radius_type,{}).get(qn,default)
 
         return rms_radius

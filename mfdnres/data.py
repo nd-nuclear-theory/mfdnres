@@ -365,7 +365,9 @@ def energy_observable_label(nuclide,observable_operator,observable_qn_list):
     return label
 
 def energy_axis_label(nuclide,observable_operator,observable_qn_list):
-    return (r"E", r"\mathrm{MeV}")
+    observable_str = r"E"
+    units_str = r"\mathrm{MeV}"
+    return observable_str, units_str
 
 register_observable("energy", Observable(energy_extractor, energy_observable_label, energy_axis_label))
 
@@ -381,7 +383,27 @@ register_observable("isospin", Observable(isospin_extractor, None, None))
 def radius_extractor(nuclide,observable_operator,observable_qn_list):
     return lambda results_data : results_data.get_radius(observable_operator,*observable_qn_list)
 
-register_observable("radius", Observable(radius_extractor, None, None))
+def radius_observable_label(nuclide,observable_operator,observable_qn_list):
+    if observable_operator == "rp":
+        observable_str = r"r_p"
+    elif observable_operator == "rn":
+        observable_str = r"r_n"
+    elif observable_operator == "r":
+        observable_str = r"r"
+    elif observable_operator == "rp-single-species":
+        observable_str = r"r_{p,\mathrm{s.s.}}"
+    elif observable_operator == "rn-single-species":
+        observable_str = r"r_{n,\mathrm{s.s.}}"
+    qn_str = qn_text(observable_qn_list[0])
+    label = r"{}({})".format(observable_str,qn_str)
+    return label
+
+def radius_axis_label(nuclide,observable_operator,observable_qn_list):
+    observable_str = r"r"
+    units_str = r"\mathrm{fm}"
+    return observable_str, units_str
+
+register_observable("radius", Observable(radius_extractor, radius_observable_label, radius_axis_label))
 
 # moment
 
@@ -426,7 +448,7 @@ def rtp_axis_label(nuclide,observable_operator,observable_qn_list):
     elif observable_operator in {"E0p","E0n","E00","E01","E0"}:
         observable_str = r"B(E0)"
         units_str = r"e^2\,\mathrm{fm}^{4}"
-    return (observable_str, units_str)
+    return observable_str, units_str
 
 register_observable("rtp", Observable(rtp_extractor, rtp_observable_label, rtp_axis_label))
 
@@ -526,15 +548,6 @@ def make_observable_text(nuclide_observable):
         observable_str = r"\bar{T}"
         qn_str = qn_text(observable_qn_list[0])
         label = r"{}({})".format(observable_str,qn_str)
-    elif observable_type == "radius":
-        if observable_operator == "rp":
-            observable_str = r"r_p"
-        elif observable_operator == "rn":
-            observable_str = r"r_n"
-        elif observable_operator == "r":
-            observable_str = r"r"
-        qn_str = qn_text(observable_qn_list[0])
-        label = r"{}({})".format(observable_str,qn_str)
     elif observable_type=="moment":
         if observable_operator == "M1":
             observable_str = r"\mu"
@@ -597,9 +610,6 @@ def make_observable_axis_label_text(nuclide_observable):
     if observable_type == "isospin":
         observable_str = r"\bar{T}"
         units_str = None
-    elif observable_type == "radius":
-        observable_str = r"r"
-        units_str = r"\mathrm{fm}"
     elif observable_type =="moment":
         if observable_operator in {"M1","Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
             observable_str = r"\mu"

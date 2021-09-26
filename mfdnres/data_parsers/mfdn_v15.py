@@ -20,6 +20,7 @@
     07/08/20 (pjf): Fix quantum number types.
     09/17/20 (zz): Add one-body observable parser.
     09/17/20 (mac): Update data attribute names.  Add two-body obervable parser.
+    09/25/21 (mac): Add support for parsing extended relative radii observables.
 """
 
 import itertools
@@ -281,7 +282,14 @@ def parse_angular_momenta(self,tokenized_lines):
 def parse_radii(self,tokenized_lines):
     """Parse radii.
     """
-    property_names = ["rp","rn","r"]
+    if len(tokenized_lines[0])==7:
+        property_names = ["rp","rn","r"]
+    elif len(tokenized_lines[0])==10:
+        # extended set of observables introduced with some version of MFDn
+        # v15beta01 (<= v15b01-39-g18c712b)
+        #
+        # See cshalo [PRC 90, 034305 (2014)] (A5) for definitions.
+        property_names = ["rp","rn","r","rpp","rnn","rpn"]
     parse_generic_static_properties(self,tokenized_lines,self.mfdn_tb_expectations,property_names)
 
 def parse_other_tbo(self,tokenized_lines):
