@@ -271,7 +271,7 @@ class MFDnResultsData(results_data.ResultsData):
         Arguments:
 
             radius_type (str): radius type ("rp", "rn", "r"), as well as deduced
-                cases ("rp-single-species", "rn-single-species")
+                cases ("rp-ss", "rn-ss")
 
             qn (tuple): quantum numbers for state
 
@@ -290,14 +290,14 @@ class MFDnResultsData(results_data.ResultsData):
         #
         # Relation to MFDn output observables "r_pp" and "r_nn" deduced from
         # cshalo [PRC 90, 034305 (2014)] (A5).
-        if (radius_type == "rp-single-species"):
+        if (radius_type == "rp-ss"):
             nuclide = self.params["nuclide"]
             Np, Nn = nuclide
             A = sum(nuclide)
             rpp = self.mfdn_tb_expectations.get("rpp",{}).get(qn,default)
             value = A/Np*rpp
             return value
-        elif (radius_type == "rn-single-species"):
+        elif (radius_type == "rn-ss"):
             nuclide = self.params["nuclide"]
             Np, Nn = nuclide
             A = sum(nuclide)

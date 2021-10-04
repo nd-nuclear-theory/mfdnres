@@ -390,9 +390,9 @@ def radius_observable_label(nuclide,observable_operator,observable_qn_list):
         observable_str = r"r_n"
     elif observable_operator == "r":
         observable_str = r"r"
-    elif observable_operator == "rp-single-species":
+    elif observable_operator == "rp-ss":
         observable_str = r"r_{p,\mathrm{s.s.}}"
-    elif observable_operator == "rn-single-species":
+    elif observable_operator == "rn-ss":
         observable_str = r"r_{n,\mathrm{s.s.}}"
     qn_str = qn_text(observable_qn_list[0])
     label = r"{}({})".format(observable_str,qn_str)
@@ -412,12 +412,12 @@ def moment_extractor(nuclide,observable_operator,observable_qn_list):
 
 register_observable("moment", Observable(moment_extractor, None, None))
 
-# moment_sqr
+# moment-sqr
 
 def moment_sqr_extractor(nuclide,observable_operator,observable_qn_list):
     return lambda results_data : results_data.get_moment(observable_operator,*observable_qn_list)**2
 
-register_observable("moment_sqr", Observable(moment_sqr_extractor, None, None))
+register_observable("moment-sqr", Observable(moment_sqr_extractor, None, None))
 
 # rtp
 
@@ -454,18 +454,34 @@ register_observable("rtp", Observable(rtp_extractor, rtp_observable_label, rtp_a
 
 # Nex-probability
 
-def Nex_probability_extractor(observable_operator,observable_qn_list):
+def Nex_probability_extractor(nuclide,observable_operator,observable_qn_list):
+
+    ##g_0= mfdnres.ncci.N0_for_nuclide(nuclide)
+    # TODO fix meaning of observable_operator argument to be Nex rather than Nex_index
     
     def extractor(results_data):
+        Nex_index = observable_operator  # 0 for lowest Nex, 1 for next Nex, ...
         decomposition = results_data.get_decomposition("Nex",*observable_qn_list)
         if decomposition is None:
             return np.nan
         else:
-            return decomposition[observable_operator]
+            return decomposition[Nex_index]
 
     return extractor
 
-register_observable("Nex-probability", Observable(Nex_probability_extractor, None, None))
+def Nex_probability_observable_label(nuclide,observable_operator,observable_qn_list):
+    observable_str = r"P(N_{\mathrm{ex}})"  # TODO include value of Nex
+    qn_str = qn_text(observable_qn_list[0])
+    label = r"{}({})".format(observable_str,qn_str)
+    return label
+
+def Nex_probability_axis_label(nuclide,observable_operator,observable_qn_list):
+    observable_str = r"P(N_{\mathrm{ex}})"
+    units_str = None
+    return observable_str, units_str
+
+register_observable("Nex-probability", Observable(Nex_probability_extractor, Nex_probability_observable_label, Nex_probability_axis_label))
+
 
 ################################################################
 # text labels derived from plotting parameters
@@ -557,8 +573,8 @@ def make_observable_text(nuclide_observable):
             observable_str = r"Q_{{{}}}".format(observable_operator[2:])
         qn_str = qn_text(observable_qn_list[0])
         label = r"{}({})".format(observable_str,qn_str)
-    elif observable_type=="momentsqr":
-        # Assumption is that momentsqr will be taken in ratio with an rtp, so,
+    elif observable_type=="moment-sqr":
+        # Assumption is that moment-sqr will be taken in ratio with an rtp, so,
         # for squared E moments, want to include the e unit.
         if observable_operator == "M1":
             observable_str = r"\mu"
@@ -569,10 +585,6 @@ def make_observable_text(nuclide_observable):
         qn_str = qn_text(observable_qn_list[0])
         label = r"{}({})".format(observable_str,qn_str)
         label = r"[{}]^2".format(label)
-    elif observable_type == "Nex-probability":
-        observable_str = r"P(N_{\mathrm{ex}})"  # TODO include value of Nex
-        qn_str = qn_text(observable_qn_list[0])
-        label = r"{}({})".format(observable_str,qn_str)
     elif observable_type in OBSERVABLE_BY_OBSERVABLE_TYPE:
         label = OBSERVABLE_BY_OBSERVABLE_TYPE[observable_type].observable_label_generator(nuclide,observable_operator,observable_qn_list)
     else:
@@ -617,8 +629,8 @@ def make_observable_axis_label_text(nuclide_observable):
         elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
             observable_str = r"Q"  ## r"eQ"
             units_str = r"\mathrm{fm}^{2}"  ## r"e\,\mathrm{fm}^{2}"
-    elif observable_type =="momentsqr":
-        # Assumption is that momentsqr will be taken in ratio with an rtp, so,
+    elif observable_type =="moment-sqr":
+        # Assumption is that moment-sqr will be taken in ratio with an rtp, so,
         # for squared E moments, want to include the e unit.
         if observable_operator in {"M1","Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
             observable_str = r"\mu^2"
@@ -626,9 +638,6 @@ def make_observable_axis_label_text(nuclide_observable):
         elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
             observable_str = r"(eQ)^2"
             units_str = r"e^2\,\mathrm{fm}^{4}"
-    elif observable_type == "Nex-probability":
-        observable_str = r"P(N_{\mathrm{ex}})"
-        units_str = None
     elif observable_type in OBSERVABLE_BY_OBSERVABLE_TYPE:
         (observable_str, units_str) = OBSERVABLE_BY_OBSERVABLE_TYPE[observable_type].axis_label_generator(nuclide,observable_operator,observable_qn_list)
     else:
@@ -864,7 +873,7 @@ def make_hw_scan_data(
         ("isospin", qn)
         ("radius", operator, qn)
         ("moment", operator, qn)
-        ("momentsqr", operator, qn)
+        ("moment-sqr", operator, qn)
         ("rtp", operator, qnf, qni)  # reduced transition probability
         ("Nex-probability", index, qn)  # e.g., for even Nmax, index=0 -> Nmax=0, index=1->Nmax=2
 
@@ -1025,6 +1034,8 @@ def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**kwarg
 
         nuclide_observable (tuple): standard nuclide/observable pair or compound
 
+        **kwargs: pass-through keyword arguments to ax.annotate
+
     """
 
     # panel label
@@ -1038,7 +1049,8 @@ def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**kwarg
         multialignment="left",
         horizontalalignment="right",
         verticalalignment="bottom",
-        bbox=dict(boxstyle="round",facecolor="white")
+        bbox=dict(boxstyle="round",facecolor="white"),
+        **kwargs
     )
 
 def add_hw_scan_plot(
@@ -1083,6 +1095,7 @@ def write_hw_scan_plot(
         observable_range_extension=(0.02,0.02),
         figsize=(6,4),
         directory=".",
+        panel_label_kwargs = {},
         verbose=False
 ):
     """ Generate full "canned" hw scan plot.
@@ -1126,7 +1139,7 @@ def write_hw_scan_plot(
     )
 
     # make panel label
-    add_observable_panel_label(ax,interaction_coulomb,nuclide_observable)
+    add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**panel_label_kwargs)
 
     # generate plot
     add_hw_scan_plot(ax,observable_data,Nmax_max)
