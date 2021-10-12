@@ -38,6 +38,7 @@
     04/02/21 (mac): Add make_obs_table for generic single-observable tabulation.
     10/12/21 (pjf):
         - Add reverse option to sorted_mesh_data.
+        - Add nonspurious_to_spurious_qn.
 """
 
 import functools
@@ -299,6 +300,32 @@ def sorted_mesh_data(mesh_data, key_descriptor, reverse=False, verbose=False):
     new_mesh_data = sorted(mesh_data, key=key_function, reverse=reverse)
 
     return new_mesh_data
+
+################################################################
+# quantum numbers within nonspurious space
+################################################################
+
+def nonspurious_to_spurious_qn(mesh_point, qn, threshold=0.9):
+    """Converts qn in non-spurious space to qn in spurious space
+
+    Arguments:
+        mesh_point (MFDnResultsData): mesh point
+        qn (tuple): desired quantum numbers in nonspurious space
+        threshold (float, optional): threshold value of <Ncm> for
+            spuriosity
+
+    Returns:
+        (tuple): qn in the full space, None if not found
+    """
+    (J,g,target_n) = qn
+    n = 0
+    for level in mesh_point.levels:
+        if (J,g) == level[0:2] and mesh_point.mfdn_tb_expectations["Ncm"][level] < threshold:
+            n += 1
+        if n == target_n:
+            return level
+    return None
+
 
 ################################################################
 # consolidation of results data objects by shared parameters
