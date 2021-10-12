@@ -39,6 +39,7 @@
     10/12/21 (pjf):
         - Add reverse option to sorted_mesh_data.
         - Add nonspurious_to_spurious_qn.
+        - Use dict comprehension in subdict to preserve order.
 """
 
 import functools
@@ -342,12 +343,12 @@ def subdict(d,keys):
         subdict (dict): dictionary with reduced set of keys
 
     """
-    subitems = [
-        item
-        for item in d.items()
-        if item[0] in keys
-    ]
-    return dict(subitems)
+    subitems = {
+        key: value
+        for key,value in d.items()
+        if key in keys
+    }
+    return subitems
 
 def dict_items(d):
     """ Convert dictionary to sorted tuple of items.
