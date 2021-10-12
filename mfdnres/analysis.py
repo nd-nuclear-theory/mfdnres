@@ -36,6 +36,8 @@
     06/18/20 (pjf): Make sorted_mesh_data only sort, not consolidate.
     03/16/21 (mac): Standardize structured array observable column name as "value".
     04/02/21 (mac): Add make_obs_table for generic single-observable tabulation.
+    10/12/21 (pjf):
+        - Add reverse option to sorted_mesh_data.
 """
 
 import functools
@@ -275,7 +277,7 @@ def selected_mesh_data(
         print("  selected_mesh_data: selected mesh points {}".format(len(new_mesh_data)))
     return new_mesh_data
 
-def sorted_mesh_data(mesh_data, key_descriptor, verbose=False):
+def sorted_mesh_data(mesh_data, key_descriptor, reverse=False, verbose=False):
     """Sort mesh data, using specified parameter tuple as key.
 
     Example:
@@ -294,7 +296,7 @@ def sorted_mesh_data(mesh_data, key_descriptor, verbose=False):
     """
 
     key_function = make_key_function(key_descriptor)
-    new_mesh_data = sorted(mesh_data, key=key_function)
+    new_mesh_data = sorted(mesh_data, key=key_function, reverse=reverse)
 
     return new_mesh_data
 
