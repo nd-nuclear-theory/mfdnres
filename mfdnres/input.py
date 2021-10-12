@@ -32,7 +32,7 @@
     06/17/20 (pjf): Add code registration and detection from filename.
     09/02/20 (pjf): Add autodetection of filename format.
     09/07/20 (pjf): Fix filename parsing.
-
+    10/12/21 (pjf): Print filename info if parser throws error.
 """
 
 import glob
@@ -262,7 +262,11 @@ def read_file(filename,res_format=None,filename_format=None,verbose=False):
     if (verbose):
         print("  read_file: filename {}".format(filename))
     with open(filename,'rt') as fin:
-        results_list = data_format_parser[res_format](fin,verbose=verbose)
+        try:
+            results_list = data_format_parser[res_format](fin,verbose=verbose)
+        except Exception as e:
+            print("filename {} filename_format {} res_format {}".format(filename, filename_format, res_format))
+            raise e
     if (verbose):
         print("  read_file: mesh points {:d}".format(len(results_list)))
 
