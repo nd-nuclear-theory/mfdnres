@@ -23,6 +23,7 @@
     - 06/14/21 (mac): Add options to qn_text to control subscript/superscript.
     - 07/14/21 (mac): Support asymmetric error in add_expt_marker_band and add add_data_marker.
     - 09/21/21 (mac): Refactor tabulation to use extensible observable registry.
+    - 10/14/21 (mac): Add nuclide and qn tuple manipulation tools (from emratio_obs.py).
 """
 
 import collections
@@ -136,6 +137,23 @@ def partitions(iterable, r):
         yield pool[:r]
         pool = pool[r:]
 
+################################################################
+# tools: nuclide and qn tuple manipulation
+################################################################
+
+def canonicalized_nuclide(nuclide):
+    """ Transpose (Z,N) if needed to make Z<=N. """
+    return tuple(sorted(nuclide))
+
+def conjugate_nuclide(nuclide):
+    """ Transpose (Z,N) to (N,Z). """
+    return tuple(reversed(nuclide))
+
+def excited(qn):
+    """ Excite (J,g,n) to (J,g,n+1). """
+    (J,g,n) = qn
+    return (J,g,n+1)
+        
 ################################################################
 # observable parsing
 ################################################################
