@@ -21,6 +21,7 @@
     09/17/20 (zz): Add one-body observable parser.
     09/17/20 (mac): Update data attribute names.  Add two-body obervable parser.
     09/25/21 (mac): Add support for parsing extended relative radii observables.
+    10/12/21 (pjf): Warn if file is empty.
 """
 
 import itertools
@@ -429,6 +430,11 @@ def parser(in_file,verbose):
     res_file_lines = [row for row in in_file]
     tokenized_lines = tools.split_and_prune_lines(res_file_lines)
     sections = tools.extracted_sections(tokenized_lines)
+
+    # handle empty files
+    if len(res_file_lines)==0:
+        print("WARNING: file {} is empty!".format(in_file.name))
+        return []
 
     # set up container
     results = mfdn_results_data.MFDnResultsData()

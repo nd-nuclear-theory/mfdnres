@@ -36,10 +36,17 @@
     06/18/20 (pjf): Make sorted_mesh_data only sort, not consolidate.
     03/16/21 (mac): Standardize structured array observable column name as "value".
     04/02/21 (mac): Add make_obs_table for generic single-observable tabulation.
+    10/12/21 (pjf):
+        - Add reverse option to sorted_mesh_data.
+        - Add nonspurious_to_spurious_qn.
+        - Use dict comprehension in subdict to preserve order.
+        - Add preprocessor option to merged_mesh; keep common params in merged mesh point.
 """
 
+import copy
 import functools
 import itertools
+import more_itertools
 import math
 
 import numpy as np
@@ -275,7 +282,7 @@ def selected_mesh_data(
         print("  selected_mesh_data: selected mesh points {}".format(len(new_mesh_data)))
     return new_mesh_data
 
-def sorted_mesh_data(mesh_data, key_descriptor, verbose=False):
+def sorted_mesh_data(mesh_data, key_descriptor, reverse=False, verbose=False):
     """Sort mesh data, using specified parameter tuple as key.
 
     Example:
@@ -294,9 +301,35 @@ def sorted_mesh_data(mesh_data, key_descriptor, verbose=False):
     """
 
     key_function = make_key_function(key_descriptor)
-    new_mesh_data = sorted(mesh_data, key=key_function)
+    new_mesh_data = sorted(mesh_data, key=key_function, reverse=reverse)
 
     return new_mesh_data
+
+################################################################
+# quantum numbers within nonspurious space
+################################################################
+
+def nonspurious_to_spurious_qn(mesh_point, qn, threshold=0.9):
+    """Converts qn in non-spurious space to qn in spurious space
+
+    Arguments:
+        mesh_point (MFDnResultsData): mesh point
+        qn (tuple): desired quantum numbers in nonspurious space
+        threshold (float, optional): threshold value of <Ncm> for
+            spuriosity
+
+    Returns:
+        (tuple): qn in the full space, None if not found
+    """
+    (J,g,target_n) = qn
+    n = 0
+    for level in mesh_point.levels:
+        if (J,g) == level[0:2] and mesh_point.mfdn_tb_expectations["Ncm"][level] < threshold:
+            n += 1
+        if n == target_n:
+            return level
+    return None
+
 
 ################################################################
 # consolidation of results data objects by shared parameters
@@ -313,12 +346,12 @@ def subdict(d,keys):
         subdict (dict): dictionary with reduced set of keys
 
     """
-    subitems = [
-        item
-        for item in d.items()
-        if item[0] in keys
-    ]
-    return dict(subitems)
+    subitems = {
+        key: value
+        for key,value in d.items()
+        if key in keys
+    }
+    return subitems
 
 def dict_items(d):
     """ Convert dictionary to sorted tuple of items.
@@ -382,7 +415,7 @@ def mesh_key_listing(mesh,keys,verbose=False):
 
     return mesh_keys
 
-def merged_mesh(mesh,keys,postprocessor=None,verbose=False):
+def merged_mesh(mesh,keys,preprocessor=None,postprocessor=None,verbose=False):
     """Obtain results mesh in which results data objects sharing same parameter
     values are merged.
 
@@ -425,6 +458,9 @@ def merged_mesh(mesh,keys,postprocessor=None,verbose=False):
 
         keys (list): list of keys
 
+        preprocessor (callable): callable to apply to all mesh points in initial
+           un-merged mesh (e.g., to define extra parameters)
+
         postprocessor (callable): callable to apply to all mesh points in final
            merged mesh (e.g., to define extra parameters)
 
@@ -439,9 +475,15 @@ def merged_mesh(mesh,keys,postprocessor=None,verbose=False):
     except IndexError:  # empty mesh has no result type
         return []
 
+    # preprocess mesh
+    source_mesh = copy.deepcopy(mesh)
+    if (preprocessor is not None):
+        for results_data in source_mesh:
+            preprocessor(results_data)
+
     # presort mesh (required for groupby)
     keyfunc = make_params_subdict_items_function(keys)
-    sorted_mesh = sorted(mesh,key=keyfunc)
+    sorted_mesh = sorted(source_mesh,key=keyfunc)
 
     # group and merge mesh points
     target_mesh = []
@@ -455,12 +497,22 @@ def merged_mesh(mesh,keys,postprocessor=None,verbose=False):
         results = results_type()
         results.params=dict(group_key)
 
+        # save params for later intersection
+        params_list = []
+
         # merge in data
         for other_results in group:
             if (verbose):
                 print("  contributing params: {}".format(other_results.params))
                 print("  contributing levels: {}".format(other_results.levels))
             results.update(other_results)
+            params_list += [other_results.params]
+
+        # use merged params
+        shared_param_keys = set.intersection(*(set(params.keys()) for params in params_list))
+        for key in shared_param_keys:
+            if more_itertools.all_equal(params[key] for params in params_list):
+                results.params[key] = params_list[0][key]
 
         # save new mesh point
         if (verbose):
