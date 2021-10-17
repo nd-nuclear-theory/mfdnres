@@ -22,7 +22,7 @@
     - 05/25/21 (mac): Add Nmax_label_text.  Rename make_qn_text to qn_text.
     - 06/14/21 (mac): Add options to qn_text to control subscript/superscript.
     - 07/14/21 (mac): Support asymmetric error in add_expt_marker_band and add add_data_marker.
-    - 09/21/21 (mac): Refactor tabulation to use extensible observable registry.
+    - 09/21/21 (mac): Refactor tabulation of observables to use extensible observable registry.
     - 10/14/21 (mac): Add nuclide and qn tuple manipulation tools (from emratio_obs.py).
 """
 
@@ -144,6 +144,10 @@ def partitions(iterable, r):
 def canonicalized_nuclide(nuclide):
     """ Transpose (Z,N) if needed to make Z<=N. """
     return tuple(sorted(nuclide))
+
+def is_canonical_nuclide(nuclide):
+    """ Nuclide (Z,N) with Z<=N. """
+    return nuclide == canonicalized_nuclide(nuclide)
 
 def conjugate_nuclide(nuclide):
     """ Transpose (Z,N) to (N,Z). """
@@ -394,24 +398,34 @@ register_observable("energy", Observable(energy_extractor, energy_observable_lab
 def isospin_extractor(nuclide,observable_operator,observable_qn_list):
     return lambda results_data : results_data.get_isospin(*observable_qn_list)
 
-register_observable("isospin", Observable(isospin_extractor, None, None))
+def isospin_observable_label(nuclide,observable_operator,observable_qn_list):
+    observable_str = r"\bar{T}"
+    qn_str = qn_text(observable_qn_list[0])
+    label = r"{}({})".format(observable_str,qn_str)
+    return label
+
+def isospin_axis_label(nuclide,observable_operator,observable_qn_list):
+    observable_str = r"\bar{T}"
+    units_str = None
+    return observable_str, units_str
+
+register_observable("isospin", Observable(isospin_extractor, isospin_observable_label, isospin_axis_label))
 
 # radius
 
 def radius_extractor(nuclide,observable_operator,observable_qn_list):
     return lambda results_data : results_data.get_radius(observable_operator,*observable_qn_list)
 
+RADIUS_STR_BY_OPERATOR = {
+    "rp" : r"r_p",
+    "rn" : r"r_n",
+    "r" : "r",
+    "rp-ss" : r"r_{p,\mathrm{s.s.}}",
+    "rn-ss" : r"r_{n,\mathrm{s.s.}}",
+}
+
 def radius_observable_label(nuclide,observable_operator,observable_qn_list):
-    if observable_operator == "rp":
-        observable_str = r"r_p"
-    elif observable_operator == "rn":
-        observable_str = r"r_n"
-    elif observable_operator == "r":
-        observable_str = r"r"
-    elif observable_operator == "rp-ss":
-        observable_str = r"r_{p,\mathrm{s.s.}}"
-    elif observable_operator == "rn-ss":
-        observable_str = r"r_{n,\mathrm{s.s.}}"
+    observable_str = RADIUS_STR_BY_OPERATOR[observable_operator]
     qn_str = qn_text(observable_qn_list[0])
     label = r"{}({})".format(observable_str,qn_str)
     return label
@@ -423,19 +437,109 @@ def radius_axis_label(nuclide,observable_operator,observable_qn_list):
 
 register_observable("radius", Observable(radius_extractor, radius_observable_label, radius_axis_label))
 
+# radius-sqr
+
+def radius_sqr_extractor(nuclide,observable_operator,observable_qn_list):
+    return lambda results_data : results_data.get_radius(observable_operator,*observable_qn_list)**2
+
+def radius_sqr_observable_label(nuclide,observable_operator,observable_qn_list):
+    # Assumption is that radius-sqr will be taken in ratio with an E2 rme, so,
+    # for squared radii, add factor of e (and brackets on observable label).
+    observable_str = "e{}^2".format(RADIUS_STR_BY_OPERATOR[observable_operator])
+    qn_str = qn_text(observable_qn_list[0])
+    label = r"[{}({})]".format(observable_str,qn_str)
+    return label
+
+def radius_sqr_axis_label(nuclide,observable_operator,observable_qn_list):
+    # Assumption is that radius-sqr will be taken in ratio with an E2 rme, so,
+    # for squared radii, add factor of e.
+    observable_str = r"er^2"
+    units_str = r"e\,\mathrm{fm}^{2}"
+    return observable_str, units_str
+
+register_observable("radius-sqr", Observable(radius_sqr_extractor, radius_sqr_observable_label, radius_sqr_axis_label))
+
+# radius-quart
+
+def radius_quart_extractor(nuclide,observable_operator,observable_qn_list):
+    return lambda results_data : results_data.get_radius(observable_operator,*observable_qn_list)**4
+
+def radius_quart_observable_label(nuclide,observable_operator,observable_qn_list):
+    # Assumption is that radius-quart will be taken in ratio with an E2 rme, so,
+    # for quartic power of radii, add factor of e^2 (and brackets on observable
+    # label).
+    observable_str = "e^2{}^4".format(RADIUS_STR_BY_OPERATOR[observable_operator])
+    qn_str = qn_text(observable_qn_list[0])
+    label = r"[{}({})]".format(observable_str,qn_str)
+    return label
+
+def radius_quart_axis_label(nuclide,observable_operator,observable_qn_list):
+    # Assumption is that radius-sqr will be taken in ratio with an E2 rme, so,
+    # for quartic power of radii, add factor of e^2.
+    observable_str = r"er^2"
+    units_str = r"e^2\,\mathrm{fm}^{4}"
+    return observable_str, units_str
+
+register_observable("radius-quart", Observable(radius_quart_extractor, radius_quart_observable_label, radius_quart_axis_label))
+
 # moment
 
 def moment_extractor(nuclide,observable_operator,observable_qn_list):
     return lambda results_data : results_data.get_moment(observable_operator,*observable_qn_list)
 
-register_observable("moment", Observable(moment_extractor, None, None))
+def moment_observable_label(nuclide,observable_operator,observable_qn_list):
+    if observable_operator == "M1":
+        observable_str = r"\mu"
+    elif observable_operator in {"Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
+        observable_str = r"\mu_{{{}}}".format(observable_operator[1:])
+    elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
+        observable_str = r"Q_{{{}}}".format(observable_operator[2:])
+    qn_str = qn_text(observable_qn_list[0])
+    label = r"{}({})".format(observable_str,qn_str)
+    return label
+
+def moment_axis_label(nuclide,observable_operator,observable_qn_list):
+    if observable_operator in {"M1","Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
+        observable_str = r"\mu"
+        units_str = r"\mu_N"
+    elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
+        observable_str = r"Q"  ## r"eQ"
+        units_str = r"\mathrm{fm}^{2}"  ## r"e\,\mathrm{fm}^{2}"
+    return observable_str, units_str
+
+register_observable("moment", Observable(moment_extractor, moment_observable_label, moment_axis_label))
 
 # moment-sqr
 
 def moment_sqr_extractor(nuclide,observable_operator,observable_qn_list):
     return lambda results_data : results_data.get_moment(observable_operator,*observable_qn_list)**2
 
-register_observable("moment-sqr", Observable(moment_sqr_extractor, None, None))
+def moment_sqr_observable_label(nuclide,observable_operator,observable_qn_list):
+    # Assumption is that moment-sqr will be taken in ratio with an rtp, so, for
+    # squared E moments, want to include the e unit (and brackets on observable
+    # label).
+    if observable_operator == "M1":
+        observable_str = r"\mu"
+    elif observable_operator in {"Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
+        observable_str = r"\mu_{{{}}}".format(observable_operator[1:])
+    elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
+        observable_str = r"eQ_{{{}}}".format(observable_operator[2:])
+    qn_str = qn_text(observable_qn_list[0])
+    label = r"[{}({})^2]".format(observable_str,qn_str)
+    return label
+
+def moment_sqr_axis_label(nuclide,observable_operator,observable_qn_list):
+    # Assumption is that moment-sqr will be taken in ratio with an rtp, so,
+    # for squared E moments, want to include the e unit.
+    if observable_operator in {"M1","Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
+        observable_str = r"\mu^2"
+        units_str = r"\mu_N^2"
+    elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
+        observable_str = r"(eQ)^2"
+        units_str = r"e^2\,\mathrm{fm}^{4}"
+    return observable_str, units_str
+
+register_observable("moment-sqr", Observable(moment_sqr_extractor, moment_sqr_observable_label, moment_sqr_axis_label))
 
 # rtp
 
@@ -475,7 +579,7 @@ register_observable("rtp", Observable(rtp_extractor, rtp_observable_label, rtp_a
 def Nex_probability_extractor(nuclide,observable_operator,observable_qn_list):
 
     ##g_0= mfdnres.ncci.N0_for_nuclide(nuclide)
-    # TODO fix meaning of observable_operator argument to be Nex rather than Nex_index
+    # TODO revise meaning of observable_operator argument to be Nex rather than Nex_index
     
     def extractor(results_data):
         Nex_index = observable_operator  # 0 for lowest Nex, 1 for next Nex, ...
@@ -488,13 +592,18 @@ def Nex_probability_extractor(nuclide,observable_operator,observable_qn_list):
     return extractor
 
 def Nex_probability_observable_label(nuclide,observable_operator,observable_qn_list):
-    observable_str = r"P(N_{\mathrm{ex}})"  # TODO include value of Nex
+    # TODO revise meaning of observable_operator argument to be Nex rather than Nex_index
+    Nex_index = observable_operator
+    Nex = 2*Nex_index
+    ## observable_str = r"P(N_{{\mathrm{{ex}}}}={Nex})".format(Nex=Nex)  # CAVEAT: Nex is relative to lowest for current parity
+    observable_str = r"P_{{N_{{\mathrm{{ex}}}}={Nex}}}".format(Nex=Nex)  # CAVEAT: Nex is relative to lowest for current parity
     qn_str = qn_text(observable_qn_list[0])
     label = r"{}({})".format(observable_str,qn_str)
     return label
 
 def Nex_probability_axis_label(nuclide,observable_operator,observable_qn_list):
-    observable_str = r"P(N_{\mathrm{ex}})"
+    ##observable_str = r"P(N_{\mathrm{ex}})"
+    observable_str = r"P_{N_{\mathrm{ex}}}"
     units_str = None
     return observable_str, units_str
 
@@ -578,32 +687,7 @@ def make_observable_text(nuclide_observable):
     (observable_type,observable_operator,observable_qn_list) = unpack_observable(observable)
 
     # construct label
-    if observable_type == "isospin":
-        observable_str = r"\bar{T}"
-        qn_str = qn_text(observable_qn_list[0])
-        label = r"{}({})".format(observable_str,qn_str)
-    elif observable_type=="moment":
-        if observable_operator == "M1":
-            observable_str = r"\mu"
-        elif observable_operator in {"Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
-            observable_str = r"\mu_{{{}}}".format(observable_operator[1:])
-        elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
-            observable_str = r"Q_{{{}}}".format(observable_operator[2:])
-        qn_str = qn_text(observable_qn_list[0])
-        label = r"{}({})".format(observable_str,qn_str)
-    elif observable_type=="moment-sqr":
-        # Assumption is that moment-sqr will be taken in ratio with an rtp, so,
-        # for squared E moments, want to include the e unit.
-        if observable_operator == "M1":
-            observable_str = r"\mu"
-        elif observable_operator in {"Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
-            observable_str = r"\mu_{{{}}}".format(observable_operator[1:])
-        elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
-            observable_str = r"eQ_{{{}}}".format(observable_operator[2:])
-        qn_str = qn_text(observable_qn_list[0])
-        label = r"{}({})".format(observable_str,qn_str)
-        label = r"[{}]^2".format(label)
-    elif observable_type in OBSERVABLE_BY_OBSERVABLE_TYPE:
+    if observable_type in OBSERVABLE_BY_OBSERVABLE_TYPE:
         label = OBSERVABLE_BY_OBSERVABLE_TYPE[observable_type].observable_label_generator(nuclide,observable_operator,observable_qn_list)
     else:
         raise(ValueError("unrecognized observable type {}".format(observable_type)))
@@ -637,34 +721,15 @@ def make_observable_axis_label_text(nuclide_observable):
     (observable_type,observable_operator,observable_qn_list) = unpack_observable(observable)
 
     # construct label
-    if observable_type == "isospin":
-        observable_str = r"\bar{T}"
-        units_str = None
-    elif observable_type =="moment":
-        if observable_operator in {"M1","Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
-            observable_str = r"\mu"
-            units_str = r"\mu_N"
-        elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
-            observable_str = r"Q"  ## r"eQ"
-            units_str = r"\mathrm{fm}^{2}"  ## r"e\,\mathrm{fm}^{2}"
-    elif observable_type =="moment-sqr":
-        # Assumption is that moment-sqr will be taken in ratio with an rtp, so,
-        # for squared E moments, want to include the e unit.
-        if observable_operator in {"M1","Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
-            observable_str = r"\mu^2"
-            units_str = r"\mu_N^2"
-        elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
-            observable_str = r"(eQ)^2"
-            units_str = r"e^2\,\mathrm{fm}^{4}"
-    elif observable_type in OBSERVABLE_BY_OBSERVABLE_TYPE:
+    if observable_type in OBSERVABLE_BY_OBSERVABLE_TYPE:
         (observable_str, units_str) = OBSERVABLE_BY_OBSERVABLE_TYPE[observable_type].axis_label_generator(nuclide,observable_operator,observable_qn_list)
     else:
         raise(ValueError("unrecognized observable type {}".format(observable_type)))
 
-    if units_str is not None:
-        label = r"{}~({})".format(observable_str,units_str)
-    else:
+    if units_str is None:
         label = observable_str
+    else:
+        label = r"{}~({})".format(observable_str,units_str)
 
     return label
 
