@@ -33,6 +33,7 @@
     09/17/20 (mac): Overhaul observable data attribute naming scheme.
     05/25/21 (mac): Add "E2" as alias for "E2p", for consistency in plot observable labeling.
     09/25/21 (mac): Add single-species radii relative to own center of mass in get_radius().
+    10/20/21 (mac): Trap spurious one-body E0 in get_rme()
 """
 
 import math
@@ -533,6 +534,15 @@ class MFDnResultsData(results_data.ResultsData):
                 value = Dsp-Dsn
             return value
 
+        # trap invalid cases
+        if observable in ["E0p","E0n"]:
+            # diagonal E0 matrix element (i.e., "squared radius") calculated
+            # with one-body lab-frame operator has spurious contribution; this
+            # could be corrected in case where cm motion is known [see intrinsic
+            # (A7)]
+            if qn_pair[0]==qn_pair[1]:
+                return default
+            
         # canonicalize labels
         (qn_pair_canonical,flipped,canonicalization_factor) = tools.canonicalize_Jgn_pair(
             qn_pair,tools.RMEConvention.kEdmonds
@@ -546,6 +556,9 @@ class MFDnResultsData(results_data.ResultsData):
         (J_ket,g_ket,n_ket) = qn_ket
 
         # retrieve underlying rme
+        #
+        # For "hw!=0" (oscillator run), try mfdn rmes, then postprocessor rmes;
+        # for "hw=0" (non-oscillator run), only accept postprocessor rmes.
         if self.params.get("hw", 0) != 0:
             try:
                 rme = (canonicalization_factor
