@@ -673,19 +673,20 @@ def make_multipanel_plot(mesh_data):
         # construct axes
         ax = fig.add_subplot(gs[row, col])
         
-        # set manual ticks (experimental interface)
+        # set manual ticks
 
-        # TUTORIAL: I am in the process of implementing manual control over tick
-        # mark intervals, a la CustomTicks.  The interface is still under
-        # development.  But you can see that matplotlib's default hw ticks, for
-        # the plot range we set below, is atrocious (major tick marks at 10 and
-        # 20, with no minor ticks at all).  Compare bebands Fig. 6, where major
-        # ticks are in steps of 5, with minor ticks in steps of 2.5 (i.e., 2
-        # subintervals).  To override the default ticks on the hw axis, enable
-        # the following (experimental) code...
+        # TUTORIAL: You can see that matplotlib's default hw ticks, for the plot
+        # range we set below, is atrocious (major tick marks at 10 and 20, with
+        # no minor ticks at allT).  Compare bebands Fig. 6, where major ticks
+        # are in steps of 5, with minor ticks in steps of 2.5 (i.e., 2
+        # subintervals).  In mfdnres.ticks, we find some functions to provide
+        # manual control over tick mark intervals, a la my Mathematica package
+        # CustomTicks.  To override the default ticks on the hw axis, enable the
+        # following code...
 
         if False:
-            mfdnres.ticks.set_ticks(ax,"x",mfdnres.ticks.linear_ticks(0,50,5,2))
+            x_ticks = mfdnres.ticks.linear_ticks(0,50,5,2)
+            mfdnres.ticks.set_ticks(ax,"x",x_ticks)
 
         # draw axes
 
