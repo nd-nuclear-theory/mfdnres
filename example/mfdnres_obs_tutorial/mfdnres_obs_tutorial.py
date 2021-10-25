@@ -71,7 +71,7 @@ import pandas as pd
 
 import mfdnres
 import mfdnres.ticks
-import mfdnres.data  # TODO 04/08/21 (mac): Rename mfdnres.data, once new name decided...
+import mfdnres.data
 import mfdnres.ncci
 
 ################################################################
@@ -88,7 +88,7 @@ mpl.rcParams.update(mfdnres.data.SENSIBLE_PLOT_STYLE)
 
 # TUTORIAL: While normally global definitions are to be avoided, sometimes
 # it is desirable to have a uniform set of definitions throughout an
-# analysis.  Here we make some definitions which define itneractions and
+# analysis.  Here we make some definitions which define interactions and
 # parameter meshes used throughout the analysis examples below.  To avoid
 # confusion with local variables, we will follow Google Python style
 # convention and use all caps.
