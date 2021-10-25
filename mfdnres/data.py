@@ -24,6 +24,7 @@
     - 07/14/21 (mac): Support asymmetric error in add_expt_marker_band and add add_data_marker.
     - 09/21/21 (mac): Refactor tabulation of observables to use extensible observable registry.
     - 10/14/21 (mac): Add nuclide and qn tuple manipulation tools (from emratio_obs.py).
+    - 10/25/21 (mac/zz): Add "rme" observable and "fix-sign-to" compound observable.
 """
 
 import collections
@@ -202,7 +203,7 @@ def nuclide_observable_descriptor(nuclide_observable):
         descriptor (str): descriptor string
     """
     # trap compound observable
-    if nuclide_observable[0] in {"diff","ratio"}:
+    if nuclide_observable[0] in {"diff","ratio","fix-sign-to"}:
         (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
         return r"{}_{}_{}".format(  # "{}-{}-{}"
             arithmetic_operation,
@@ -371,9 +372,6 @@ def register_observable(observable_type, observable):
 ################################################################
 # observable implementations
 ################################################################
-
-# TODO 09/21/21 (mac): Finish extracting observable label definitions from
-# if-then traps into observable definitions.
 
 # energy
 
@@ -563,7 +561,7 @@ def rtp_observable_label(nuclide,observable_operator,observable_qn_list):
 def rtp_axis_label(nuclide,observable_operator,observable_qn_list):
     if observable_operator in {"M1","Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
         observable_str = r"B(M1)"
-        units_str = r"\mu_N"
+        units_str = r"\mu_N^2"
     elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
         observable_str = r"B(E2)"
         units_str = r"e^2\,\mathrm{fm}^{4}"
@@ -573,6 +571,39 @@ def rtp_axis_label(nuclide,observable_operator,observable_qn_list):
     return observable_str, units_str
 
 register_observable("rtp", Observable(rtp_extractor, rtp_observable_label, rtp_axis_label))
+
+# rme
+
+def rme_extractor(nuclide,observable_operator,observable_qn_list):
+    return lambda results_data : results_data.get_rme(observable_operator,tuple(observable_qn_list))
+
+def rme_observable_label(nuclide,observable_operator,observable_qn_list):
+    if observable_operator == "M1":
+        observable_str = r"M1"
+    elif observable_operator in {"Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
+        observable_str = r"M1_{{{}}}".format(observable_operator[1:])
+    elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
+        observable_str = r"E2_{{{}}}".format(observable_operator[2:])
+    elif observable_operator in {"E0p","E0n","E00","E01","E0"}:
+        observable_str = r"E0_{{{}}}".format(observable_operator[2:])
+    qn_str_1 = qn_text(observable_qn_list[0])
+    qn_str_2 = qn_text(observable_qn_list[1])
+    label = r"\langle {} \Vert {} \Vert {} \rangle".format(qn_str_1,observable_str,qn_str_2)  # <1|O|2> = 2->1
+    return label
+
+def rme_axis_label(nuclide,observable_operator,observable_qn_list):
+    if observable_operator in {"M1","Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
+        observable_str = r"\langle M1 \rangle"
+        units_str = r"\mu_N"
+    elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
+        observable_str = r"\langle E2 \rangle"
+        units_str = r"e\,\mathrm{fm}^{2}"
+    elif observable_operator in {"E0p","E0n","E00","E01","E0"}:
+        observable_str = r"\langle E0 \rangle"
+        units_str = r"e\,\mathrm{fm}^{2}"
+    return observable_str, units_str
+
+register_observable("rme", Observable(rme_extractor, rme_observable_label, rme_axis_label))
 
 # Nex-probability
 
@@ -629,7 +660,7 @@ def make_nuclide_text(nuclide_observable,as_tuple=False):
 
     """
     # trap compound observable
-    if nuclide_observable[0] in {"diff","ratio"}:
+    if nuclide_observable[0] in {"diff","ratio","fix-sign-to"}:
         (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
         same_nuclide = (nuclide_observable1[0]==nuclide_observable2[0])  # CAVEAT: test fails to "see through" a unary "minus" compound observable
         if same_nuclide:
@@ -674,6 +705,9 @@ def make_observable_text(nuclide_observable):
             arithmetic_symbol,
             make_observable_text(nuclide_observable2)
         )
+    elif nuclide_observable[0] in {"fix-sign-to"}:
+        (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
+        return make_observable_text(nuclide_observable1)
     elif nuclide_observable[0] in {"minus"}:
         (arithmetic_operation,nuclide_observable1) = nuclide_observable
         arithmetic_symbol = "-"
@@ -706,12 +740,14 @@ def make_observable_axis_label_text(nuclide_observable):
         label (str): label string, to be interpreted in math mode
     """
     # trap compound observable
-    if nuclide_observable[0] in {"diff","ratio"}:
+    if nuclide_observable[0] in {"diff","ratio","fix-sign-to"}:
         (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
         if arithmetic_operation == "diff":
             return r"\Delta {}".format(make_observable_axis_label_text(nuclide_observable1))
         elif arithmetic_operation == "ratio":
             return r"\mathrm{Ratio}"
+        elif arithmetic_operation == "fix-sign-to":
+            return make_observable_axis_label_text(nuclide_observable1)
     elif nuclide_observable[0] in {"minus"}:
         (arithmetic_operation,nuclide_observable1) = nuclide_observable
         return make_observable_axis_label_text(nuclide_observable1)
@@ -970,9 +1006,14 @@ def make_hw_scan_data(
     Compound observables:
 
         ("diff", obs1, obs2)  # obs1-obs2
+
         ("ratio", obs1, obs2)  # obs1/obs2
+
         ("minus", obs1)  # -obs1
-        TODO (?): ("fix-sign-to", obs1, obs2)  # obs1*sign(obs2)
+
+        ("fix-sign-to", obs1, obs2) # obs1*sign(obs2); serves to fix sign
+            fluctuations for matrix elements between same initial and final
+            states, so that obs2 is always positive
 
     Examples:
 
@@ -1000,7 +1041,7 @@ def make_hw_scan_data(
     """
 
     # trap compound observable
-    if nuclide_observable[0] in {"diff","ratio"}:
+    if nuclide_observable[0] in {"diff","ratio","fix-sign-to"}:
         (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
         data1 = make_hw_scan_data(mesh_data,nuclide_observable1,selector=selector,Nmax_range=Nmax_range,hw_range=hw_range)
         data2 = make_hw_scan_data(mesh_data,nuclide_observable2,selector=selector,Nmax_range=Nmax_range,hw_range=hw_range)
@@ -1008,6 +1049,8 @@ def make_hw_scan_data(
             return data1-data2
         elif arithmetic_operation == "ratio":
             return data1/data2
+        elif arithmetic_operation == "fix-sign-to":
+            return data1*data2.apply(np.sign,raw=True)
     elif nuclide_observable[0] in {"minus"}:
         (arithmetic_operation,nuclide_observable1) = nuclide_observable
         data1 = make_hw_scan_data(mesh_data,nuclide_observable1,selector=selector,Nmax_range=Nmax_range,hw_range=hw_range)
