@@ -476,7 +476,7 @@ def radius_quart_observable_label(nuclide,observable_operator,observable_qn_list
 def radius_quart_axis_label(nuclide,observable_operator,observable_qn_list):
     # Assumption is that radius-sqr will be taken in ratio with an E2 rme, so,
     # for quartic power of radii, add factor of e^2.
-    observable_str = r"er^2"
+    observable_str = r"e^2r^4"
     units_str = r"e^2\,\mathrm{fm}^{4}"
     return observable_str, units_str
 
@@ -972,6 +972,7 @@ def make_hw_scan_data(
         ("diff", obs1, obs2)  # obs1-obs2
         ("ratio", obs1, obs2)  # obs1/obs2
         ("minus", obs1)  # -obs1
+        TODO (?): ("fix-sign-to", obs1, obs2)  # obs1*sign(obs2)
 
     Examples:
 
