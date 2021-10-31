@@ -956,8 +956,9 @@ def Nmax_plot_style(
         )
 
 ################################################################
-# hw scan
+# (Nmax,hw) multi-indexed data ("hw scan")
 ################################################################
+
 
 def hw_scan_descriptor(interaction_coulomb,nuclide_observable,verbose=False):
     """ Generate standard descriptor string for a (nuclide,observable) pair.
@@ -978,6 +979,20 @@ def hw_scan_descriptor(interaction_coulomb,nuclide_observable,verbose=False):
     )
 
     return descriptor
+
+
+def hw_scan_drop_nan(observable_data):
+    """ Drop nan values from (Nmax,hw) observable data.
+
+    Arguments:
+        observable_data (pd.DataFrame): data multi-indexed by (Nmax,hw)
+
+    Returns:
+        (pd.DataFrame): data multi-indexed by (Nmax,hw)
+    """
+
+    clean_data = observable_data[observable_data["value"].notna()]
+    return clean_data
 
 def make_hw_scan_data(
         mesh_data,nuclide_observable,
@@ -1087,7 +1102,7 @@ def make_hw_scan_data(
     observable_data = pd.DataFrame(table).set_index(["Nmax","hw"])
 
     # drop nan values
-    observable_data = observable_data[observable_data["value"].notna()]
+    observable_data = hw_scan_drop_nan(observable_data)
 
     # slice on (Nmax,hw)
     Nmax_slice = slice(None) if Nmax_range is None else slice(*Nmax_range)
