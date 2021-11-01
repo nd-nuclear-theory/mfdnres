@@ -783,20 +783,23 @@ def make_interaction_text(interaction_coulomb):
     label = r"\mathrm{{{}}}".format(interaction_coulomb[0])
     return label
 
-def Nmax_label_text(Nmax_highlight,Nmax_max):
+def Nmax_label_text(Nmax_highlight,Nmax_max=None):
     """ Generate Nmax label of form Nmax=* or Nmax=*(*).
 
     Arguments:
 
         Nmax_highlight (int): last "full scan" Nmax
 
-        Nmax_max (int): last Nmax
+        Nmax_max (int, optional): last Nmax
 
     Returns:
     
         label (str): label string, to be interpreted in math mode
 
     """
+    if Nmax_max == None:
+        Nmax_max = Nmax_highlight
+        
     if Nmax_highlight==Nmax_max:
         Nmax_combo_text = "{:d}".format(Nmax_max)
     else:

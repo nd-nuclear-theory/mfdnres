@@ -57,6 +57,7 @@ Setup
     - 04/07/21 (mac): Created, drawing on tabulate_obs_8li-coulex.py and emratio_obs.py.
     - 04/08/21 (mac): Clean up mfdnres.data interface.  Add survey and multipanel examples.
     - 04/10/21 (mac): Use os.makedirs.  Add experimental use of mfdnres.ticks.
+    - 11/01/21 (mac,zz): Update examples to use newer mfdnres.ticks and mfdnres.multipanel tools.
 
 """
 
@@ -605,14 +606,6 @@ def make_multipanel_plot(mesh_data):
     interaction_coulomb = INTERACTION_COULOMB_LIST[0]
     nuclide = (4,5)
     Nmax_max = NMAX_MAX_BY_NUCLIDE[nuclide]
-    panel_letter_by_panel = {
-        # TODO 04/08/21 (mac): Implement generic panel letter generator function
-        # a la SciDraw Multipanel.
-        (0,0): "a",
-        (1,0): "b",
-        (0,1): "c",
-        (1,1): "d",
-        }
     panel_label_text_by_panel = {
         (0,0): "$E$",
         (1,0): "$\Delta E$",
@@ -625,6 +618,12 @@ def make_multipanel_plot(mesh_data):
         (0,1): (0.,25.),
         (1,1): (0.,5.),
         }
+    observable_tick_specifier_by_panel = {
+        (0,0): (-70,-30,5,5),
+        (1,0): (-1,6,1,5),
+        (0,1): (-1,30,5,5),
+        (1,1): (-1,6,1,5),
+    }
     nuclide_observable_list_by_panel = {
 
         (0,0): [
@@ -654,25 +653,26 @@ def make_multipanel_plot(mesh_data):
         ],
     }
 
-    # figure layout parameters
-    panel_size = (3.,2.)
-    dimensions = (2,2)
-    figsize = np.array(panel_size)*np.array(dimensions)
-
     # initialize figure
-    fig = plt.figure(figsize=figsize)
-    gs = fig.add_gridspec(*dimensions, hspace=0., wspace=0.25)
+    dimensions=(2,2)
+    panel_size=(2.2,2.0)
+    fig, gs = mfdnres.multipanel.multipanel_fig_gs(
+        dimensions=dimensions,
+        panel_size=panel_size,
+        x_panel_gaps=0.25,
+        y_panel_gaps=0.02
+    )
+    
+    for panel_indices in mfdnres.multipanel.grid_iterator(dimensions):
 
-    for (row, col) in itertools.product(range(2),range(2)):
-
-        nuclide_observable_list = nuclide_observable_list_by_panel[(row, col)]
+        nuclide_observable_list = nuclide_observable_list_by_panel[panel_indices]
 
         # find range parameters
         hw_range = HW_RANGE_BY_INTERACTION_COULOMB[interaction_coulomb]
-        observable_range = observable_range_by_panel[(row, col)]
+        observable_range = observable_range_by_panel[panel_indices]
 
         # construct axes
-        ax = fig.add_subplot(gs[row, col])
+        ax = fig.add_subplot(gs[panel_indices[0], panel_indices[1]])
         
         # set manual ticks
 
@@ -685,9 +685,11 @@ def make_multipanel_plot(mesh_data):
         # CustomTicks.  To override the default ticks on the hw axis, enable the
         # following code...
 
-        if False:
+        if True:
             x_ticks = mfdnres.ticks.linear_ticks(0,50,5,2)
             mfdnres.ticks.set_ticks(ax,"x",x_ticks)
+            y_ticks = mfdnres.ticks.linear_ticks(*observable_tick_specifier_by_panel[panel_indices])
+            mfdnres.ticks.set_ticks(ax,"y",y_ticks)
 
         # draw axes
 
@@ -712,14 +714,11 @@ def make_multipanel_plot(mesh_data):
         )
         
         # eliminate labels from interior panel edges
-        if not ax.is_last_row():
-            ##ax.get_xaxis().get_label().set_visible(False)
-            ax.set_xlabel(None)
-            ax.set_xticklabels([])
+        mfdnres.multipanel.suppress_interior_labels(ax,axis="x")
 
         # panel letter
         ax.annotate(
-            "({})".format(panel_letter_by_panel[(row, col)]),
+            mfdnres.multipanel.panel_letter(dimensions,panel_indices,direction="vertical"),
             xy=(0.05,0.95),xycoords="axes fraction",
             horizontalalignment="left",
             verticalalignment="top",
@@ -728,14 +727,26 @@ def make_multipanel_plot(mesh_data):
 
         # panel label
         ax.annotate(
-            panel_label_text_by_panel[(row, col)],
+            panel_label_text_by_panel[panel_indices],
             xy=(0.90,0.90),xycoords="axes fraction",
             multialignment="left",
             horizontalalignment="right",
             verticalalignment="top",
             bbox=dict(boxstyle="round",facecolor="white")
         )
-            
+
+        # Nmax label (on just one panel)
+        if panel_indices==(0,0):
+            ax.annotate(
+                r"${}$".format(mfdnres.data.Nmax_label_text(Nmax_max)),
+                xy=(0.05,0.035),
+                xycoords=("axes fraction","axes fraction"),
+                multialignment="left",
+                horizontalalignment="left",
+                verticalalignment="bottom",
+                fontsize="x-small",
+            )
+
         # tabulate and plot each observable
         for plot_index, nuclide_observable in enumerate(nuclide_observable_list):
 
@@ -818,27 +829,33 @@ def make_teardrop_plot(mesh_data):
     observable_range = (-1.75,1)
     observable_range_extension = (0.02,0.02)
     marker_size = 6
-    num_panels = len(nuclide_observable_list)
-    fig = plt.figure(figsize=figsize)
-    gs = fig.add_gridspec(nrows=1, ncols=num_panels, hspace=0., wspace=0.)
+    dimensions = (1,len(nuclide_observable_list))
+    fig, gs = mfdnres.multipanel.multipanel_fig_gs(dimensions=dimensions,panel_size=(0.75,3.))
 
     # tabulate observables
-    for (observable_index,nuclide_observable) in enumerate(nuclide_observable_list):
+    for panel_indices in mfdnres.multipanel.grid_iterator(dimensions):
+        observable_index = mfdnres.multipanel.panel_index(dimensions,panel_indices)
+        nuclide_observable = nuclide_observable_list[observable_index]
 
         # construct axes
-        row = 0
-        col = observable_index
+        row, col = panel_indices
         ax = fig.add_subplot(gs[row, col])
+        
         ax.set_xlim(0,1)
         ax.set_xticks([])
         ax.set_axisbelow(b=True)
-        ax.set_ylabel(mfdnres.data.make_observable_axis_label_text(nuclide_observable))
+        
+        ax.set_ylabel(r"${}$".format(mfdnres.data.make_observable_axis_label_text(nuclide_observable)))
         ax.set_ylim(*mfdnres.data.extend_interval_relative(observable_range,observable_range_extension))
         ax.grid(axis="y",linewidth=0.5,linestyle=":",color="gray")
         mfdnres.multipanel.suppress_interior_labels(ax)
-        if not ax.is_first_col():
-            ax.tick_params(axis="y", length=0)
-        
+        ## if not ax.is_first_col():
+        ##     ax.tick_params(axis="y", length=0)
+
+        # set manual ticks
+        y_ticks = mfdnres.ticks.linear_ticks(-2,2,0.5,5)
+        mfdnres.ticks.set_ticks(ax,"y",y_ticks)
+            
         # label for observable
         ax.annotate(
             r"${}$".format(mfdnres.data.make_observable_text(nuclide_observable)),
@@ -905,9 +922,9 @@ def main():
 
     mesh_data=read_data()
 
-    make_basic_plot(mesh_data)
-    make_plot_series(mesh_data)
-    make_survey_plot(mesh_data)
+    ## make_basic_plot(mesh_data)
+    ## make_plot_series(mesh_data)
+    ## make_survey_plot(mesh_data)
     make_multipanel_plot(mesh_data)
     make_teardrop_plot(mesh_data)
 

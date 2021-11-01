@@ -190,6 +190,17 @@ def suppress_interior_labels(ax,axis="both",show_axis_label=False,show_tick_labe
         show_tick_labels (bool, optional): whether or not to still permit tick labels
 
     """
+
+    # In matplotlib 3.4.3:
+    #
+    # MatplotlibDeprecationWarning: The is_last_row
+    # function was deprecated in Matplotlib 3.4 and will be removed two minor
+    # releases later. Use ax.get_subplotspec().is_last_row() instead.
+    #
+    # But, in matplotlib 3.3.0, this new interface is not yet available:
+    #
+    # AttributeError: 'SubplotSpec' object has no attribute 'is_last_row'
+
     if axis in {"x","both"} and not ax.is_last_row():
         if not show_axis_label:
             ax.set_xlabel(None)
