@@ -320,8 +320,6 @@ def make_basic_plot(mesh_data):
     # TUTORIAL: To see selected mesh and final sliced DataFrame, set
     # verbose=True.
     
-    interaction_coulomb = INTERACTION_COULOMB_LIST[0]  # ("Daejeon16",1)
-    (interaction,coulomb) = interaction_coulomb
     observable_data = mfdnres.data.make_hw_scan_data(
         mesh_data,nuclide_observable,
         selector =  {"interaction": interaction, "coulomb": coulomb},
@@ -343,9 +341,35 @@ def make_basic_plot(mesh_data):
 
     # make plot
 
-    # TUTORIAL: This is the "canned" routine to set up a single-panel figure,
-    # label it, and plot the data.  We will see later how to break out the
-    # different parts of the task, if we want more control.
+    # TUTORIAL: To get you started quickly, this example uses a "canned" routine
+    #
+    #     mfdnres.data.write_hw_scan_plot()
+    #
+    # to make a single-panel figure containing the plots for a single
+    # observable, and some standardized labels.  This is convenient for a
+    # "quick-and-dirty" check.  But often you will want to have more control
+    # over your figure, and will need to take over these tasks (generating the
+    # axes, adding the plots, adding labels) yourself.  You can look in data.py
+    # to see the code for this function.  Its main ingredients are:
+    #
+    #     # initialize plot
+    #     fig, ax = plt.subplots(...)
+    #
+    #     # provide axis labeling
+    #     mfdnres.data.set_up_hw_scan_axes(ax,...)
+    #     
+    #     # make panel label
+    #     mfdnres.data.add_observable_panel_label(ax,...)
+    #     
+    #     # generate plot
+    #     mfdnres.data.add_hw_scan_plot(ax,observable_data,...)
+    #     
+    #     # finalize plot
+    #     plt.savefig(figure_file_name)
+    #     plt.close()
+    #
+    # Then make_survey_plot() below provides an example where we take over these
+    # tasks ourselves.
     #
     # Also, here we manually set the plot range for the observable.  We'll see
     # ways to automate this later.  If observable_range=None, then matplotlib
