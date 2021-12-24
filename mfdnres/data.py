@@ -441,18 +441,24 @@ def radius_sqr_extractor(nuclide,observable_operator,observable_qn_list):
     return lambda results_data : results_data.get_radius(observable_operator,*observable_qn_list)**2
 
 def radius_sqr_observable_label(nuclide,observable_operator,observable_qn_list):
-    # Assumption is that radius-sqr will be taken in ratio with an E2 rme, so,
-    # for squared radii, add factor of e (and brackets on observable label).
-    observable_str = "e{}^2".format(RADIUS_STR_BY_OPERATOR[observable_operator])
+    # Assumption is that radius-sqr will be taken in ratio with an E2 moment,
+    # i.e., "Q" (not "eQ"), so, for squared radii, do *not* add factor of e (and
+    # brackets on observable label).  If it is instead taken in ratio to an E2
+    # rme, we would need the factor of e.
+    ## observable_str = "e{}^2".format(RADIUS_STR_BY_OPERATOR[observable_operator])
+    ## label = r"[{}({})]".format(observable_str,qn_str)
+    observable_str = "{}^2".format(RADIUS_STR_BY_OPERATOR[observable_operator])
     qn_str = qn_text(observable_qn_list[0])
-    label = r"[{}({})]".format(observable_str,qn_str)
+    label = r"{}({})".format(observable_str,qn_str)
     return label
 
 def radius_sqr_axis_label(nuclide,observable_operator,observable_qn_list):
-    # Assumption is that radius-sqr will be taken in ratio with an E2 rme, so,
-    # for squared radii, add factor of e.
-    observable_str = r"er^2"
-    units_str = r"e\,\mathrm{fm}^{2}"
+    # Assumption is that radius-sqr will be taken in ratio with an E2 moment
+    # (see note on observable label).
+    ## observable_str = r"er^2"
+    ## units_str = r"e\,\mathrm{fm}^{2}"
+    observable_str = r"r^2"
+    units_str = r"\mathrm{fm}^{2}"
     return observable_str, units_str
 
 register_observable("radius-sqr", Observable(radius_sqr_extractor, radius_sqr_observable_label, radius_sqr_axis_label))
@@ -1268,6 +1274,8 @@ def write_hw_scan_plot(
         figsize (tuple, optional): mpl figure size argument
 
         directory (str, optional): output directory
+
+        panel_label_kwargs (dict, optional): keyword arguments to pass through to add_observable_panel_label()
 
     """
     # initialize plot
