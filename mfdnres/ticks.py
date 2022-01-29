@@ -14,12 +14,14 @@
 
     - 04/08/21 (mac): Created.
     - 09/07/21 (mac): Add set_ticks().
+    - 01/29/22 (mac): Provide half-integer tick formatter (refactored from jj1_scale).
 
 """
 
 import warnings
 
 import matplotlib as mpl
+import matplotlib.ticker
 ##import matplotlib.pyplot as plt
 
 ################################################################
@@ -35,7 +37,6 @@ def approx_in_range(x,interval,tolerance=1e-10):
     """ Approximate range test."""
     (a,b) = interval
     return (a-tolerance)<=x<=(b+tolerance)
-
 
 # Options[LinTicks]={
 #   (* tick options *)
@@ -281,7 +282,8 @@ def set_ticks(
     Beware that applying ticks beyond the axis range (limits) will stretch the
     limits, which may need to then be reset.
 
-    FUTURE: provide support for tick label formatting
+    FUTURE: Provide support for tick label formatting?  Or rely on formatter
+    mechanism?
 
     Arguments:
 
@@ -305,10 +307,64 @@ def set_ticks(
     (major_ticks,minor_ticks) = major_minor_ticks
     ticks_setter(major_ticks)
     ticks_setter(minor_ticks, minor=True)
+
+################################################################
+# formatters
+################################################################
+
+def half_int_str(x):
+    """ Format an exactly-represented half integer as a solidus fraction.
+
+    Arguments:
+
+        x (int or float): value to format (must be exactly represented integer or half integer)
+
+    Return:
+
+        text (str): string representation
+    """
+
+    if (x%1==0):
+        return "{:d}".format(int(x))
+    elif (x%1==0.5):
+        return "{:d}/2".format(int(2*x))
+    else:
+        raise ValueError("Half-integer string formatter expected integer or half-integer but given {}".format(x))
+
+class HalfIntFormatter(mpl.ticker.Formatter):
+    """ Tick formatter for half integers.
+
+    Example:
+        mfdnres.ticks.set_ticks(ax,"x",mfdnres.ticks.linear_ticks(0.5,20.5,2,2))
+        ax.xaxis.set_major_formatter(mfdnres.ticks.HalfIntFormatter())
+    """
+
+    # We could have also simply instantiated a FuncFormatter:
+    #
+    # HALF_INT_FORMATTER = mpl.ticker.FuncFormatter(lambda x, pos=None: format_half_int(x))
+
+    def __call__(self, x, pos=None):
+        return half_int_str(x)
     
+################################################################
+# test code
+################################################################
+
 def main():    
 
     print(linear_tick_locations(0,10,2,4))
-
+    
+    # half-integer
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots()
+    ax.set_xlim(0,10.5)
+    ax.set_xlabel(r"$J$")
+    set_ticks(ax,"x",linear_ticks(0.5,20.5,2,2))
+    ##ax.xaxis.set_major_formatter(half_int_formatter())
+    ax.xaxis.set_major_formatter(HalfIntFormatter())
+    ax.set_ylabel(r"$E$")
+    plt.show()
+    
+   
 if __name__ == "__main__":
     main()
