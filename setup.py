@@ -1,5 +1,5 @@
 import inspect
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name="mfdnres",
@@ -7,7 +7,7 @@ setup(
     author="Mark A. Caprio, University of Notre Dame",
     description=("A scripting library for universal results postprocessing"),
     license="MIT",
-    packages=['mfdnres'],
+    packages=find_packages(include='mfdnres*'),
     install_requires=[
         "numpy>=1.0.0",
     ],
