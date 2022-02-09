@@ -31,10 +31,15 @@ Department of Physics, University of Notre Dame
   % git checkout -t origin/develop
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  Set up the package in your `PYTHONPATH` by running `pip` (or `pip3` on Debian):
+  Set up the package in your `PYTHONPATH` by running `pip`:
 
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  % pip install --user --editable .
+  % python3 -m pip install --user --editable .
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  If you want to use the analysis tools, install the additional requirements:
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  % python3 -m pip install --user --editable .[analysis]
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   a. Subsequently updating source
