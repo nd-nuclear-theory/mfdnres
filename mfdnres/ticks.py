@@ -198,9 +198,6 @@ def linear_ticks(
 ):
     """Construct lists of major and minor tick locations.
 
-    This is primarily intended as a "helper" function for set_linear_ticks() and
-    should not normally need to be called by the user.
-
     Arguments:
 
         x1 (float): starting value
@@ -304,7 +301,7 @@ def set_ticks(
     else:
         raise(ValueError("Unrecognized direction ({})".format(direction)))
 
-    (major_ticks,minor_ticks) = major_minor_ticks
+    (major_ticks, minor_ticks) = major_minor_ticks
     ticks_setter(major_ticks)
     ticks_setter(minor_ticks, minor=True)
 
@@ -352,15 +349,19 @@ class HalfIntFormatter(mpl.ticker.Formatter):
 
 def main():    
 
-    print(linear_tick_locations(0,10,2,4))
+    print(linear_ticks(0,10,2,4))
     
     # half-integer
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots()
     ax.set_xlim(0,10.5)
     ax.set_xlabel(r"$J$")
-    set_ticks(ax,"x",linear_ticks(0.5,20.5,2,2))
-    ##ax.xaxis.set_major_formatter(half_int_formatter())
+    ## set_ticks(ax,"x",linear_ticks(0.5,20.5,2,2))
+    x_tick_specifier = (0.5,20.5,2,2)
+    print(x_tick_specifier)
+    x_ticks = linear_ticks(*x_tick_specifier)
+    print(x_ticks)
+    set_ticks(ax,"x",x_ticks)
     ax.xaxis.set_major_formatter(HalfIntFormatter())
     ax.set_ylabel(r"$E$")
     plt.show()
