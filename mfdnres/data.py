@@ -25,6 +25,7 @@
     - 09/21/21 (mac): Refactor tabulation of observables to use extensible observable registry.
     - 10/14/21 (mac): Add nuclide and qn tuple manipulation tools (from emratio_obs.py).
     - 10/25/21 (mac/zz): Add "rme" observable and "fix-sign-to" compound observable.
+    - 02/13/22 (mac): Extend isotope label formatting and add isotope_str.
 """
 
 import collections
@@ -268,14 +269,16 @@ ELEMENT_SYMBOLS = [
     "Nh","Fl","Mc","Lv","Ts","Og"
 ]
 
-def isotope(nuclide,as_tuple=False):
+def isotope(nuclide, format=None, as_tuple=False):
     """Generate text label component for nuclide.
 
     Arguments:
 
         nuclide (tuple): (Z,N)
 
-        as_tuple (bool, optional): return (Z,N) label rather than standard nuclide symbol
+        format (str, optional): format code, defaults to standard isotope label format
+
+        as_tuple (bool, optional, deprecated): return (Z,N) label rather than standard nuclide symbol
 
     Returns:
 
@@ -287,9 +290,38 @@ def isotope(nuclide,as_tuple=False):
     element_symbol = ELEMENT_SYMBOLS[Z] if Z<len(ELEMENT_SYMBOLS) else str(Z)
     A = sum(nuclide)
     if as_tuple:
-        label = r"({nuclide[0]:d},{nuclide[1]:d})".format(nuclide=nuclide)
-    else:
+        format = "tuple"  # legacy
+
+    if (format == None) or (format == "AS"):
+        # standard "^A Symbol"
         label = r"^{{{}}}\mathrm{{{}}}".format(A,element_symbol)
+    elif format == "AZSN":
+        # "^A _Z Symbol _N"
+        label = r"^{{{}}}_{{{}}}\mathrm{{{}}}^{{}}_{{{}}}".format(A,Z,element_symbol,N)  # dummy superscript is for subscript alignment
+    elif format == "tuple":
+        label = r"({nuclide[0]:d},{nuclide[1]:d})".format(nuclide=nuclide)
+    return label
+
+def isotope_str(nuclide, lower = False):
+    """Generate simple string for nuclide, for use in filenames, e.g., "156Dy".
+
+    Arguments:
+
+        nuclide (tuple): (Z,N)
+
+        lower (bool, optional): force lowercase
+
+    Returns:
+
+        (str): simple string representation of nuclide
+
+    """
+    (Z,N) = nuclide
+    element_symbol = ELEMENT_SYMBOLS[Z] if Z<len(ELEMENT_SYMBOLS) else str(Z)
+    if lower:
+        element_symbol = element_symbol.lower()
+    A = sum(nuclide)
+    label = "{}{}".format(A, element_symbol)
     return label
 
 def qn_text(qn,show_parity=True,show_index=True):
