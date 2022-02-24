@@ -26,6 +26,7 @@
     - 10/14/21 (mac): Add nuclide and qn tuple manipulation tools (from emratio_obs.py).
     - 10/25/21 (mac/zz): Add "rme" observable and "fix-sign-to" compound observable.
     - 02/13/22 (mac): Extend isotope label formatting and add isotope_str.
+    - 02/24/22 (zz): Add E1p,E1n,E1 support in rme and rtp funtions.
 """
 
 import collections
@@ -159,7 +160,7 @@ def excited(qn):
     """ Excite (J,g,n) to (J,g,n+1). """
     (J,g,n) = qn
     return (J,g,n+1)
-        
+
 ################################################################
 # observable parsing
 ################################################################
@@ -350,7 +351,7 @@ def qn_text(qn,show_parity=True,show_index=True):
         n_str = "{:d}".format(qn[2])
     else:
         n_str = ""
-        
+
     label = r"{{{}}}^{{{}}}_{{{}}}".format(J_str,P_str,n_str)
     return label
 
@@ -375,15 +376,15 @@ Observable = collections.namedtuple('Observable', ["extractor_generator", "obser
 #     Returns:
 #
 #         For extractor_generator:
-#    
+#
 #             extractor (callable): results_data (MFDnResultsData) -> observable value (float, np.array, or np.nan)
-#    
+#
 #         For observable_label_generator:
-#    
+#
 #             label (str): label string, to be interpreted in math mode
-#    
+#
 #         For axis_label_generator:
-#    
+#
 #             observable (str): observable label string, to be interpreted in math mode
 #             units (str): units string, to be interpreted in math mode, or None
 
@@ -589,6 +590,8 @@ def rtp_observable_label(nuclide,observable_operator,observable_qn_list):
         observable_str = r"M1_{{{}}}".format(observable_operator[1:])
     elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
         observable_str = r"E2_{{{}}}".format(observable_operator[2:])
+    elif observable_operator in {"E1p","E1n","E1"}:
+        observable_str = r"E1_{{{}}}".format(observable_operator[2:])
     elif observable_operator in {"E0p","E0n","E00","E01","E0"}:
         observable_str = r"E0_{{{}}}".format(observable_operator[2:])
     qn_str_1 = qn_text(observable_qn_list[0])
@@ -603,6 +606,9 @@ def rtp_axis_label(nuclide,observable_operator,observable_qn_list):
     elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
         observable_str = r"B(E2)"
         units_str = r"e^2\,\mathrm{fm}^{4}"
+    elif observable_operator in {"E1p","E1n","E1"}:
+        observable_str = r"B(E1)"
+        units_str = r"e^2\,\mathrm{fm}^{2}"
     elif observable_operator in {"E0p","E0n","E00","E01","E0"}:
         observable_str = r"B(E0)"
         units_str = r"e^2\,\mathrm{fm}^{4}"
@@ -622,6 +628,8 @@ def rme_observable_label(nuclide,observable_operator,observable_qn_list):
         observable_str = r"M1_{{{}}}".format(observable_operator[1:])
     elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
         observable_str = r"E2_{{{}}}".format(observable_operator[2:])
+    elif observable_operator in {"E1p","E1n","E1"}:
+        observable_str = r"E1_{{{}}}".format(observable_operator[2:])
     elif observable_operator in {"E0p","E0n","E00","E01","E0"}:
         observable_str = r"E0_{{{}}}".format(observable_operator[2:])
     qn_str_1 = qn_text(observable_qn_list[0])
@@ -636,6 +644,9 @@ def rme_axis_label(nuclide,observable_operator,observable_qn_list):
     elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
         observable_str = r"\langle E2 \rangle"
         units_str = r"e\,\mathrm{fm}^{2}"
+    elif observable_operator in {"E1p","E1n","E1"}:
+        observable_str = r"\langle E1 \rangle"
+        units_str = r"e\,\mathrm{fm}"
     elif observable_operator in {"E0p","E0n","E00","E01","E0"}:
         observable_str = r"\langle E0 \rangle"
         units_str = r"e\,\mathrm{fm}^{2}"
@@ -649,7 +660,7 @@ def Nex_probability_extractor(nuclide,observable_operator,observable_qn_list):
 
     ##g_0= mfdnres.ncci.N0_for_nuclide(nuclide)
     # TODO revise meaning of observable_operator argument to be Nex rather than Nex_index
-    
+
     def extractor(results_data):
         Nex_index = observable_operator  # 0 for lowest Nex, 1 for next Nex, ...
         decomposition = results_data.get_decomposition("Nex",*observable_qn_list)
@@ -714,7 +725,7 @@ def make_nuclide_text(nuclide_observable,as_tuple=False):
         (arithmetic_operation,nuclide_observable1) = nuclide_observable
         nuclide_text = make_nuclide_text(nuclide_observable1,as_tuple=as_tuple)
         return nuclide_text
-    
+
     (nuclide,observable) = nuclide_observable
 
     return isotope(nuclide,as_tuple=as_tuple)
@@ -774,7 +785,7 @@ def make_observable_axis_label_text(nuclide_observable):
         nuclide_observable (tuple): standard nuclide/observable pair or compound
 
     Returns:
-    
+
         label (str): label string, to be interpreted in math mode
     """
     # trap compound observable
@@ -831,13 +842,13 @@ def Nmax_label_text(Nmax_highlight,Nmax_max=None):
         Nmax_max (int, optional): last Nmax
 
     Returns:
-    
+
         label (str): label string, to be interpreted in math mode
 
     """
     if Nmax_max == None:
         Nmax_max = Nmax_highlight
-        
+
     if Nmax_highlight==Nmax_max:
         Nmax_combo_text = "{:d}".format(Nmax_max)
     else:
@@ -1013,7 +1024,7 @@ def hw_scan_descriptor(interaction_coulomb,nuclide_observable,verbose=False):
 
     if verbose:
         print("Generating hw_scan_descriptor: {} {}".format(interaction_coulomb,nuclide_observable))
-        
+
     descriptor="hw-scan_{interaction_coulomb[0]:s}-{interaction_coulomb[1]:1d}_{nuclide_observable_descriptor}".format(
         interaction_coulomb=interaction_coulomb,
         nuclide_observable_descriptor=nuclide_observable_descriptor(nuclide_observable)
@@ -1111,7 +1122,7 @@ def make_hw_scan_data(
         (arithmetic_operation,nuclide_observable1) = nuclide_observable
         data1 = make_hw_scan_data(mesh_data,nuclide_observable1,selector=selector,Nmax_range=Nmax_range,hw_range=hw_range)
         return -data1
-    
+
     # unpack arguments
     (nuclide,observable) = nuclide_observable
     (observable_type,observable_operator,observable_qn_list) = unpack_observable(observable)
@@ -1437,4 +1448,3 @@ def add_data_marker(ax,x,y_with_error,errorbar_kw=dict()):
         ## yerr = [y_error]  # for symmetric error bars
         yerr = [[dy_plus],[dy_minus]]
     ax.errorbar([x],[y],yerr=yerr,**errorbar_kw)
-
