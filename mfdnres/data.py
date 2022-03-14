@@ -26,6 +26,7 @@
     - 10/14/21 (mac): Add nuclide and qn tuple manipulation tools (from emratio_obs.py).
     - 10/25/21 (mac/zz): Add "rme" observable and "fix-sign-to" compound observable.
     - 02/13/22 (mac): Extend isotope label formatting and add isotope_str.
+    - 03/14/22 (mac): Add break_label_at_symbol.
 """
 
 import collections
@@ -159,7 +160,41 @@ def excited(qn):
     """ Excite (J,g,n) to (J,g,n+1). """
     (J,g,n) = qn
     return (J,g,n+1)
-        
+
+################################################################
+# tools: label formatting
+################################################################
+
+def break_label_at_symbol(label, symbol, separator = "$\n$"):
+    """Insert newline before given character in text label.
+
+    Intended for to, e.g., split ratios at the solidus.
+
+    By default, inserts not only a newline, but also a closing and reopening
+    "$", on the assumption that the text is breaking in math mode.
+
+    Example:
+
+        >>> mfdnres.data.break_label_at_symbol(r"$E(4^+)/E(2^+)$", "/")
+
+        '$E(4^+)$\n$/E(2^+)$'
+
+    Arguments:
+
+        label (str): Unbroken label
+
+        symbol (str): Symbol at which to break
+
+        separator (str, optional): String to introduce to generate linebreak
+
+    Returns:
+
+        (str): Broken label
+
+    """
+
+    return label.replace(symbol,separator+symbol)
+
 ################################################################
 # observable parsing
 ################################################################
