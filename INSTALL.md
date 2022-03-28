@@ -39,7 +39,7 @@ Department of Physics, University of Notre Dame
 
   If you want to use the analysis tools, install the additional requirements:
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  % python3 -m pip install --user --editable .[analysis]
+  % python3 -m pip install --user --editable ".[analysis]"
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   a. Subsequently updating source
