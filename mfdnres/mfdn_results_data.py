@@ -34,6 +34,7 @@
     05/25/21 (mac): Add "E2" as alias for "E2p", for consistency in plot observable labeling.
     09/25/21 (mac): Add single-species radii relative to own center of mass in get_radius().
     10/20/21 (mac): Trap spurious one-body E0 in get_rme()
+    02/24/22 (zz): Add E1 special case in get_rme().
 """
 
 import math
@@ -174,27 +175,27 @@ class MFDnResultsData(results_data.ResultsData):
     #
     # decompositions
     #     => mfdn_level_decompositions
-    # 
+    #
     # native_static_properties  TODO
     #     => mfdn_level_properties (T, am)
     #        AND
     #        mfdn_ob_moments (E2, M1)
-    # 
+    #
     # native_transition_properties
     #     => mfdn_ob_rmes
-    # 
+    #
     # two_body_static_observables
     #     => mfdn_tb_expectations
-    # 
+    #
     # one_body_static_properties
     #     => REMOVED
-    # 
+    #
     # one_body_transition_properties
     #     => postprocessor_ob_rmes
-    # 
+    #
     # NEW
     #     => postprocessor_tb_rmes
-    
+
     ########################################
     # Initializer
     ########################################
@@ -259,7 +260,7 @@ class MFDnResultsData(results_data.ResultsData):
 
         if verbose:
             print("{} {} {}".format(decomposition_type,qn,decomposition))
-            
+
         return decomposition
 
     def get_radius(self,radius_type,qn,default=np.nan):
@@ -305,7 +306,7 @@ class MFDnResultsData(results_data.ResultsData):
             rnn = self.mfdn_tb_expectations.get("rnn",{}).get(qn,default)
             value = A/Nn*rnn
             return value
-        
+
         rms_radius = self.mfdn_tb_expectations.get(radius_type,{}).get(qn,default)
 
         return rms_radius
@@ -492,6 +493,11 @@ class MFDnResultsData(results_data.ResultsData):
             E2p = self.get_rme("E2p",qn_pair,default,verbose)
             value = E2p
             return value
+        elif (observable == "E1"):
+            # physical E1 (alias for E1p)
+            E1p = self.get_rme("E1p",qn_pair,default,verbose)
+            value = E1p
+            return value
         elif (observable in {"E00","E01"}):
             # isoscalar/isovector E0
             E0p = self.get_rme("E0p",qn_pair,default,verbose)
@@ -542,7 +548,7 @@ class MFDnResultsData(results_data.ResultsData):
             # (A7)]
             if qn_pair[0]==qn_pair[1]:
                 return default
-            
+
         # canonicalize labels
         (qn_pair_canonical,flipped,canonicalization_factor) = tools.canonicalize_Jgn_pair(
             qn_pair,tools.RMEConvention.kEdmonds
