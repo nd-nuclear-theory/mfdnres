@@ -28,6 +28,9 @@
     - 02/13/22 (mac): Extend isotope label formatting and add isotope_str.
     - 02/24/22 (zz): Add E1p,E1n,E1 support in rme and rtp funtions.
     - 03/14/22 (mac): Add break_label_at_symbol.
+    - 04/08/22 (mac):
+         + Add LevelSelector and associated machinery.
+         + Hide "fix-sign-to" in observable descriptor.
 """
 
 import collections
@@ -39,7 +42,8 @@ import numpy as np
 import pandas as pd
 
 from . import (
-    analysis
+    analysis,
+    tools
 )
 
 ################################################################
@@ -241,13 +245,21 @@ def nuclide_observable_descriptor(nuclide_observable):
         descriptor (str): descriptor string
     """
     # trap compound observable
-    if nuclide_observable[0] in {"diff","ratio","fix-sign-to"}:
+    if nuclide_observable[0] in {"diff","ratio"}:
         (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
         return r"{}_{}_{}".format(  # "{}-{}-{}"
             arithmetic_operation,
             nuclide_observable_descriptor(nuclide_observable1),
             nuclide_observable_descriptor(nuclide_observable2)
         )
+    elif nuclide_observable[0] in {"fix-sign-to"}:
+        # descriptor does not reflect any sign fixes
+        #
+        # This is to prevent excessive growth of file names (if "fix-sign-to"
+        # were treateed like "diff" or "ratio"), both for readability and to
+        # avoid "File name too long" errors.
+        (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
+        return nuclide_observable_descriptor(nuclide_observable1)
     elif nuclide_observable[0] in {"minus"}:
         (arithmetic_operation,nuclide_observable1) = nuclide_observable
         return r"{}_{}".format(
@@ -260,7 +272,11 @@ def nuclide_observable_descriptor(nuclide_observable):
     (observable_type,observable_operator,observable_qn_list) = unpack_observable(observable)
 
     qn_list_str = "-".join([
-        "{:04.1f}-{:1d}-{:02d}".format(*observable_qn)
+        (
+            "{:04.1f}-{:1d}-{:02d}".format(*observable_qn)
+            if type(observable_qn) is tuple
+            else observable_qn.descriptor_str  # provide support for LevelSelector object
+        )
         for observable_qn in observable_qn_list
     ])
 
@@ -375,16 +391,18 @@ def qn_text(qn,show_parity=True,show_index=True):
         label (str): label string, to be interpreted in math mode
     """
 
+    J, g, n = qn
+    
     # am.HalfInt.Str() is missing in Python
     ## J = am.HalfInt(int(2*qn[0]),2)
-    twice_J=int(2*qn[0])
+    twice_J=int(2*J)
     J_str = "{}/2".format(twice_J) if twice_J % 2 else twice_J//2
     if show_parity:
-        P_str = "+" if qn[1]==0 else "-"
+        P_str = "+" if g==0 else "-"
     else:
         P_str = ""
     if show_index:
-        n_str = "{:d}".format(qn[2])
+        n_str = "{:d}".format(n)
     else:
         n_str = ""
 
@@ -392,6 +410,221 @@ def qn_text(qn,show_parity=True,show_index=True):
     return label
 
 HW_AXIS_LABEL_TEXT = r"$\hbar\omega~(\mathrm{MeV})$"
+
+################################################################
+# LevelSelector machinery
+################################################################
+
+def resolve_qn(results_data, qn):
+    """Resolve (J,g,n) quantum number tuple or level selector to quantum number tuple.
+
+    Arguments:
+
+        results_data (mfdnres.ResultsData): Results data
+
+        qn (tuple): (J,g,n) tuple or LevelSelector object
+
+    Returns:
+
+        resolved_qn_list (list): (J,g,n) tuple or None
+
+    """
+    if isinstance(qn,tuple):
+        resolved_qn = qn
+    elif isinstance(qn,LevelSelector):
+        resolved_qn = qn(results_data)
+    else:
+        raise(TypeError("Unexpected value for level selector"))
+
+    return resolved_qn
+
+def resolve_qn_text(qn):
+    """Resolve LaTeX label text for (J,g,n) quantum number tuple or level selector.
+
+    Arguments:
+
+        results_data (mfdnres.ResultsData): Results data
+
+        qn (list): (J,g,n) or LevelSelector object
+
+    Returns:
+
+        resolved_qn_text (str): LaTeX label text
+
+    """
+
+    if isinstance(qn,tuple):
+        label = qn_text(qn)
+    elif isinstance(qn,LevelSelector):
+        label = qn.label_text
+    else:
+        raise(TypeError("Unexpected value for level selector"))
+
+    return label
+
+class LevelSelector(object):
+    """Object to select level from ResultsData spectrum.
+
+    This is an interface class.
+
+    For any daughter class, which we shall generically call LevelSelectorFoo,
+    LevelSelectorFoo(args) constructs a callable object, which takes a
+    ResultsData object (or some daughter thereof) and returns a quantum number
+    (J,g,n) tuple or None, based on criteria given in args.
+
+    Properties:
+      
+        descriptor_str (str): Text string describing level
+
+        label_text (str): Formatted LaTeX text representing selected level
+
+    """
+
+    def __init__(self):
+        """ Null initialize."""
+        pass
+
+    def __call__(self, results_data):
+        """ Retrieve level.
+        """
+        return None
+
+    @property
+    def descriptor_str(self):
+        """ Provide text string for use in descriptors.
+        """
+        return ""
+
+    @property
+    def label_text(self):
+        """ Provide LaTeX label.
+        """
+        return ""
+        
+    
+class LevelSelectorQN(LevelSelector):
+    """Provides trivial level selector for given quantum numbers.
+
+    Simply returns the given quantum numbers, unless the level is not found, in
+    which case None is returned.
+
+    """
+
+    def __init__(self, qn):
+        """ Initialize with given parameters.
+
+        Arguments:
+            qn (tuple): (J, g, n)
+        """
+        super().__init__()
+        self._qn = qn
+
+    def __call__(self, results_data):
+        """ Retrieve level.
+        """
+
+        if self._qn not in results_data.levels:
+            return None
+
+        return self._qn
+
+    @property
+    def descriptor_str(self):
+        """ Provide text string for use in descriptors.
+        """
+        text = "{:04.1f}-{:1d}-{:02d}".format(*self._qn)
+        return text
+
+    @property
+    def label_text(self):
+        """ Provide LaTeX label.
+        """
+
+        label = qn_text(self._qn)
+        return label
+        
+class LevelSelectorQNT(LevelSelector):
+    """Provides level selector within given isospin subspace.
+
+    Returns level of given quantum numbers within given isospin subspace.
+
+    Uses effective isospin from <T^2>, and bins by <T^2>, with the boundary
+    between T1 and T2 occurring at [T1*(T1+1)+T2*(T2+1)]/2.  For the ideal case
+    where states of isospin differing by unity undergo pure two-state mixing,
+    this ensures that the crossover in identification happens at a mixing angle
+    of 45 deg.
+
+    """
+
+    def __init__(self, qnT, debug=False):
+        """ Initialize with given parameters.
+
+        Arguments:
+            qnT (tuple): (J, g, n_for_T, T)
+        """
+        super().__init__()
+        self._qnT = qnT
+        self._debug = debug
+
+    def __call__(self, results_data):
+        """ Retrieve level.
+        """
+
+        # recover quanbum numbers for sought level
+        J, g, n_for_T, T = self._qnT
+        
+        # set up binning
+        T_lower = T-1
+        T_upper = T+1
+        if T_lower < 0. :
+            T_bound_lower = 0.  # assumes inclusive lower bound and positive definite result for comparison
+        else:
+            T_bound_lower = tools.effective_am((T_lower*(T_lower+1)+T*(T+1))/2)
+        T_bound_upper = tools.effective_am((T_upper*(T_upper+1)+T*(T+1))/2)
+
+        # scan for sought level
+        current_n = 0
+        current_n_for_T = 0
+        while current_n_for_T < n_for_T:
+            current_n +=1
+            current_qn = (J,g,current_n)
+            current_T = results_data.get_isospin(current_qn)
+            if self._debug:
+                print("T {} {} {}: {}".format(T,T_bound_lower,T_bound_upper,current_T))
+            if np.isnan(current_T):
+                return None  # ran out of levels
+            if T_bound_lower <= current_T < T_bound_upper:
+                current_n_for_T += 1
+        return current_qn
+
+    @property
+    def descriptor_str(self):
+        """ Provide text string for use in descriptors."""
+        text = "{:04.1f}-{:1d}-{:02d}-T{:04.1f}".format(*self._qnT)
+        return text
+
+    @property
+    def label_text(self):
+        """ Provide LaTeX label.
+        """
+
+        J, g, n_for_T, T = self._qnT
+
+        # format using J;T notation
+        ## twice_T=int(2*T)
+        ## T_str = "{}/2".format(twice_T) if twice_T % 2 else twice_T//2
+        ## label = "{};{}".format(mfdnres.data.qn_text((J, g, n_for_T)), T_str)
+
+        # format using J_{T=...} notation
+        twice_J=int(2*J)
+        J_str = "{}/2".format(twice_J) if twice_J % 2 else twice_J//2
+        P_str = "+" if g==0 else "-"
+        n_str = "{:d}".format(n_for_T)
+        twice_T=int(2*T)
+        T_str = "{}/2".format(twice_T) if twice_T % 2 else twice_T//2
+        
+        label = r"{{{}}}^{{{}}}_{{{};T={}}}".format(J_str,P_str,n_str,T_str)
+        return label
 
 ################################################################
 # observable registry
@@ -442,14 +675,21 @@ def register_observable(observable_type, observable):
 # observable implementations
 ################################################################
 
+# TODO 04/08/22 (mac): finish upgrading observables to handle LevelSelector in place of qn
+
 # energy
 
 def energy_extractor(nuclide,observable_operator,observable_qn_list):
-    return lambda results_data : results_data.get_energy(*observable_qn_list)
+    ## return lambda results_data : results_data.get_energy(*observable_qn_list)
+    def extractor(results_data):
+        resolved_qn_list = [resolve_qn(results_data, qn) for qn in observable_qn_list]
+        return results_data.get_energy(*resolved_qn_list)
+    return extractor
 
 def energy_observable_label(nuclide,observable_operator,observable_qn_list):
     observable_str = r"E"
-    qn_str = qn_text(observable_qn_list[0])
+    ##qn_str = qn_text(observable_qn_list[0])
+    qn_str = resolve_qn_text(observable_qn_list[0])
     label = r"{}({})".format(observable_str,qn_str)
     return label
 
@@ -463,11 +703,15 @@ register_observable("energy", Observable(energy_extractor, energy_observable_lab
 # isospin
 
 def isospin_extractor(nuclide,observable_operator,observable_qn_list):
-    return lambda results_data : results_data.get_isospin(*observable_qn_list)
+    ## return lambda results_data : results_data.get_isospin(*observable_qn_list)
+    def extractor(results_data):
+        resolved_qn_list = [resolve_qn(results_data, qn) for qn in observable_qn_list]
+        return results_data.get_isospin(*resolved_qn_list)
+    return extractor
 
 def isospin_observable_label(nuclide,observable_operator,observable_qn_list):
     observable_str = r"\bar{T}"
-    qn_str = qn_text(observable_qn_list[0])
+    qn_str = resolve_qn_text(observable_qn_list[0])
     label = r"{}({})".format(observable_str,qn_str)
     return label
 
