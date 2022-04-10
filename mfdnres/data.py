@@ -991,16 +991,18 @@ def make_nuclide_text(nuclide_observable,as_tuple=False):
     # trap compound observable
     if nuclide_observable[0] in {"diff","ratio","fix-sign-to"}:
         (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
-        same_nuclide = (nuclide_observable1[0]==nuclide_observable2[0])  # CAVEAT: test fails to "see through" a unary "minus" compound observable
+        ## same_nuclide = (nuclide_observable1[0]==nuclide_observable2[0])  # CAVEAT: test fails to "see through" compound observables given as arguments
+        nuclide_text1 = make_nuclide_text(nuclide_observable1)
+        nuclide_text2 = make_nuclide_text(nuclide_observable2)
+        same_nuclide = nuclide_text1 == nuclide_text2
         if same_nuclide:
-            nuclide_text = make_nuclide_text(nuclide_observable1)
-            return nuclide_text
+            nuclide_text = nuclide_text1
         else:
             nuclide_text = r"{}/{}".format(
                 make_nuclide_text(nuclide_observable1,as_tuple=as_tuple),
                 make_nuclide_text(nuclide_observable2,as_tuple=as_tuple)
             )
-            return nuclide_text
+        return nuclide_text
     elif nuclide_observable[0] in {"minus"}:
         (arithmetic_operation,nuclide_observable1) = nuclide_observable
         nuclide_text = make_nuclide_text(nuclide_observable1,as_tuple=as_tuple)
