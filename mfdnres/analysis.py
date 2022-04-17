@@ -41,6 +41,7 @@
         - Add nonspurious_to_spurious_qn.
         - Use dict comprehension in subdict to preserve order.
         - Add preprocessor option to merged_mesh; keep common params in merged mesh point.
+    04/17/22 (mac): Make make_obs_table provide np.nan value when extractor raises exception.
 """
 
 import copy
@@ -580,7 +581,10 @@ def make_obs_table(mesh_data,key_descriptor,obs_extractor,key_list=None,prune=Fa
     table_data = []
     for key in common_key_list:
         results_data = results_dict[key]
-        value = obs_extractor(results_data)
+        try:
+            value = obs_extractor(results_data)
+        except:
+            value = np.nan
         if (prune and np.isnan(value)):
             continue
         table_data += [

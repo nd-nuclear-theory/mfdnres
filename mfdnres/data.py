@@ -31,6 +31,7 @@
     - 04/08/22 (mac):
          + Add LevelSelector and associated machinery.
          + Hide "fix-sign-to" in observable descriptor.
+    - 04/17/11 (mac): Propose ObservableExtractor interface.
 """
 
 import collections
@@ -412,40 +413,40 @@ def qn_text(qn,show_parity=True,show_index=True):
 HW_AXIS_LABEL_TEXT = r"$\hbar\omega~(\mathrm{MeV})$"
 
 ################################################################
-# LevelSelector machinery
+# LevelSelector tools
 ################################################################
 
-def resolve_qn(results_data, qn):
+def resolve_qn(results_data, level_selector):
     """Resolve (J,g,n) quantum number tuple or level selector to quantum number tuple.
 
     Arguments:
 
         results_data (mfdnres.ResultsData): Results data
 
-        qn (tuple): (J,g,n) tuple or LevelSelector object
+        level_selector (tuple): (J,g,n) tuple or LevelSelector object
 
     Returns:
 
         resolved_qn_list (list): (J,g,n) tuple or None
 
     """
-    if isinstance(qn,tuple):
-        resolved_qn = qn
-    elif isinstance(qn,LevelSelector):
-        resolved_qn = qn(results_data)
+    if isinstance(level_selector,tuple):
+        resolved_qn = level_selector
+    elif isinstance(level_selector,LevelSelector):
+        resolved_qn = level_selector.select_level(results_data)
     else:
         raise(TypeError("Unexpected value for level selector"))
 
     return resolved_qn
 
-def resolve_qn_text(qn):
+def resolve_qn_text(level_selector):
     """Resolve LaTeX label text for (J,g,n) quantum number tuple or level selector.
 
     Arguments:
 
         results_data (mfdnres.ResultsData): Results data
 
-        qn (list): (J,g,n) or LevelSelector object
+        level_selector (list): (J,g,n) or LevelSelector object
 
     Returns:
 
@@ -453,24 +454,33 @@ def resolve_qn_text(qn):
 
     """
 
-    if isinstance(qn,tuple):
-        label = qn_text(qn)
-    elif isinstance(qn,LevelSelector):
-        label = qn.label_text
+    if isinstance(level_selector,tuple):
+        label = qn_text(level_selector)
+    elif isinstance(level_selector,LevelSelector):
+        label = level_selector.label_text
     else:
         raise(TypeError("Unexpected value for level selector"))
 
     return label
+
+################################################################
+# LevelSelector interface
+################################################################
 
 class LevelSelector(object):
     """Object to select level from ResultsData spectrum.
 
     This is an interface class.
 
-    For any daughter class, which we shall generically call LevelSelectorFoo,
-    LevelSelectorFoo(args) constructs a callable object, which takes a
-    ResultsData object (or some daughter thereof) and returns a quantum number
-    (J,g,n) tuple or None, based on criteria given in args.
+    For any daughter class, which we shall generically call LevelSelector,
+    LevelSelector(args) constructs a level selector object.  Given a ResultsData
+    object (or some daughter thereof), level_selector.select_level(results_data)
+    selects a level based on the criteria specified via args, and returns the
+    quantum number tuple (J,g,n) for the selected level (or None).
+
+    Methods:
+
+        level (ResultsData -> tuple): Retrieve level QN (or None) from given ResultsData
 
     Properties:
       
@@ -484,7 +494,12 @@ class LevelSelector(object):
         """ Null initialize."""
         pass
 
-    def __call__(self, results_data):
+    ## def __call__(self, results_data):
+    ##     """ Retrieve level.
+    ##     """
+    ##     return None
+    
+    def select_level(self, results_data):
         """ Retrieve level.
         """
         return None
@@ -502,6 +517,10 @@ class LevelSelector(object):
         return ""
         
     
+################################################################
+# LevelSelector objects
+################################################################
+
 class LevelSelectorQN(LevelSelector):
     """Provides trivial level selector for given quantum numbers.
 
@@ -519,7 +538,7 @@ class LevelSelectorQN(LevelSelector):
         super().__init__()
         self._qn = qn
 
-    def __call__(self, results_data):
+    def select_level(self, results_data):
         """ Retrieve level.
         """
 
@@ -566,7 +585,7 @@ class LevelSelectorQNT(LevelSelector):
         self._qnT = qnT
         self._debug = debug
 
-    def __call__(self, results_data):
+    def select_level(self, results_data):
         """ Retrieve level.
         """
 
@@ -626,6 +645,135 @@ class LevelSelectorQNT(LevelSelector):
         label = r"{{{}}}^{{{}}}_{{{};T={}}}".format(J_str,P_str,n_str,T_str)
         return label
 
+###############################################################
+# ObservableExtractor interface
+################################################################
+
+class ObservableExtractor(object):
+    """Object to extract observable from ResultsData.
+
+    This is an interface class.
+
+    For any daughter class, which we shall generically call ObservableExtractor,
+    ObservableExtractor(args) constructs an observable extractor object.  Given
+    a ResultsData object (or some daughter thereof),
+    observable_extractor.observable(results_data) returns the numerical
+    observable data (or np.nan).
+
+    Methods:
+
+        observable (ResultsData -> float OR np.array): Retrieve observable (or
+        np.nan) from given ResultsData
+
+    Properties:
+      
+        descriptor_str (str): Text string describing observable
+
+        observable_label_text (str): Formatted LaTeX text representing
+            observable, to be interpreted in math mode
+
+        axis_label_text (str, str): Formatted LaTeX text representing axis label
+
+            observable (str): observable label string, to be interpreted in math mode
+            units (str): units string, to be interpreted in math mode, or None
+
+    """
+
+    def __init__(self):
+        """ Null initialize."""
+        pass
+
+    def observable(self, results_data):
+        """ Extract observable.
+        """
+        return np.nan
+
+    @property
+    def descriptor_str(self):
+        """ Text string describing observable.
+        """
+        return ""
+
+    @property
+    def observable_label_text(self):
+        """ Formatted LaTeX text representing observable.
+        """
+        return ""
+
+    @property
+    def axis_label_text(self):
+        """ Formatted LaTeX text representing axis label.
+        """
+        observable_str = r""
+        units_str = None
+        return observable_str, units_str
+
+    
+###############################################################
+# ObservableExtractor objects
+################################################################
+
+def nuclide_descriptor_str(nuclide):
+    """ Text string describing nuclide.
+
+    Arguments:
+
+        nuclide (tuple): (Z,N)
+
+    Returns:
+
+        descriptor (str): Text Z<zz>-N<nn>.
+    """
+    return "Z{nuclide[0]:02d}-N{nuclide[1]:02d}".format(nuclide)
+
+class Energy(ObservableExtractor):
+    """ Provides observable extractor for level energy.
+    """
+
+    def __init__(self, nuclide, level):
+        """ Initialize with given parameters.
+
+        Arguments:
+            level (LevelSelector): Level
+        """
+        super().__init__()
+        self._nuclide = nuclide
+        self._level = level
+
+    def observable(self, results_data):
+        """ Extract observable.
+        """
+        qn = self._level.select_level(results_data)
+        return results_data.get_energy(qn)
+
+    @property
+    def descriptor_str(self):
+        """ Text string describing observable.
+        """
+        return "-".join([
+            nuclide_descriptor_str(self._nuclide),
+            "energy",
+            self._level.descriptor_str,
+        ])
+
+    @property
+    def observable_label_text(self):
+        """ Formatted LaTeX text representing observable.
+        """
+        observable_text = r"E"
+        level_text = self._level.label_text
+        label = r"{}({})".format(observable_text,level_text)
+        return label
+
+    @property
+    def axis_label_text(self):
+        """ Formatted LaTeX text representing axis label.
+        """
+        observable_text = r"E"
+        units_text = r"\mathrm{MeV}"
+        return observable_text, units_text
+    
+    
 ################################################################
 # observable registry
 ################################################################
@@ -677,12 +825,14 @@ def register_observable(observable_type, observable):
 
 # TODO 04/08/22 (mac): finish upgrading observables to handle LevelSelector in place of qn
 
+# TODO 04/17/22 (mac): deprecate in favor of ObservableExtractor
+
 # energy
 
 def energy_extractor(nuclide,observable_operator,observable_qn_list):
     ## return lambda results_data : results_data.get_energy(*observable_qn_list)
     def extractor(results_data):
-        resolved_qn_list = [resolve_qn(results_data, qn) for qn in observable_qn_list]
+        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
         return results_data.get_energy(*resolved_qn_list)
     return extractor
 
@@ -705,7 +855,7 @@ register_observable("energy", Observable(energy_extractor, energy_observable_lab
 def isospin_extractor(nuclide,observable_operator,observable_qn_list):
     ## return lambda results_data : results_data.get_isospin(*observable_qn_list)
     def extractor(results_data):
-        resolved_qn_list = [resolve_qn(results_data, qn) for qn in observable_qn_list]
+        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
         return results_data.get_isospin(*resolved_qn_list)
     return extractor
 
@@ -725,7 +875,11 @@ register_observable("isospin", Observable(isospin_extractor, isospin_observable_
 # radius
 
 def radius_extractor(nuclide,observable_operator,observable_qn_list):
-    return lambda results_data : results_data.get_radius(observable_operator,*observable_qn_list)
+    ## return lambda results_data : results_data.get_radius(observable_operator,*observable_qn_list)
+    def extractor(results_data):
+        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
+        return results_data.get_radius(observable_operator,*resolved_qn_list)
+    return extractor
 
 RADIUS_STR_BY_OPERATOR = {
     "rp" : r"r_p",
@@ -737,7 +891,7 @@ RADIUS_STR_BY_OPERATOR = {
 
 def radius_observable_label(nuclide,observable_operator,observable_qn_list):
     observable_str = RADIUS_STR_BY_OPERATOR[observable_operator]
-    qn_str = qn_text(observable_qn_list[0])
+    qn_str = resolve_qn_text(observable_qn_list[0])
     label = r"{}({})".format(observable_str,qn_str)
     return label
 
@@ -751,7 +905,11 @@ register_observable("radius", Observable(radius_extractor, radius_observable_lab
 # radius-sqr
 
 def radius_sqr_extractor(nuclide,observable_operator,observable_qn_list):
-    return lambda results_data : results_data.get_radius(observable_operator,*observable_qn_list)**2
+    ## return lambda results_data : results_data.get_radius(observable_operator,*observable_qn_list)**2
+    def extractor(results_data):
+        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
+        return results_data.get_radius(observable_operator,*resolved_qn_list)**2
+    return extractor
 
 def radius_sqr_observable_label(nuclide,observable_operator,observable_qn_list):
     # Assumption is that radius-sqr will be taken in ratio with an E2 moment,
@@ -761,7 +919,7 @@ def radius_sqr_observable_label(nuclide,observable_operator,observable_qn_list):
     ## observable_str = "e{}^2".format(RADIUS_STR_BY_OPERATOR[observable_operator])
     ## label = r"[{}({})]".format(observable_str,qn_str)
     observable_str = "{}^2".format(RADIUS_STR_BY_OPERATOR[observable_operator])
-    qn_str = qn_text(observable_qn_list[0])
+    qn_str = resolve_qn_text(observable_qn_list[0])
     label = r"{}({})".format(observable_str,qn_str)
     return label
 
@@ -779,14 +937,18 @@ register_observable("radius-sqr", Observable(radius_sqr_extractor, radius_sqr_ob
 # radius-quart
 
 def radius_quart_extractor(nuclide,observable_operator,observable_qn_list):
-    return lambda results_data : results_data.get_radius(observable_operator,*observable_qn_list)**4
+    ## return lambda results_data : results_data.get_radius(observable_operator,*observable_qn_list)**4
+    def extractor(results_data):
+        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
+        return results_data.get_radius(observable_operator,*resolved_qn_list)**4
+    return extractor
 
 def radius_quart_observable_label(nuclide,observable_operator,observable_qn_list):
     # Assumption is that radius-quart will be taken in ratio with an E2 rme, so,
     # for quartic power of radii, add factor of e^2 (and brackets on observable
     # label).
     observable_str = "e^2{}^4".format(RADIUS_STR_BY_OPERATOR[observable_operator])
-    qn_str = qn_text(observable_qn_list[0])
+    qn_str = resolve_qn_text(observable_qn_list[0])
     label = r"[{}({})]".format(observable_str,qn_str)
     return label
 
@@ -802,7 +964,11 @@ register_observable("radius-quart", Observable(radius_quart_extractor, radius_qu
 # moment
 
 def moment_extractor(nuclide,observable_operator,observable_qn_list):
-    return lambda results_data : results_data.get_moment(observable_operator,*observable_qn_list)
+    ##return lambda results_data : results_data.get_moment(observable_operator,*observable_qn_list)
+    def extractor(results_data):
+        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
+        return results_data.get_moment(observable_operator,*resolved_qn_list)
+    return extractor
 
 def moment_observable_label(nuclide,observable_operator,observable_qn_list):
     if observable_operator == "M1":
@@ -811,7 +977,7 @@ def moment_observable_label(nuclide,observable_operator,observable_qn_list):
         observable_str = r"\mu_{{{}}}".format(observable_operator[1:])
     elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
         observable_str = r"Q_{{{}}}".format(observable_operator[2:])
-    qn_str = qn_text(observable_qn_list[0])
+    qn_str = resolve_qn_text(observable_qn_list[0])
     label = r"{}({})".format(observable_str,qn_str)
     return label
 
@@ -829,7 +995,11 @@ register_observable("moment", Observable(moment_extractor, moment_observable_lab
 # moment-sqr
 
 def moment_sqr_extractor(nuclide,observable_operator,observable_qn_list):
-    return lambda results_data : results_data.get_moment(observable_operator,*observable_qn_list)**2
+    ## return lambda results_data : results_data.get_moment(observable_operator,*observable_qn_list)**2
+    def extractor(results_data):
+        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
+        return results_data.get_moment(observable_operator,*resolved_qn_list)**2
+    return extractor
 
 def moment_sqr_observable_label(nuclide,observable_operator,observable_qn_list):
     # Assumption is that moment-sqr will be taken in ratio with an rtp, so, for
@@ -841,7 +1011,7 @@ def moment_sqr_observable_label(nuclide,observable_operator,observable_qn_list):
         observable_str = r"\mu_{{{}}}".format(observable_operator[1:])
     elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
         observable_str = r"eQ_{{{}}}".format(observable_operator[2:])
-    qn_str = qn_text(observable_qn_list[0])
+    qn_str = resolve_qn_text(observable_qn_list[0])
     label = r"[{}({})^2]".format(observable_str,qn_str)
     return label
 
@@ -861,7 +1031,11 @@ register_observable("moment-sqr", Observable(moment_sqr_extractor, moment_sqr_ob
 # rtp
 
 def rtp_extractor(nuclide,observable_operator,observable_qn_list):
-    return lambda results_data : results_data.get_rtp(observable_operator,tuple(observable_qn_list))
+    ## return lambda results_data : results_data.get_rtp(observable_operator,tuple(observable_qn_list))
+    def extractor(results_data):
+        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
+        return results_data.get_rtp(observable_operator,resolved_qn_list)
+    return extractor
 
 def rtp_observable_label(nuclide,observable_operator,observable_qn_list):
     if observable_operator == "M1":
@@ -874,8 +1048,8 @@ def rtp_observable_label(nuclide,observable_operator,observable_qn_list):
         observable_str = r"E1_{{{}}}".format(observable_operator[2:])
     elif observable_operator in {"E0p","E0n","E00","E01","E0"}:
         observable_str = r"E0_{{{}}}".format(observable_operator[2:])
-    qn_str_1 = qn_text(observable_qn_list[0])
-    qn_str_2 = qn_text(observable_qn_list[1])
+    qn_str_1 = resolve_qn_text(observable_qn_list[0])
+    qn_str_2 = resolve_qn_text(observable_qn_list[1])
     label = r"B({};{}\rightarrow{})".format(observable_str,qn_str_2,qn_str_1)  # <1|O|2> = 2->1
     return label
 
@@ -899,7 +1073,11 @@ register_observable("rtp", Observable(rtp_extractor, rtp_observable_label, rtp_a
 # rme
 
 def rme_extractor(nuclide,observable_operator,observable_qn_list):
-    return lambda results_data : results_data.get_rme(observable_operator,tuple(observable_qn_list))
+    ##return lambda results_data : results_data.get_rme(observable_operator,tuple(observable_qn_list))
+    def extractor(results_data):
+        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
+        return results_data.get_rme(observable_operator,resolved_qn_list)
+    return extractor
 
 def rme_observable_label(nuclide,observable_operator,observable_qn_list):
     if observable_operator == "M1":
@@ -912,8 +1090,8 @@ def rme_observable_label(nuclide,observable_operator,observable_qn_list):
         observable_str = r"E1_{{{}}}".format(observable_operator[2:])
     elif observable_operator in {"E0p","E0n","E00","E01","E0"}:
         observable_str = r"E0_{{{}}}".format(observable_operator[2:])
-    qn_str_1 = qn_text(observable_qn_list[0])
-    qn_str_2 = qn_text(observable_qn_list[1])
+    qn_str_1 = resolve_qn_text(observable_qn_list[0])
+    qn_str_2 = resolve_qn_text(observable_qn_list[1])
     label = r"\langle {} \Vert {} \Vert {} \rangle".format(qn_str_1,observable_str,qn_str_2)  # <1|O|2> = 2->1
     return label
 
@@ -940,10 +1118,11 @@ def Nex_probability_extractor(nuclide,observable_operator,observable_qn_list):
 
     ##g_0= mfdnres.ncci.N0_for_nuclide(nuclide)
     # TODO revise meaning of observable_operator argument to be Nex rather than Nex_index
-
+   
     def extractor(results_data):
+        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
         Nex_index = observable_operator  # 0 for lowest Nex, 1 for next Nex, ...
-        decomposition = results_data.get_decomposition("Nex",*observable_qn_list)
+        decomposition = results_data.get_decomposition("Nex",*resolved_qn_list)
         if decomposition is None:
             return np.nan
         else:
@@ -957,7 +1136,7 @@ def Nex_probability_observable_label(nuclide,observable_operator,observable_qn_l
     Nex = 2*Nex_index
     ## observable_str = r"P(N_{{\mathrm{{ex}}}}={Nex})".format(Nex=Nex)  # CAVEAT: Nex is relative to lowest for current parity
     observable_str = r"P_{{N_{{\mathrm{{ex}}}}={Nex}}}".format(Nex=Nex)  # CAVEAT: Nex is relative to lowest for current parity
-    qn_str = qn_text(observable_qn_list[0])
+    qn_str = resolve_qn_text(observable_qn_list[0])
     label = r"{}({})".format(observable_str,qn_str)
     return label
 
