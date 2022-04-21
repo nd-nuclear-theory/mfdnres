@@ -41,6 +41,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import re
 
 from . import (
     analysis,
@@ -377,6 +378,40 @@ def isotope_str(nuclide, lower = False):
     A = sum(nuclide)
     label = "{}{}".format(A, element_symbol)
     return label
+
+ISOTOPE_STR_PATTERN = re.compile(r"^(?P<A>\d+)(?P<sym>[A-Za-z]+)$")
+
+def parse_isotope_str(label):
+    """Parse simple string for nuclide, e.g. "156Dy", into (Z,N) tuple.
+
+    This is the inverse of isotope_str(). Note that this function is *almost*
+    case insensitive; "n" (neutron) is distinguished from "N" (nitrogen). This
+    is the only instance where the case is relevant.
+
+    Arguments:
+        label (str): simple string representation of nuclide
+
+    Returns:
+        (tuple of int): (Z,N)
+    """
+    # extract string components
+    match = ISOTOPE_STR_PATTERN.match(label)
+    if not match:
+        raise ValueError("invalid isotope string: {}".format(label))
+    A = int(match["A"])
+    element_symbol = match["sym"]
+
+    # canonicalize to capitalized symbol if not "neutron"
+    if element_symbol != "n":
+        element_symbol = element_symbol.capitalize()
+
+    # determine atomic number
+    Z = ELEMENT_SYMBOLS.index(element_symbol)
+    if Z > A:
+        raise ValueError("invalid nuclide: A={:d}, Z={:d}".format(A,Z))
+
+    nuclide = (Z,A-Z)
+    return nuclide
 
 def qn_text(qn,show_parity=True,show_index=True):
     """ Generate text label component for quantum numbers.
