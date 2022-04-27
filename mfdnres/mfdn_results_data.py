@@ -351,6 +351,9 @@ class MFDnResultsData(results_data.ResultsData):
 
         """
 
+        if verbose:
+            print("get_moment {} {}".format(observable,qn))
+            
         # trap deduced observables (isoscalar/isovector E2 or physical M1)
         if (observable in {"E20","E21"}):
             E2p = self.get_moment("E2p",qn,default,verbose)
@@ -380,7 +383,7 @@ class MFDnResultsData(results_data.ResultsData):
             # the M1 value this function would usually compute as a linear
             # combination of the D terms taken from MFDn.res.  These terms
             # typically have smaller magnitudes but are saved at the same fixed
-            # point precision at the physical M1.
+            # point precision as the physical M1.
             value = self.mfdn_ob_moments.get("M1",{}).get(qn,default)
             return value
 
@@ -416,6 +419,8 @@ class MFDnResultsData(results_data.ResultsData):
 
         # else revert to native static moment (may be garbage if obmes were turned off)
         if (np.isnan(value)):
+            if verbose:
+                print("  fall-through to native static moment")
             value = self.mfdn_ob_moments.get(observable,{}).get(qn,default)
 
         return value
