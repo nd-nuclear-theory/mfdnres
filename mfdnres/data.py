@@ -32,6 +32,7 @@
          + Add LevelSelector and associated machinery.
          + Hide "fix-sign-to" in observable descriptor.
     - 04/17/11 (mac): Propose ObservableExtractor interface.
+    - 05/01/22 (mac): Add element_symbol labeling function.
 """
 
 import collections
@@ -323,6 +324,23 @@ ELEMENT_SYMBOLS = [
     "Nh","Fl","Mc","Lv","Ts","Og"
 ]
 
+def element_symbol(Z):
+    """Generate text label component for element symbol.
+
+    Arguments:
+
+        Z (int): Z for element
+
+    Returns:
+
+        label (str): label string, to be interpreted in math mode
+
+    """
+
+    element_symbol = ELEMENT_SYMBOLS[Z] if Z<len(ELEMENT_SYMBOLS) else str(Z)
+    label = r"\mathrm{{{}}}".format(element_symbol)
+    return label
+    
 def isotope(nuclide, format=None, as_tuple=False):
     """Generate text label component for nuclide.
 
