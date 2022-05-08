@@ -348,7 +348,7 @@ def isotope(nuclide, format=None, as_tuple=False):
 
         nuclide (tuple): (Z,N)
 
-        format (str, optional): format code, defaults to standard isotope label format
+        format (str, optional): format code for label ("AS", "AZSN", "tuple")
 
         as_tuple (bool, optional, deprecated): return (Z,N) label rather than standard nuclide symbol
 
