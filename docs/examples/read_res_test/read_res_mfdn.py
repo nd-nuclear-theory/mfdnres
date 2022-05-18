@@ -1,9 +1,15 @@
 """read_res_mfdn.py
 
-    Provides simple example of reading and accessing MFDn run results.
+    Provides simple example of reading and accessing MFDn results.
+
+    In practice, such results may need to be "merged" with results from the MFDn
+    postprocessor.
 
     Required test data:
-        type_specimens/mfdn/v15-h2/runmfdn13-mfdn15-Z3-N3-Daejeon16-coul1-hw15.000-a_cm40-Nmax02-Mj1.0-lan200-tol1.0e-06.res
+
+        data/mfdn/v15-h2/runmfdn13-mfdn15-Z3-N3-Daejeon16-coul1-hw15.000-a_cm40-Nmax02-Mj1.0-lan200-tol1.0e-06.res
+
+        This example output is produced by mcscript-ncci/docs/examples/runmfdn13.py.
 
     Mark A. Caprio
     University of Notre Dame
@@ -11,9 +17,12 @@
     Language: Python 3
 
     - 09/17/20 (mac): Created.
-    - 04/10/21 (mac): Update example file.
+    - 05/10/21 (mac): Update example file.
+    - 05/18/22 (mac): Update example file.
 
 """
+
+import os
 
 import mfdnres
 import mfdnres.ncci
@@ -27,8 +36,9 @@ def read_data():
     """
 
     print("Reading input file...")
-    mesh_data = mfdnres.input.read_file(
-        "type_specimens/mfdn/v15-h2/runmfdn13-mfdn15-Z3-N3-Daejeon16-coul1-hw15.000-a_cm40-Nmax02-Mj1.0-lan200-tol1.0e-06.res",
+    data_dir = os.path.join("data","mfdn","v15-h2")
+    mesh_data = mfdnres.input.slurp_res_files(
+        data_dir,
         res_format="mfdn_v15",
         filename_format="mfdn_format_7_ho",
         verbose=True
@@ -47,13 +57,10 @@ def read_data():
 # explore single mesh point
 ################################################################
 
-def explore_point(mesh_data):
-    """Pick out single hw mesh point and examine spncci_results_data members and
-    results of accessors.
-    """
+def explore_point(results_data):
+    """Examine mfdn_results_data members and results of accessors.
 
-    # pick out mesh point manually
-    results_data = mesh_data[0]
+    """
 
     # examine data attributes
     print("Data attributes...")
@@ -79,4 +86,4 @@ def explore_point(mesh_data):
 
 # read data
 mesh_data = read_data()
-explore_point(mesh_data)
+explore_point(mesh_data[0])

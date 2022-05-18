@@ -4,6 +4,7 @@ Mark A. Caprio, Patrick J. Fasano
 Department of Physics, University of Notre Dame
 
 + 05/24/19 (mac): Created.
++ 05/18/22 (mac): Update basic examples.
 
 ----------------------------------------------------------------
 
@@ -104,12 +105,13 @@ Department of Physics, University of Notre Dame
 
 # 3. Basic tests
 
-  A basic test script may be found in `mfdnres/example/mfdn_scan.py`.  But to
-  run this successfully, you will need to have first downloaded the data files
-  for the test runs and set GROUP_HOME as above.
+  Basic test scripts to read and parse results files may be found in
+  `docs/examples/read_res_test`.
 
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  % cd example
-  % python3 mfdn_scan.py
+  % cd mfdnres
+  % cd docs/examples/read_res_test
+  % python3 read_res_mfdn.py
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+  See also the tutorial in `docs/examples/tutorial`.

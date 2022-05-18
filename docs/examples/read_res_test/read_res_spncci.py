@@ -3,7 +3,7 @@
     Provides simple example of reading and accessing SpNCCI run results.
 
     Required test data:
-        type_specimens/spncci/runmac0420-Z3-N3-JISP16-0-Nsigmamax02-Nmax02.res
+        data/spncci/runmac0420-Z3-N3-JISP16-0-Nsigmamax02-Nmax02.res
 
     Mark A. Caprio
     University of Notre Dame
@@ -11,8 +11,11 @@
     Language: Python 3
 
     - 08/14/20 (mac): Created.
+    - 05/18/22 (mac): Update example file path.
 
 """
+
+import os
 
 import mfdnres
 import mfdnres.decomposition
@@ -26,8 +29,9 @@ def read_data():
     """
 
     print("Reading input file...")
-    mesh_data = mfdnres.input.read_file(
-        "type_specimens/spncci/runmac0420-Z3-N3-JISP16-0-Nsigmamax02-Nmax02.res",
+    data_dir = os.path.join("data","spncci")
+    mesh_data = mfdnres.input.slurp_res_files(
+        data_dir,
         res_format="spncci",
         filename_format="spncci",
         verbose=True
@@ -51,13 +55,11 @@ def read_data():
 # explore single mesh point
 ################################################################
 
-def explore_point(mesh_data):
-    """Pick out single hw mesh point and examine spncci_results_data members and
-    results of accessors.
-    """
+def explore_point(mesh_data,key):
+    """Examine spncci_results_data members and results of accessors.
 
-    # pick out mesh point manually
-    ## results_data = mesh_data[4]
+    Results are picked from mesh by given key.
+    """
 
     # pick out mesh point by key
     print("Selecting single results data object...")
@@ -66,7 +68,7 @@ def explore_point(mesh_data):
         (("Nsigmamax",int),("Nmax",int),("hw",float))
         )
     ##print("results_dict {}".format(results_dict))
-    results_data = results_dict[(2,2,20.)]
+    results_data = results_dict[key]
     print("results_data {}".format(results_data))
     print("results_data.params {}".format(results_data.params))
     print()
@@ -108,4 +110,4 @@ def explore_point(mesh_data):
 
 # read data
 mesh_data = read_data()
-explore_point(mesh_data)
+explore_point(mesh_data,(2,2,20.))
