@@ -33,6 +33,7 @@
          + Hide "fix-sign-to" in observable descriptor.
     - 04/17/11 (mac): Propose ObservableExtractor interface.
     - 05/01/22 (mac): Add element_symbol labeling function.
+    - 05/22/22 (mac): Add element_str labeling function.
 """
 
 import collections
@@ -224,7 +225,7 @@ def unpack_observable(observable):
 
     """
     observable_type = observable[0]
-    if observable_type in {"energy","isospin"}:
+    if len(observable)==2:  # e.g., for "energy","isospin"
         observable_operator = None
         observable_qn_list = observable[1:]
     else:
@@ -324,6 +325,23 @@ ELEMENT_SYMBOLS = [
     "Nh","Fl","Mc","Lv","Ts","Og"
 ]
 
+## def element_str(Z):
+##     """Generate text label component for element symbol.
+## 
+##     Arguments:
+## 
+##         Z (int): Z for element
+## 
+##     Returns:
+## 
+##         label (str): label string, to be interpreted in math mode
+## 
+##     """
+## 
+##     element_symbol = ELEMENT_SYMBOLS[Z] if Z<len(ELEMENT_SYMBOLS) else str(Z)
+##     label = r"\mathrm{{{}}}".format(element_symbol)
+##     return label
+
 def element_symbol(Z):
     """Generate text label component for element symbol.
 
@@ -341,6 +359,25 @@ def element_symbol(Z):
     label = r"\mathrm{{{}}}".format(element_symbol)
     return label
     
+def element_str(Z, lower = False):
+    """Generate simple string for element, for use in filenames, e.g., "Dy".
+
+    Arguments:
+
+        Z (int): Z for element
+
+        lower (bool, optional): force lowercase
+
+    Returns:
+
+        (str): simple string representation of nuclide
+
+    """
+    element_symbol = ELEMENT_SYMBOLS[Z] if Z<len(ELEMENT_SYMBOLS) else str(Z)
+    if lower:
+        element_symbol = element_symbol.lower()
+    return element_symbol
+
 def isotope(nuclide, format=None, as_tuple=False):
     """Generate text label component for nuclide.
 
@@ -429,9 +466,10 @@ def qn_text(qn,show_parity=True,show_index=True):
     return label
 
 HW_AXIS_LABEL_TEXT = r"$\hbar\omega~(\mathrm{MeV})$"
+NMAX_AXIS_LABEL_TEXT = r"$N_{\mathrm{max}}$"
 
 ################################################################
-# LevelSelector tools
+# tools for dispatching LevelSelector or traditional quantum numbers
 ################################################################
 
 def resolve_qn(results_data, level_selector):
@@ -486,9 +524,9 @@ def resolve_qn_text(level_selector):
 ################################################################
 
 class LevelSelector(object):
-    """Object to select level from ResultsData spectrum.
+    """Select level from ResultsData spectrum.
 
-    This is an interface class.
+    This is an interface class, not meant to be instantiated directly.
 
     For any daughter class, which we shall generically call LevelSelector,
     LevelSelector(args) constructs a level selector object.  Given a ResultsData
@@ -512,11 +550,6 @@ class LevelSelector(object):
         """ Null initialize."""
         pass
 
-    ## def __call__(self, results_data):
-    ##     """ Retrieve level.
-    ##     """
-    ##     return None
-    
     def select_level(self, results_data):
         """ Retrieve level.
         """
@@ -536,7 +569,7 @@ class LevelSelector(object):
         
     
 ################################################################
-# LevelSelector objects
+# level selection by quantum numbers (trivial) -- (J,g,n)
 ################################################################
 
 class LevelSelectorQN(LevelSelector):
@@ -580,6 +613,10 @@ class LevelSelectorQN(LevelSelector):
         label = qn_text(self._qn)
         return label
         
+################################################################
+# level selection within isosopin suspace -- (J,g,n,T)
+################################################################
+
 class LevelSelectorQNT(LevelSelector):
     """Provides level selector within given isospin subspace.
 
@@ -607,7 +644,7 @@ class LevelSelectorQNT(LevelSelector):
         """ Retrieve level.
         """
 
-        # recover quanbum numbers for sought level
+        # recover quantum numbers for sought level
         J, g, n_for_T, T = self._qnT
         
         # set up binning
@@ -845,6 +882,17 @@ def register_observable(observable_type, observable):
 
 # TODO 04/17/22 (mac): deprecate in favor of ObservableExtractor
 
+# DEBUGGING: If an extractor fails and raises an exception, this will not be
+# seen, since all exceptions are caught by ncci.analysis.make_obs_table, which
+# simply tabulates a nan.  For debugging purposes, a try can be used within the
+# extractor to trap and print the exception:
+#
+#        try:
+#            resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
+#        except Exception as e:
+#            print(e)
+
+
 # energy
 
 def energy_extractor(nuclide,observable_operator,observable_qn_list):
@@ -889,6 +937,28 @@ def isospin_axis_label(nuclide,observable_operator,observable_qn_list):
     return observable_str, units_str
 
 register_observable("isospin", Observable(isospin_extractor, isospin_observable_label, isospin_axis_label))
+
+# n index -- diagnostic on level selection 
+
+def n_extractor(nuclide,observable_operator,observable_qn_list):
+    ## return lambda results_data : results_data.get_isospin(*observable_qn_list)
+    def extractor(results_data):
+        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
+        return resolved_qn_list[0][2]
+    return extractor
+
+def n_observable_label(nuclide,observable_operator,observable_qn_list):
+    observable_str = r"n"
+    qn_str = resolve_qn_text(observable_qn_list[0])
+    label = r"{}({})".format(observable_str,qn_str)
+    return label
+
+def n_axis_label(nuclide,observable_operator,observable_qn_list):
+    observable_str = r"n"
+    units_str = None
+    return observable_str, units_str
+
+register_observable("n", Observable(n_extractor, n_observable_label, n_axis_label))
 
 # radius
 
@@ -1486,6 +1556,42 @@ def Nmax_plot_style(
         color=Nmax_color(Nmax_relative),
         )
 
+def hw_plot_style(
+        hw,
+        marker_size=6,
+        ## Nmax_symbol_scale=Nmax_symbol_scale,
+        ## Nmax_marker_face_color=None,
+        ## Nmax_dashing=Nmax_dashing,
+        ## Nmax_color=Nmax_color
+):
+    """Provide plot styling kwargs based on hw.  (WIP)
+
+    The various optional arguments control how styling details are determined.
+
+    Arguments:
+
+        Nmax_relative (int): Nmax-Nmax_max
+
+        marker_size (float,optional): base marker size for maximal Nmax
+
+        Nmax_symbol_scale, ... (callable, optional): functions to provide
+            specific styling parameters as function of relative Nmax
+
+    Returns:
+
+        (dict): kwargs for ax.plot
+
+    """
+
+    return dict(
+        markersize=marker_size,
+        ##markersize=marker_size*Nmax_symbol_scale(Nmax_relative),
+        ##markerfacecolor=(None if Nmax_marker_face_color is None else Nmax_marker_face_color(Nmax_relative)),
+        ## linewidth=1,
+        ##dashes=Nmax_dashing(Nmax_relative),
+        ##color=Nmax_color(Nmax_relative),
+        )
+
 ################################################################
 # (Nmax,hw) multi-indexed data ("hw scan")
 ################################################################
@@ -1689,9 +1795,38 @@ def set_up_hw_scan_axes(
 
         hw_range_extension (tuple of float, optional): x range relative extension
 
+        observable_range_extension (tuple of float, optional): y range relative extension
+
     """
     ax.set_xlabel(HW_AXIS_LABEL_TEXT)
     ax.set_xlim(*extend_interval_relative(hw_range,hw_range_extension))
+    ax.set_ylabel(r"${}$".format(make_observable_axis_label_text(nuclide_observable)))
+    if (observable_range is not None) and np.isfinite(observable_range[0]).all():
+        ax.set_ylim(*extend_interval_relative(observable_range,observable_range_extension))
+
+def set_up_Nmax_scan_axes(
+        ax,nuclide_observable,Nmax_range,observable_range,
+        Nmax_range_extension=(0.05,0.05),observable_range_extension=(0.05,0.05)
+):
+    """ Set up axes.
+
+    Arguments:
+
+        ax (mpl.axes.Axes): axes object
+
+        nuclide_observable (tuple): standard nuclide/observable pair or compound
+
+        Nmax_range (tuple of int): x range, before extension
+
+        observable_range (tuple of float): y range, or None for matplotlib auto
+
+        Nmax_range_extension (tuple of float, optional): x range relative extension
+
+        observable_range_extension (tuple of float, optional): y range relative extension
+
+    """
+    ax.set_xlabel(NMAX_AXIS_LABEL_TEXT)
+    ax.set_xlim(*extend_interval_relative(Nmax_range,Nmax_range_extension))
     ax.set_ylabel(r"${}$".format(make_observable_axis_label_text(nuclide_observable)))
     if (observable_range is not None) and np.isfinite(observable_range[0]).all():
         ax.set_ylim(*extend_interval_relative(observable_range,observable_range_extension))
@@ -1744,11 +1879,13 @@ def add_hw_scan_plot(
 
         marker (str): matplotlib marker specifier
 
-        Nmax_plot_style_kw (dict, optional): styling options to pass through to plot styling function
+        Nmax_plot_style_kw (dict, optional): styling options to pass through to
+        plot styling function
 
         Nmax_plot_style (callable, optional): function to provide styling kwargs
             as function of Nmax_relative (rarely needed, since normally instead
-            can simply use Nmax_plot_style_kw)
+            can simply use Nmax_plot_style_kw with the default styling function
+            Nmax_plot_style)
 
     """
 
@@ -1759,6 +1896,40 @@ def add_hw_scan_plot(
             **Nmax_plot_style(Nmax-Nmax_max,**Nmax_plot_style_kw)
         )
 
+def add_Nmax_scan_plot(
+        ax,observable_data,
+        marker=".",
+        hw_plot_style_kw={},
+        hw_plot_style=hw_plot_style,
+        verbose=False
+):
+    """Add hw scan plot to axes.
+
+    Arguments:
+
+        ax (mpl.axes.Axes): axes object
+
+        observable_data (pd.DataFrame): data multi-indexed by (Nmax,hw)
+
+        marker (str): matplotlib marker specifier
+
+        hw_plot_style_kw (dict, optional): styling options to pass through to
+        plot styling function
+
+        hw_plot_style (callable, optional): function to provide styling kwargs
+            as function of hw
+
+    """
+
+    for hw, group in observable_data.reset_index().groupby("hw"):
+        if verbose:
+            print("hw {}\n {}".format(hw,group))
+        ax.plot(
+            group["Nmax"],group["value"],
+            marker=marker,
+            **hw_plot_style(hw,**hw_plot_style_kw)
+        )
+        
 def write_hw_scan_plot(
         descriptor,
         interaction_coulomb,nuclide_observable,
@@ -1771,7 +1942,13 @@ def write_hw_scan_plot(
         panel_label_kwargs = {},
         verbose=False
 ):
-    """ Generate full "canned" hw scan plot.
+    """Generate full "canned" hw scan plot.
+
+    This is for "quick and dirty" plots for analysis, and to serve as a model
+    for the basic elements of creating a figure containing an hw scan plot.  For
+    "production" figures for publication, where you need more control, and may
+    combine several plots in different panels, you would generally write control
+    code along these lines yourself, instead of using this canned routine.
 
     Arguments:
 
