@@ -34,6 +34,7 @@
     - 04/17/11 (mac): Propose ObservableExtractor interface.
     - 05/01/22 (mac): Add element_symbol labeling function.
     - 05/22/22 (mac): Add element_str labeling function.
+    - 06/09/22 (mac/aem): Add LevelSelectorOverride.
 """
 
 import collections
@@ -699,6 +700,83 @@ class LevelSelectorQNT(LevelSelector):
         
         label = r"{{{}}}^{{{}}}_{{{};T={}}}".format(J_str,P_str,n_str,T_str)
         return label
+
+################################################################
+# level selection override
+################################################################
+
+class LevelSelectorOverride(LevelSelector):
+    """Provides level selector which overrides another level selector for selected mesh points.
+
+    Level descriptor and label are passed through untouched.
+
+    Example:
+
+        mfdnres.data.LevelSelectorOverride(
+            mfdnres.data.LevelSelectorQN((0.0,0,1)),
+            ("Nmax","hw"),
+            {(10,15.): (0.0,0,2)},
+            verbose = True,
+        )
+
+    """
+
+    def __init__(self, base_level_selector, key_fields, qn_by_key, verbose=False):
+        """Initialize with given parameters.
+
+        Arguments:
+
+            base_level_selector(mfdnres.data.LevelSelector): Level selector to
+            use if no override applies
+
+            key_fields (tuple of str): Names of parameters from which to construct key
+
+            qn_by_key (dict): Mapping from key to (J,g,n) for overrides
+
+        """
+        super().__init__()
+        self._base_level_selector = base_level_selector
+        self._key_fields = key_fields
+        self._qn_by_key = qn_by_key
+        self._verbose = verbose
+        print("Set verbose to {}".format(verbose))
+
+    def select_level(self, results_data):
+        """ Retrieve level.
+        """
+
+        if self._verbose:
+            print("Mesh point {}".format(results_data.params))
+
+        # recover quantum numbers for sought level
+        key = analysis.extract_key(self._key_fields, results_data)
+        if key in self._qn_by_key:
+            qn = self._qn_by_key[key]
+        else:
+            qn = self._base_level_selector.select_level(results_data)
+
+        # validate as existing level
+        if qn not in results_data.levels:
+            qn = None
+
+        if self._verbose:
+            print("key {} qn {}".format(key, qn))
+        
+        return qn
+
+    @property
+    def descriptor_str(self):
+        """ Provide text string for use in descriptors."""
+        text = self._base_level_selector.descriptor_str
+        return text
+
+    @property
+    def label_text(self):
+        """ Provide LaTeX label.
+        """
+        label = self._base_level_selector.label_text
+        return label
+
 
 ###############################################################
 # ObservableExtractor interface
