@@ -17,6 +17,7 @@
 
     - 09/17/20 (mac): Created.
     - 05/18/22 (mac): Update example file.
+    - 07/12/22 (mac): Provide example use of two-body RME accessor.
 
 """
 
@@ -93,8 +94,14 @@ def explore_point(results_data):
     print()
 
     # access tb rmes
-    # TODO 05/18/22 (mac): Provide test when any two-body RME accessor is implemented.
-    ## print("Test accessors (two-body)...")
+    print("Test accessors (two-body)...")
+    print("QxQ_0 rme {}".format(results_data.get_rme("QxQ_0",((2.0,0,1),(2.0,0,1)),rank="tb")))
+    print()
+
+    print("Test get_rme verbose mode...")
+    print("E2 rme {}".format(results_data.get_rme("E2p",((1.0,0,1),(1.0,0,1)),verbose=True)))
+    print("E2 rme {}".format(results_data.get_rme("E2p",((1.0,0,1),(1.0,1,1)),verbose=True)))  # invalid state pair
+    print()
     
 ################################################################
 # main
