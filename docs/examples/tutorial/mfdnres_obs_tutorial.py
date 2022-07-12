@@ -5,6 +5,26 @@ Analysis and plotting examples, drawing on the data for Fig. 6 of "bebands":
     M. A. Caprio et al., EPJA 56, 120 (2020),
     https://doi.org/10.1140/epja/s10050-020-00112-0
 
+Contents
+
+    * global plot styling
+
+    * global mesh and styling definitions
+
+    * data input
+
+    * Example: basic single plot ("canned" version)
+
+    * Example: series of basic single plots ("canned" version)
+
+    * Example: multipage survey plot
+
+    * Example: heterogeneous multipanel plot
+
+    * Example: teardrop plot
+
+    * main
+
 Note for user
 
     Comments starting with "TUTORIAL" are commentary meant for your reading
@@ -242,7 +262,7 @@ def read_data():
     return mesh_data
 
 ################################################################
-# Example: basic single plot
+# Example: basic single plot ("canned" version)
 ################################################################
 
 def make_basic_plot(mesh_data):
@@ -252,7 +272,9 @@ def make_basic_plot(mesh_data):
 
     """
 
-    # TUTORIAL: Here is where the output will go.
+    # plot directory
+
+    # TUTORIAL: Here is where the output files will go.
     
     plot_directory="plots/basic"
     os.makedirs(plot_directory, exist_ok=True)
@@ -390,7 +412,7 @@ def make_basic_plot(mesh_data):
     )
 
 ################################################################
-# Example: series of individual plots
+# Example: series of basic single plots ("canned" version)
 ################################################################
 
 def make_plot_series(mesh_data):
@@ -480,7 +502,7 @@ def make_plot_series(mesh_data):
             )
 
 ################################################################
-# Example: make multipage survey plot
+# Example: multipage survey plot
 ################################################################
 
 def make_survey_plot(mesh_data):
@@ -832,7 +854,7 @@ def make_multipanel_plot(mesh_data):
     plt.close()
 
 ################################################################
-# teardrop plot
+# Example: teardrop plot
 ################################################################
 
 EXPT_M1_MOMENT_BY_NUCLIDE = {
