@@ -35,6 +35,7 @@
     - 05/01/22 (mac): Add element_symbol labeling function.
     - 05/22/22 (mac): Add element_str labeling function.
     - 06/09/22 (mac/aem): Add LevelSelectorOverride.
+    - 06/21/22 (mac): Add nuclide_str() and qn_str().
 """
 
 import collections
@@ -277,7 +278,7 @@ def nuclide_observable_descriptor(nuclide_observable):
 
     qn_list_str = "-".join([
         (
-            "{:04.1f}-{:1d}-{:02d}".format(*observable_qn)
+            qn_str(observable_qn)
             if type(observable_qn) is tuple
             else observable_qn.descriptor_str  # provide support for LevelSelector object
         )
@@ -413,7 +414,7 @@ def isotope(nuclide, format=None, as_tuple=False):
     return label
 
 def isotope_str(nuclide, lower = False):
-    """Generate simple string for nuclide, for use in filenames, e.g., "156Dy".
+    """Generate simple string for isotope symbol, for use in filenames, e.g., "156Dy".
 
     Arguments:
 
@@ -423,7 +424,7 @@ def isotope_str(nuclide, lower = False):
 
     Returns:
 
-        (str): simple string representation of nuclide
+        (str): simple string representation of isotope symbol
 
     """
     (Z,N) = nuclide
@@ -434,13 +435,31 @@ def isotope_str(nuclide, lower = False):
     label = "{}{}".format(A, element_symbol)
     return label
 
+def nuclide_str(nuclide):
+    """Generate simple string for nuclide code, for use in filenames, e.g., "Z03-N03".
+
+    Arguments:
+
+        nuclide (tuple): (Z,N)
+
+    Returns:
+
+        (str): simple string representation of nuclide
+
+    """
+    (Z,N) = nuclide
+    label = "Z{nuclide[0]:02d}-N{nuclide[1]:02d}".format(nuclide=nuclide)
+    return label
+
 def qn_text(qn,show_parity=True,show_index=True):
     """ Generate text label component for quantum numbers.
 
     Arguments:
 
         qn (tuple): (J,g,n) quantum numbers
+
         show_parity (bool, optional): whether or not to show parity (subscript)
+
         show_index (bool, optional): whether or not to show index (subscript)
 
     Returns:
@@ -464,6 +483,21 @@ def qn_text(qn,show_parity=True,show_index=True):
         n_str = ""
 
     label = r"{{{}}}^{{{}}}_{{{}}}".format(J_str,P_str,n_str)
+    return label
+
+def qn_str(qn):
+    """Generate simple string for (J,g,n) quantum numbers, for use in filenames, e.g., "00.0-0-1".
+
+    Arguments:
+
+        qn (tuple): (J,g,n) quantum numbers
+
+    Returns:
+
+        (str): simple string representation of qn
+
+    """
+    label = "{:04.1f}-{:1d}-{:02d}".format(*qn)
     return label
 
 HW_AXIS_LABEL_TEXT = r"$\hbar\omega~(\mathrm{MeV})$"
@@ -603,7 +637,7 @@ class LevelSelectorQN(LevelSelector):
     def descriptor_str(self):
         """ Provide text string for use in descriptors.
         """
-        text = "{:04.1f}-{:1d}-{:02d}".format(*self._qn)
+        text = qn_str(self._qn)
         return text
 
     @property
