@@ -36,6 +36,7 @@
     10/20/21 (mac): Trap spurious one-body E0 in get_rme()
     02/24/22 (zz): Add E1 special case in get_rme().
     07/12/22 (mac): Provide support for two-body observables in get_rme().
+    07/13/22 (mac): Add get_expectation_value().
 """
 
 import math
@@ -701,16 +702,34 @@ class MFDnResultsData(results_data.ResultsData):
         (J_ket,g_ket,n_ket) = qn_ket
 
         # retrieve underlying rme
-        try:
-            rme = self.get_rme(observable,qn_pair,rank,allow_mfdn_native,default,verbose)
-        except KeyError:
-            return default
+        rme = self.get_rme(observable,qn_pair,rank,allow_mfdn_native,default,verbose)
 
         # derive final value from rme
         rtp = 1/(2*J_ket+1)*rme**2
 
         return rtp
 
+    def get_expectation_value(
+            self, observable, qn,
+            rank="ob", allow_mfdn_native=True,
+            default=np.nan, verbose=False
+    ):
+        """ Retrieve expectation value (deduced from RME).
+
+        See get_rme for arguments.
+        """
+
+        # extract labels
+        (J,g,n) = qn
+
+        # retrieve underlying rme
+        rme = self.get_rme(observable,(qn,qn),rank,allow_mfdn_native,default,verbose)
+
+        # derive final value from rme
+        expectation_value = 1/am.hat(J)*rme
+
+        return expectation_value
+    
     ########################################
     # Updating method
     ########################################
