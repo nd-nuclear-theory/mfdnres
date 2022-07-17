@@ -37,6 +37,7 @@
     02/24/22 (zz): Add E1 special case in get_rme().
     07/12/22 (mac): Provide support for two-body observables in get_rme().
     07/13/22 (mac): Add get_expectation_value().
+    07/17/22 (mac): Deduce diagonal E0 RMEs from radius (or else suppress) in get_rme().
 """
 
 import math
@@ -461,7 +462,7 @@ class MFDnResultsData(results_data.ResultsData):
 
     def get_rme(
             self, observable, qn_pair,
-            rank="ob", allow_mfdn_native=True,
+            rank="ob", allow_mfdn_native=True, deduce_e0_from_radius=True,
             default=np.nan, verbose=False
     ):
         """Retrieve reduced matrix element (RME).
@@ -494,6 +495,9 @@ class MFDnResultsData(results_data.ResultsData):
         TODO 07/12/22 (mac): It would be useful to be able to deduce generic TBO
         rmes from mfdn native two-body expectations.
 
+        TODO 07/17/22 (mac): For diagonal E0 rme in CMF calculation, apply
+        analytic cm correction.
+
         Arguments:
 
             observable (str): operator type ("E2p", "E2n", "Dlp", "Dln", "Dsp",
@@ -507,6 +511,9 @@ class MFDnResultsData(results_data.ResultsData):
             allow_mfdn_native (bool, optional): whether or not to first try to
                 retrieve an mfdn native value for an ob rme, before falling back
                 on a postprocessor value
+
+            deduce_e0_from_radius (bool, optional): whether or not to enable
+                calculation of diagonal E0 rme from radius
 
             default (float, optional): default value to return for missing observable
 
@@ -548,6 +555,21 @@ class MFDnResultsData(results_data.ResultsData):
             # physical E0 (alias for E0p)
             E0p = self.get_rme("E0p",qn_pair,rank,allow_mfdn_native,default,verbose)
             value = E0p
+            return value
+        elif (observable in {"E0p","E0n"} and qn_pair[0]==qn_pair[1]):
+            # diagonal E0 -- deduce from radius or suppress
+            if deduce_e0_from_radius:
+                Z, N = self.params["nuclide"]
+                qn = qn_pair[0]
+                J, g, n = qn
+                if observable=="E0p":
+                    expectation_value = Z*self.get_radius("rp",qn,default)**2
+                elif observable=="E0n":
+                    expectation_value = N*self.get_radius("rn",qn,default)**2
+                value = am.hat(J)*expectation_value
+            else:
+                # suppress diagonal E0, since has CM contamination
+                value = default
             return value
         elif (observable == "M1"):
             # physical M1
@@ -628,7 +650,7 @@ class MFDnResultsData(results_data.ResultsData):
 
     def get_rme_matrix(
             self, observable, subspace_pair, dim_pair,
-            rank="ob", allow_mfdn_native=True,
+            rank="ob", allow_mfdn_native=True, deduce_e0_from_radius=True,
             default=np.nan, verbose=False
     ):
         """Construct matrix of reduced matrix elements (RMEs).
@@ -677,7 +699,7 @@ class MFDnResultsData(results_data.ResultsData):
                 qn_ket = (J_ket,g_ket,ket_index+1)  # convert to spectroscopic 1-based numbering
                 rme_matrix[bra_index,ket_index] = self.get_rme(
                     observable, (qn_bra,qn_ket),
-                    rank,allow_mfdn_native,default,verbose
+                    rank,allow_mfdn_native,deduce_e0_from_radius,default,verbose
                 )
 
         if (verbose):
@@ -688,7 +710,7 @@ class MFDnResultsData(results_data.ResultsData):
 
     def get_rtp(
             self, observable, qn_pair,
-            rank="ob", allow_mfdn_native=True,
+            rank="ob", allow_mfdn_native=True, deduce_e0_from_radius=True,
             default=np.nan, verbose=False
     ):
         """ Retrieve reduced transition probability (RTP).
@@ -723,7 +745,9 @@ class MFDnResultsData(results_data.ResultsData):
         (J,g,n) = qn
 
         # retrieve underlying rme
-        rme = self.get_rme(observable,(qn,qn),rank,allow_mfdn_native,default,verbose)
+        rme = self.get_rme(
+            observable,(qn,qn),rank,allow_mfdn_native,deduce_e0_from_radius,default,verbose
+        )
 
         # derive final value from rme
         expectation_value = 1/am.hat(J)*rme
