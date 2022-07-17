@@ -42,6 +42,7 @@
         - Use dict comprehension in subdict to preserve order.
         - Add preprocessor option to merged_mesh; keep common params in merged mesh point.
     04/17/22 (mac): Make make_obs_table provide np.nan value when extractor raises exception.
+    07/17/22 (mac): Change behavior of make_results_dict() to fail on duplicate mesh key.
 """
 
 import copy
@@ -183,6 +184,13 @@ def make_key_function(key_descriptor):
     key_function = functools.partial(extract_key,key_fields)
     return key_function
 
+# exception class for signaling nonunique mesh key
+class KeyDuplicationError(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
+
 def make_results_dict(
         mesh_data,key_descriptor,
         key_transformation=None,
@@ -203,6 +211,10 @@ def make_results_dict(
     duplicated), the final occurrence overwrites any earlier
     occurrences.  In the future, a more sophisticated "merging"
     process might be appropriate.
+
+    In the event that the same mesh point arises multiple
+    times on input (i.e., a given value for the key tuple is
+    duplicated), dictionary creation failes with 
 
     An optional key transformation is useful for, e.g., shifting the Nmax value
     stored in the dictionary when results are to be used as reference results
@@ -232,12 +244,10 @@ def make_results_dict(
             print("  make_results_dict: filename {} key {}".format(results_data.filename,key))
 
         # store data point
-        if (key not in results_dict):
-            # save mesh point
-            results_dict[key] = results_data
+        if key in results_dict:
+            raise KeyDuplicationError("duplicate mesh key {}".format(key))
         else:
-            # TODO: do smart merge "update" on existing mesh point
-            # overwrite mesh point
+            # save mesh point
             results_dict[key] = results_data
 
     return results_dict
