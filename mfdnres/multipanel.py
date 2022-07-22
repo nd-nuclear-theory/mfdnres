@@ -69,7 +69,7 @@ def panel_letter(
 
     Recovers functionality from SciDraw Multipanel and PanelLetter.
 
-    TODO: Add analogs to PanelLetterOrigin and PanelLetterDimensions, via panel_index.
+    TODO: Add analogs to SciDraw's PanelLetterOrigin and PanelLetterDimensions, via panel_index.
 
     Arguments:
 
@@ -83,7 +83,7 @@ def panel_letter(
 
         shift (int, optional): shift to panel indexing
 
- (tuple of str, optional): (left,right) delimeter strings for panel letter
+        delimiters (tuple of str, optional): (left,right) delimeter strings for panel letter
 
     Returns:
 

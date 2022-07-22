@@ -279,9 +279,6 @@ def set_ticks(
     Beware that applying ticks beyond the axis range (limits) will stretch the
     limits, which may need to then be reset.
 
-    FUTURE: Provide support for tick label formatting?  Or rely on formatter
-    mechanism?
-
     Arguments:
 
         ax (mpl.Axes.axes): axes

@@ -35,6 +35,9 @@
     09/25/21 (mac): Add single-species radii relative to own center of mass in get_radius().
     10/20/21 (mac): Trap spurious one-body E0 in get_rme()
     02/24/22 (zz): Add E1 special case in get_rme().
+    07/12/22 (mac): Provide support for two-body observables in get_rme().
+    07/13/22 (mac): Add get_expectation_value().
+    07/17/22 (mac): Deduce diagonal E0 RMEs from radius (or else suppress) in get_rme().
 """
 
 import math
@@ -316,12 +319,13 @@ class MFDnResultsData(results_data.ResultsData):
 
         The preferred method of deducing the moment is from the RME from the
         state to itself, if available via get_rme.  (This RME may be either a
-        native # calculated rme or from the postprocessor.)  If the RME is not
-        available, the accessor looks for a native calculated moment.  But
-        beware that mfdnv15b02 outputs junk native moments if OBDME calculation
-        has been turned out, and native calculated moments (as well as native
-        calculated transitions) are output with fixed low precision.  Hence our
-        preference for using the RME to calculate the moment.
+        native calculated rme as provided by older versions of mfdn or from the
+        postprocessor.)  If the RME is not available, the accessor looks for a
+        native calculated moment.  But beware that mfdnv15b02 outputs junk
+        native moments if OBDME calculation has been turned off, and native
+        calculated moments (as well as native calculated transitions) are output
+        with fixed low precision.  Hence our preference for using the RME to
+        calculate the moment.
 
         Adds support for deduced cases: "E20" and E21" for isoscalar E2 and
         isovector E2, "M1" deduced from dipole terms.  (Any native-calculated
@@ -351,6 +355,9 @@ class MFDnResultsData(results_data.ResultsData):
 
         """
 
+        if verbose:
+            print("get_moment {} {}".format(observable,qn))
+            
         # trap deduced observables (isoscalar/isovector E2 or physical M1)
         if (observable in {"E20","E21"}):
             E2p = self.get_moment("E2p",qn,default,verbose)
@@ -380,7 +387,7 @@ class MFDnResultsData(results_data.ResultsData):
             # the M1 value this function would usually compute as a linear
             # combination of the D terms taken from MFDn.res.  These terms
             # typically have smaller magnitudes but are saved at the same fixed
-            # point precision at the physical M1.
+            # point precision as the physical M1.
             value = self.mfdn_ob_moments.get("M1",{}).get(qn,default)
             return value
 
@@ -416,6 +423,8 @@ class MFDnResultsData(results_data.ResultsData):
 
         # else revert to native static moment (may be garbage if obmes were turned off)
         if (np.isnan(value)):
+            if verbose:
+                print("  fall-through to native static moment")
             value = self.mfdn_ob_moments.get(observable,{}).get(qn,default)
 
         return value
@@ -451,7 +460,11 @@ class MFDnResultsData(results_data.ResultsData):
 
         return value
 
-    def get_rme(self,observable,qn_pair,default=np.nan,verbose=False):
+    def get_rme(
+            self, observable, qn_pair,
+            rank="ob", allow_mfdn_native=True, deduce_e0_from_radius=True,
+            default=np.nan, verbose=False
+    ):
         """Retrieve reduced matrix element (RME).
 
         Returns RME in Edmonds convention, as common for spectroscopic data
@@ -467,22 +480,53 @@ class MFDnResultsData(results_data.ResultsData):
         "M1" from MFDn is ignored, as this is redundant to the dipole terms and
         not provided by obscalc-ob.)
 
+        Note that the same operator name might in principle be used for both a
+        one-body operator and a two-body operator in the postprocessor output.
+        However, this is not a problem, since the particle rank is explicitly
+        specified through the rank argument, and not left for the accessor to
+        figure out.
+
+        TODO 07/12/22 (mac): Migrate M1 observable names from D?? to M1??.
+
+        TODO 07/12/22 (mac): It would be useful to be able to deduce M1/E2
+        diagonal rmes from mfdn native moments.  But may need to avoid a
+        potentially circular call to get_moment.
+
+        TODO 07/12/22 (mac): It would be useful to be able to deduce generic TBO
+        rmes from mfdn native two-body expectations.
+
+        TODO 07/17/22 (mac): For diagonal E0 rme in CMF calculation, apply
+        analytic cm correction.
+
         Arguments:
-            observable (str): operator type ("E2p", "E2n", "Dlp", "Dln",
-                "Dsp", "Dsn", ...), as well as deduced cases ("E20", "E21", "E2" as alias for "E2p", "M1")
+
+            observable (str): operator type ("E2p", "E2n", "Dlp", "Dln", "Dsp",
+                "Dsn", ...), as well as deduced cases ("E20", "E21", "E2" as
+                alias for "E2p", "M1")
+
             qn_pair (tuple): quantum numbers for states (qn_bra,qn_ket)
-            default (float,optional): default value to return for missing observable
+
+            rank (str, optional): particle rank ("ob" or "tb") of observable
+
+            allow_mfdn_native (bool, optional): whether or not to first try to
+                retrieve an mfdn native value for an ob rme, before falling back
+                on a postprocessor value
+
+            deduce_e0_from_radius (bool, optional): whether or not to enable
+                calculation of diagonal E0 rme from radius
+
+            default (float, optional): default value to return for missing observable
 
         Returns
-            (float): observable value
+            (float): observable value (or default if missing)
 
         """
 
         # trap deduced observables
         if (observable in {"E20","E21"}):
             # isoscalar/isovector E2
-            E2p = self.get_rme("E2p",qn_pair,default,verbose)
-            E2n = self.get_rme("E2n",qn_pair,default,verbose)
+            E2p = self.get_rme("E2p",qn_pair,rank,allow_mfdn_native,default,verbose)
+            E2n = self.get_rme("E2n",qn_pair,rank,allow_mfdn_native,default,verbose)
             if (observable =="E20"):
                 value = E2p+E2n
             else:
@@ -490,18 +534,18 @@ class MFDnResultsData(results_data.ResultsData):
             return value
         elif (observable == "E2"):
             # physical E2 (alias for E2p)
-            E2p = self.get_rme("E2p",qn_pair,default,verbose)
+            E2p = self.get_rme("E2p",qn_pair,rank,allow_mfdn_native,default,verbose)
             value = E2p
             return value
         elif (observable == "E1"):
             # physical E1 (alias for E1p)
-            E1p = self.get_rme("E1p",qn_pair,default,verbose)
+            E1p = self.get_rme("E1p",qn_pair,rank,allow_mfdn_native,default,verbose)
             value = E1p
             return value
         elif (observable in {"E00","E01"}):
             # isoscalar/isovector E0
-            E0p = self.get_rme("E0p",qn_pair,default,verbose)
-            E0n = self.get_rme("E0n",qn_pair,default,verbose)
+            E0p = self.get_rme("E0p",qn_pair,rank,allow_mfdn_native,default,verbose)
+            E0n = self.get_rme("E0n",qn_pair,rank,allow_mfdn_native,default,verbose)
             if (observable =="E00"):
                 value = E0p+E0n
             else:
@@ -509,31 +553,46 @@ class MFDnResultsData(results_data.ResultsData):
             return value
         elif (observable == "E0"):
             # physical E0 (alias for E0p)
-            E0p = self.get_rme("E0p",qn_pair,default,verbose)
+            E0p = self.get_rme("E0p",qn_pair,rank,allow_mfdn_native,default,verbose)
             value = E0p
+            return value
+        elif (observable in {"E0p","E0n"} and qn_pair[0]==qn_pair[1]):
+            # diagonal E0 -- deduce from radius or suppress
+            if deduce_e0_from_radius:
+                Z, N = self.params["nuclide"]
+                qn = qn_pair[0]
+                J, g, n = qn
+                if observable=="E0p":
+                    expectation_value = Z*self.get_radius("rp",qn,default)**2
+                elif observable=="E0n":
+                    expectation_value = N*self.get_radius("rn",qn,default)**2
+                value = am.hat(J)*expectation_value
+            else:
+                # suppress diagonal E0, since has CM contamination
+                value = default
             return value
         elif (observable == "M1"):
             # physical M1
-            Dsp = self.get_rme("Dsp",qn_pair,default,verbose)
-            Dsn = self.get_rme("Dsn",qn_pair,default,verbose)
-            Dlp = self.get_rme("Dlp",qn_pair,default,verbose)
+            Dsp = self.get_rme("Dsp",qn_pair,rank,allow_mfdn_native,default,verbose)
+            Dsn = self.get_rme("Dsn",qn_pair,rank,allow_mfdn_native,default,verbose)
+            Dlp = self.get_rme("Dlp",qn_pair,rank,allow_mfdn_native,default,verbose)
             gp = 5.586
             gn = -3.826
             value = Dlp+gp*Dsp+gn*Dsn
             return value
-
-        # trap deduced observables (isoscalar/isovector M1)
-        if (observable in {"Dl0","Dl1"}):
-            Dlp = self.get_rme("Dlp",qn_pair,default,verbose)
-            Dln = self.get_rme("Dln",qn_pair,default,verbose)
+        elif (observable in {"Dl0","Dl1"}):
+            # isoscalar/isovector orbital M1
+            Dlp = self.get_rme("Dlp",qn_pair,rank,allow_mfdn_native,default,verbose)
+            Dln = self.get_rme("Dln",qn_pair,rank,allow_mfdn_native,default,verbose)
             if (observable =="Dl0"):
                 value = Dlp+Dln
             else:
                 value = Dlp-Dln
             return value
-        if (observable in {"Ds0","Ds1"}):
-            Dsp = self.get_rme("Dsp",qn_pair,default,verbose)
-            Dsn = self.get_rme("Dsn",qn_pair,default,verbose)
+        elif (observable in {"Ds0","Ds1"}):
+            # isoscalar/isovector spin M1
+            Dsp = self.get_rme("Dsp",qn_pair,rank,allow_mfdn_native,default,verbose)
+            Dsn = self.get_rme("Dsn",qn_pair,rank,allow_mfdn_native,default,verbose)
             if (observable =="Ds0"):
                 value = Dsp+Dsn
             else:
@@ -563,31 +622,37 @@ class MFDnResultsData(results_data.ResultsData):
 
         # retrieve underlying rme
         #
-        # For "hw!=0" (oscillator run), try mfdn rmes, then postprocessor rmes;
-        # for "hw=0" (non-oscillator run), only accept postprocessor rmes.
-        if self.params.get("hw", 0) != 0:
-            try:
-                rme = (canonicalization_factor
-                    * self.mfdn_ob_rmes[observable][qn_pair_canonical])
-            except KeyError:
-                try:
-                    rme = (canonicalization_factor
-                        * self.postprocessor_ob_rmes[observable][qn_pair_canonical])
-                except KeyError:
-                    return default
-        else:
-            try:
-                rme = (canonicalization_factor
-                    * self.postprocessor_ob_rmes[observable][qn_pair_canonical])
-            except KeyError:
-                return default
+        # For "hw!=0" (oscillator run), try mfdn ob rmes, then postprocessor ob rmes;
+        # for "hw=0" (non-oscillator run), only accept postprocessor ob rmes.
+        try:
+            if rank == "ob":
+                if allow_mfdn_native and (self.params.get("hw", 0) != 0):
+                    try:
+                        rme = self.mfdn_ob_rmes[observable][qn_pair_canonical]
+                    except KeyError:
+                        rme = self.postprocessor_ob_rmes[observable][qn_pair_canonical]
+                else:
+                    rme = self.postprocessor_ob_rmes[observable][qn_pair_canonical]
+            elif rank == "tb":
+                rme = self.postprocessor_tb_rmes[observable][qn_pair_canonical]
+        except KeyError as e:
+            if verbose:
+                print("    lookup failed ({})".format(e))
+            return default
 
-        if (verbose):
+        # apply phase factor to decanonicalize labels
+        rme *= canonicalization_factor
+        
+        if verbose:
             print("    rme {:e}".format(rme))
 
         return rme
 
-    def get_rme_matrix(self,observable,subspace_pair,dim_pair,default=np.nan,verbose=False):
+    def get_rme_matrix(
+            self, observable, subspace_pair, dim_pair,
+            rank="ob", allow_mfdn_native=True, deduce_e0_from_radius=True,
+            default=np.nan, verbose=False
+    ):
         """Construct matrix of reduced matrix elements (RMEs).
 
         Resulting matrix may be useful either for diagnostic purposes (to review
@@ -600,10 +665,20 @@ class MFDnResultsData(results_data.ResultsData):
 
 
         Arguments:
+
             observable (str): operator type ("E2p", ...) accepted by get_rme
+
             subspace_pair (tuple): quantum numbers for subspaces (Jg_bra,Jg_ket)
+
             dim_pair (tuple): dimensions (dim_bra,dim_ket)
-            default (float,optional): default value to return for missing observable
+
+            rank (str, optional): particle rank ("ob" or "tb") of observable
+
+            allow_mfdn_native (bool, optional): whether or not to first try to
+                retrieve an mfdn native value for an ob rme, before falling back
+                on a postprocessor value
+
+            default (float, optional): default value to return for missing observable
 
         Returns
             (np.array of float): observable values
@@ -623,8 +698,8 @@ class MFDnResultsData(results_data.ResultsData):
                 qn_bra = (J_bra,g_bra,bra_index+1)  # convert to spectroscopic 1-based numbering
                 qn_ket = (J_ket,g_ket,ket_index+1)  # convert to spectroscopic 1-based numbering
                 rme_matrix[bra_index,ket_index] = self.get_rme(
-                    observable,(qn_bra,qn_ket),
-                    default=default,verbose=verbose
+                    observable, (qn_bra,qn_ket),
+                    rank,allow_mfdn_native,deduce_e0_from_radius,default,verbose
                 )
 
         if (verbose):
@@ -633,8 +708,14 @@ class MFDnResultsData(results_data.ResultsData):
 
         return rme_matrix
 
-    def get_rtp(self,observable,qn_pair,default=np.nan,verbose=False):
+    def get_rtp(
+            self, observable, qn_pair,
+            rank="ob", allow_mfdn_native=True, deduce_e0_from_radius=True,
+            default=np.nan, verbose=False
+    ):
         """ Retrieve reduced transition probability (RTP).
+
+        See get_rme for arguments.
         """
 
         # extract labels
@@ -643,16 +724,36 @@ class MFDnResultsData(results_data.ResultsData):
         (J_ket,g_ket,n_ket) = qn_ket
 
         # retrieve underlying rme
-        try:
-            rme = self.get_rme(observable,qn_pair,default,verbose)
-        except KeyError:
-            return default
+        rme = self.get_rme(observable,qn_pair,rank,allow_mfdn_native,default,verbose)
 
         # derive final value from rme
         rtp = 1/(2*J_ket+1)*rme**2
 
         return rtp
 
+    def get_expectation_value(
+            self, observable, qn,
+            rank="ob", allow_mfdn_native=True,
+            default=np.nan, verbose=False
+    ):
+        """ Retrieve expectation value (deduced from RME).
+
+        See get_rme for arguments.
+        """
+
+        # extract labels
+        (J,g,n) = qn
+
+        # retrieve underlying rme
+        rme = self.get_rme(
+            observable,(qn,qn),rank,allow_mfdn_native,deduce_e0_from_radius,default,verbose
+        )
+
+        # derive final value from rme
+        expectation_value = 1/am.hat(J)*rme
+
+        return expectation_value
+    
     ########################################
     # Updating method
     ########################################

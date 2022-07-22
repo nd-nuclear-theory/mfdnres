@@ -5,6 +5,26 @@ Analysis and plotting examples, drawing on the data for Fig. 6 of "bebands":
     M. A. Caprio et al., EPJA 56, 120 (2020),
     https://doi.org/10.1140/epja/s10050-020-00112-0
 
+Contents
+
+    * global plot styling
+
+    * global mesh and styling definitions
+
+    * data input
+
+    * Example: basic single plot ("canned" version)
+
+    * Example: series of basic single plots ("canned" version)
+
+    * Example: multipage survey plot
+
+    * Example: heterogeneous multipanel plot
+
+    * Example: teardrop plot
+
+    * main
+
 Note for user
 
     Comments starting with "TUTORIAL" are commentary meant for your reading
@@ -58,6 +78,7 @@ Setup
     - 04/08/21 (mac): Clean up mfdnres.data interface.  Add survey and multipanel examples.
     - 04/10/21 (mac): Use os.makedirs.  Add experimental use of mfdnres.ticks.
     - 11/01/21 (mac,zz): Update examples to use newer mfdnres.ticks and mfdnres.multipanel tools.
+    - 05/18/22 (mac): Add tick styling to multipanel example.
 
 """
 
@@ -241,7 +262,7 @@ def read_data():
     return mesh_data
 
 ################################################################
-# Example: basic single plot
+# Example: basic single plot ("canned" version)
 ################################################################
 
 def make_basic_plot(mesh_data):
@@ -251,7 +272,9 @@ def make_basic_plot(mesh_data):
 
     """
 
-    # TUTORIAL: Here is where the output will go.
+    # plot directory
+
+    # TUTORIAL: Here is where the output files will go.
     
     plot_directory="plots/basic"
     os.makedirs(plot_directory, exist_ok=True)
@@ -389,7 +412,7 @@ def make_basic_plot(mesh_data):
     )
 
 ################################################################
-# Example: series of individual plots
+# Example: series of basic single plots ("canned" version)
 ################################################################
 
 def make_plot_series(mesh_data):
@@ -479,7 +502,7 @@ def make_plot_series(mesh_data):
             )
 
 ################################################################
-# Example: make multipage survey plot
+# Example: multipage survey plot
 ################################################################
 
 def make_survey_plot(mesh_data):
@@ -627,6 +650,12 @@ def make_multipanel_plot(mesh_data):
     os.makedirs(plot_directory, exist_ok=True)
 
     # plot contents
+    #
+    # TUTORIAL: The basic idea here is that we will loop over all panel indices
+    # below, to create the panels.  The code inside the loop is "generic".  It
+    # is the same for all panels.  It will know to choose different contents to
+    # include in each panel, based on the panel row and column indices, by using
+    # the information provided in the following dictionaries.
     interaction_coulomb = INTERACTION_COULOMB_LIST[0]
     nuclide = (4,5)
     Nmax_max = NMAX_MAX_BY_NUCLIDE[nuclide]
@@ -684,7 +713,7 @@ def make_multipanel_plot(mesh_data):
         dimensions=dimensions,
         panel_size=panel_size,
         x_panel_gaps=0.25,
-        y_panel_gaps=0.02
+        y_panel_gaps=0.02,
     )
     
     for panel_indices in mfdnres.multipanel.grid_iterator(dimensions):
@@ -740,13 +769,16 @@ def make_multipanel_plot(mesh_data):
         # eliminate labels from interior panel edges
         mfdnres.multipanel.suppress_interior_labels(ax,axis="x")
 
+        # format ticks
+        ax.tick_params(which="both", top=True, right=True, labelsize="x-small")
+        
         # panel letter
         ax.annotate(
             mfdnres.multipanel.panel_letter(dimensions,panel_indices,direction="vertical"),
             xy=(0.05,0.95),xycoords="axes fraction",
             horizontalalignment="left",
             verticalalignment="top",
-            fontsize="small"
+            fontsize="small",
         )
 
         # panel label
@@ -756,7 +788,7 @@ def make_multipanel_plot(mesh_data):
             multialignment="left",
             horizontalalignment="right",
             verticalalignment="top",
-            bbox=dict(boxstyle="round",facecolor="white")
+            ##bbox=dict(boxstyle="round",facecolor="white"),
         )
 
         # Nmax label (on just one panel)
@@ -782,13 +814,13 @@ def make_multipanel_plot(mesh_data):
             observable_data = mfdnres.data.make_hw_scan_data(
                 mesh_data,nuclide_observable,
                 selector =  {"interaction": interaction, "coulomb": coulomb},
-                Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range
+                Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range,
             )
         
             # write data
             mfdnres.data.write_hw_scan_data(
                 descriptor,observable_data,
-                directory=plot_directory
+                directory=plot_directory,
             )
 
             # add plot
@@ -809,7 +841,7 @@ def make_multipanel_plot(mesh_data):
                 ax,
                 observable_data,
                 Nmax_max=Nmax_max,
-                Nmax_plot_style_kw = dict(marker_size=4, Nmax_dashing=(lambda Nmax_relative : dashing))
+                Nmax_plot_style_kw = dict(marker_size=4, Nmax_dashing=(lambda Nmax_relative : dashing)),
             )
             
     # finalize plot
@@ -822,7 +854,7 @@ def make_multipanel_plot(mesh_data):
     plt.close()
 
 ################################################################
-# teardrop plot
+# Example: teardrop plot
 ################################################################
 
 EXPT_M1_MOMENT_BY_NUCLIDE = {

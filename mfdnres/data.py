@@ -32,6 +32,10 @@
          + Add LevelSelector and associated machinery.
          + Hide "fix-sign-to" in observable descriptor.
     - 04/17/11 (mac): Propose ObservableExtractor interface.
+    - 05/01/22 (mac): Add element_symbol labeling function.
+    - 05/22/22 (mac): Add element_str labeling function.
+    - 06/09/22 (mac/aem): Add LevelSelectorOverride.
+    - 06/21/22 (mac): Add nuclide_str() and qn_str().
 """
 
 import collections
@@ -224,7 +228,7 @@ def unpack_observable(observable):
 
     """
     observable_type = observable[0]
-    if observable_type in {"energy","isospin"}:
+    if len(observable)==2:  # e.g., for "energy","isospin"
         observable_operator = None
         observable_qn_list = observable[1:]
     else:
@@ -275,7 +279,7 @@ def nuclide_observable_descriptor(nuclide_observable):
 
     qn_list_str = "-".join([
         (
-            "{:04.1f}-{:1d}-{:02d}".format(*observable_qn)
+            qn_str(observable_qn)
             if type(observable_qn) is tuple
             else observable_qn.descriptor_str  # provide support for LevelSelector object
         )
@@ -324,6 +328,59 @@ ELEMENT_SYMBOLS = [
     "Nh","Fl","Mc","Lv","Ts","Og"
 ]
 
+## def element_str(Z):
+##     """Generate text label component for element symbol.
+##
+##     Arguments:
+##
+##         Z (int): Z for element
+##
+##     Returns:
+##
+##         label (str): label string, to be interpreted in math mode
+##
+##     """
+##
+##     element_symbol = ELEMENT_SYMBOLS[Z] if Z<len(ELEMENT_SYMBOLS) else str(Z)
+##     label = r"\mathrm{{{}}}".format(element_symbol)
+##     return label
+
+def element_symbol(Z):
+    """Generate text label component for element symbol.
+
+    Arguments:
+
+        Z (int): Z for element
+
+    Returns:
+
+        label (str): label string, to be interpreted in math mode
+
+    """
+
+    element_symbol = ELEMENT_SYMBOLS[Z] if Z<len(ELEMENT_SYMBOLS) else str(Z)
+    label = r"\mathrm{{{}}}".format(element_symbol)
+    return label
+
+def element_str(Z, lower = False):
+    """Generate simple string for element, for use in filenames, e.g., "Dy".
+
+    Arguments:
+
+        Z (int): Z for element
+
+        lower (bool, optional): force lowercase
+
+    Returns:
+
+        (str): simple string representation of nuclide
+
+    """
+    element_symbol = ELEMENT_SYMBOLS[Z] if Z<len(ELEMENT_SYMBOLS) else str(Z)
+    if lower:
+        element_symbol = element_symbol.lower()
+    return element_symbol
+
 def isotope(nuclide, format=None, as_tuple=False):
     """Generate text label component for nuclide.
 
@@ -331,7 +388,7 @@ def isotope(nuclide, format=None, as_tuple=False):
 
         nuclide (tuple): (Z,N)
 
-        format (str, optional): format code, defaults to standard isotope label format
+        format (str, optional): format code for label ("AS", "AZSN", "tuple")
 
         as_tuple (bool, optional, deprecated): return (Z,N) label rather than standard nuclide symbol
 
@@ -358,7 +415,7 @@ def isotope(nuclide, format=None, as_tuple=False):
     return label
 
 def isotope_str(nuclide, lower = False):
-    """Generate simple string for nuclide, for use in filenames, e.g., "156Dy".
+    """Generate simple string for isotope symbol, for use in filenames, e.g., "156Dy".
 
     Arguments:
 
@@ -368,7 +425,7 @@ def isotope_str(nuclide, lower = False):
 
     Returns:
 
-        (str): simple string representation of nuclide
+        (str): simple string representation of isotope symbol
 
     """
     (Z,N) = nuclide
@@ -413,13 +470,31 @@ def parse_isotope_str(label):
     nuclide = (Z,A-Z)
     return nuclide
 
+def nuclide_str(nuclide):
+    """Generate simple string for nuclide code, for use in filenames, e.g., "Z03-N03".
+
+    Arguments:
+
+        nuclide (tuple): (Z,N)
+
+    Returns:
+
+        (str): simple string representation of nuclide
+
+    """
+    (Z,N) = nuclide
+    label = "Z{nuclide[0]:02d}-N{nuclide[1]:02d}".format(nuclide=nuclide)
+    return label
+
 def qn_text(qn,show_parity=True,show_index=True):
     """ Generate text label component for quantum numbers.
 
     Arguments:
 
         qn (tuple): (J,g,n) quantum numbers
+
         show_parity (bool, optional): whether or not to show parity (subscript)
+
         show_index (bool, optional): whether or not to show index (subscript)
 
     Returns:
@@ -428,7 +503,7 @@ def qn_text(qn,show_parity=True,show_index=True):
     """
 
     J, g, n = qn
-    
+
     # am.HalfInt.Str() is missing in Python
     ## J = am.HalfInt(int(2*qn[0]),2)
     twice_J=int(2*J)
@@ -445,10 +520,26 @@ def qn_text(qn,show_parity=True,show_index=True):
     label = r"{{{}}}^{{{}}}_{{{}}}".format(J_str,P_str,n_str)
     return label
 
+def qn_str(qn):
+    """Generate simple string for (J,g,n) quantum numbers, for use in filenames, e.g., "00.0-0-1".
+
+    Arguments:
+
+        qn (tuple): (J,g,n) quantum numbers
+
+    Returns:
+
+        (str): simple string representation of qn
+
+    """
+    label = "{:04.1f}-{:1d}-{:02d}".format(*qn)
+    return label
+
 HW_AXIS_LABEL_TEXT = r"$\hbar\omega~(\mathrm{MeV})$"
+NMAX_AXIS_LABEL_TEXT = r"$N_{\mathrm{max}}$"
 
 ################################################################
-# LevelSelector tools
+# tools for dispatching LevelSelector or traditional quantum numbers
 ################################################################
 
 def resolve_qn(results_data, level_selector):
@@ -503,9 +594,9 @@ def resolve_qn_text(level_selector):
 ################################################################
 
 class LevelSelector(object):
-    """Object to select level from ResultsData spectrum.
+    """Select level from ResultsData spectrum.
 
-    This is an interface class.
+    This is an interface class, not meant to be instantiated directly.
 
     For any daughter class, which we shall generically call LevelSelector,
     LevelSelector(args) constructs a level selector object.  Given a ResultsData
@@ -518,7 +609,7 @@ class LevelSelector(object):
         level (ResultsData -> tuple): Retrieve level QN (or None) from given ResultsData
 
     Properties:
-      
+
         descriptor_str (str): Text string describing level
 
         label_text (str): Formatted LaTeX text representing selected level
@@ -529,11 +620,6 @@ class LevelSelector(object):
         """ Null initialize."""
         pass
 
-    ## def __call__(self, results_data):
-    ##     """ Retrieve level.
-    ##     """
-    ##     return None
-    
     def select_level(self, results_data):
         """ Retrieve level.
         """
@@ -550,10 +636,10 @@ class LevelSelector(object):
         """ Provide LaTeX label.
         """
         return ""
-        
-    
+
+
 ################################################################
-# LevelSelector objects
+# level selection by quantum numbers (trivial) -- (J,g,n)
 ################################################################
 
 class LevelSelectorQN(LevelSelector):
@@ -586,7 +672,7 @@ class LevelSelectorQN(LevelSelector):
     def descriptor_str(self):
         """ Provide text string for use in descriptors.
         """
-        text = "{:04.1f}-{:1d}-{:02d}".format(*self._qn)
+        text = qn_str(self._qn)
         return text
 
     @property
@@ -596,7 +682,11 @@ class LevelSelectorQN(LevelSelector):
 
         label = qn_text(self._qn)
         return label
-        
+
+################################################################
+# level selection within isosopin suspace -- (J,g,n,T)
+################################################################
+
 class LevelSelectorQNT(LevelSelector):
     """Provides level selector within given isospin subspace.
 
@@ -624,9 +714,9 @@ class LevelSelectorQNT(LevelSelector):
         """ Retrieve level.
         """
 
-        # recover quanbum numbers for sought level
+        # recover quantum numbers for sought level
         J, g, n_for_T, T = self._qnT
-        
+
         # set up binning
         T_lower = T-1
         T_upper = T+1
@@ -676,9 +766,86 @@ class LevelSelectorQNT(LevelSelector):
         n_str = "{:d}".format(n_for_T)
         twice_T=int(2*T)
         T_str = "{}/2".format(twice_T) if twice_T % 2 else twice_T//2
-        
+
         label = r"{{{}}}^{{{}}}_{{{};T={}}}".format(J_str,P_str,n_str,T_str)
         return label
+
+################################################################
+# level selection override
+################################################################
+
+class LevelSelectorOverride(LevelSelector):
+    """Provides level selector which overrides another level selector for selected mesh points.
+
+    Level descriptor and label are passed through untouched.
+
+    Example:
+
+        mfdnres.data.LevelSelectorOverride(
+            mfdnres.data.LevelSelectorQN((0.0,0,1)),
+            ("Nmax","hw"),
+            {(10,15.): (0.0,0,2)},
+            verbose = True,
+        )
+
+    """
+
+    def __init__(self, base_level_selector, key_fields, qn_by_key, verbose=False):
+        """Initialize with given parameters.
+
+        Arguments:
+
+            base_level_selector(mfdnres.data.LevelSelector): Level selector to
+            use if no override applies
+
+            key_fields (tuple of str): Names of parameters from which to construct key
+
+            qn_by_key (dict): Mapping from key to (J,g,n) for overrides
+
+        """
+        super().__init__()
+        self._base_level_selector = base_level_selector
+        self._key_fields = key_fields
+        self._qn_by_key = qn_by_key
+        self._verbose = verbose
+        print("Set verbose to {}".format(verbose))
+
+    def select_level(self, results_data):
+        """ Retrieve level.
+        """
+
+        if self._verbose:
+            print("Mesh point {}".format(results_data.params))
+
+        # recover quantum numbers for sought level
+        key = analysis.extract_key(self._key_fields, results_data)
+        if key in self._qn_by_key:
+            qn = self._qn_by_key[key]
+        else:
+            qn = self._base_level_selector.select_level(results_data)
+
+        # validate as existing level
+        if qn not in results_data.levels:
+            qn = None
+
+        if self._verbose:
+            print("key {} qn {}".format(key, qn))
+
+        return qn
+
+    @property
+    def descriptor_str(self):
+        """ Provide text string for use in descriptors."""
+        text = self._base_level_selector.descriptor_str
+        return text
+
+    @property
+    def label_text(self):
+        """ Provide LaTeX label.
+        """
+        label = self._base_level_selector.label_text
+        return label
+
 
 ###############################################################
 # ObservableExtractor interface
@@ -701,7 +868,7 @@ class ObservableExtractor(object):
         np.nan) from given ResultsData
 
     Properties:
-      
+
         descriptor_str (str): Text string describing observable
 
         observable_label_text (str): Formatted LaTeX text representing
@@ -743,7 +910,7 @@ class ObservableExtractor(object):
         units_str = None
         return observable_str, units_str
 
-    
+
 ###############################################################
 # ObservableExtractor objects
 ################################################################
@@ -807,8 +974,8 @@ class Energy(ObservableExtractor):
         observable_text = r"E"
         units_text = r"\mathrm{MeV}"
         return observable_text, units_text
-    
-    
+
+
 ################################################################
 # observable registry
 ################################################################
@@ -862,6 +1029,17 @@ def register_observable(observable_type, observable):
 
 # TODO 04/17/22 (mac): deprecate in favor of ObservableExtractor
 
+# DEBUGGING: If an extractor fails and raises an exception, this will not be
+# seen, since all exceptions are caught by ncci.analysis.make_obs_table, which
+# simply tabulates a nan.  For debugging purposes, a try can be used within the
+# extractor to trap and print the exception:
+#
+#        try:
+#            resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
+#        except Exception as e:
+#            print(e)
+
+
 # energy
 
 def energy_extractor(nuclide,observable_operator,observable_qn_list):
@@ -906,6 +1084,28 @@ def isospin_axis_label(nuclide,observable_operator,observable_qn_list):
     return observable_str, units_str
 
 register_observable("isospin", Observable(isospin_extractor, isospin_observable_label, isospin_axis_label))
+
+# n index -- diagnostic on level selection
+
+def n_extractor(nuclide,observable_operator,observable_qn_list):
+    ## return lambda results_data : results_data.get_isospin(*observable_qn_list)
+    def extractor(results_data):
+        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
+        return resolved_qn_list[0][2]
+    return extractor
+
+def n_observable_label(nuclide,observable_operator,observable_qn_list):
+    observable_str = r"n"
+    qn_str = resolve_qn_text(observable_qn_list[0])
+    label = r"{}({})".format(observable_str,qn_str)
+    return label
+
+def n_axis_label(nuclide,observable_operator,observable_qn_list):
+    observable_str = r"n"
+    units_str = None
+    return observable_str, units_str
+
+register_observable("n", Observable(n_extractor, n_observable_label, n_axis_label))
 
 # radius
 
@@ -1153,7 +1353,7 @@ def Nex_probability_extractor(nuclide,observable_operator,observable_qn_list):
 
     ##g_0= mfdnres.ncci.N0_for_nuclide(nuclide)
     # TODO revise meaning of observable_operator argument to be Nex rather than Nex_index
-   
+
     def extractor(results_data):
         resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
         Nex_index = observable_operator  # 0 for lowest Nex, 1 for next Nex, ...
@@ -1503,6 +1703,42 @@ def Nmax_plot_style(
         color=Nmax_color(Nmax_relative),
         )
 
+def hw_plot_style(
+        hw,
+        marker_size=6,
+        ## Nmax_symbol_scale=Nmax_symbol_scale,
+        ## Nmax_marker_face_color=None,
+        ## Nmax_dashing=Nmax_dashing,
+        ## Nmax_color=Nmax_color
+):
+    """Provide plot styling kwargs based on hw.  (WIP)
+
+    The various optional arguments control how styling details are determined.
+
+    Arguments:
+
+        Nmax_relative (int): Nmax-Nmax_max
+
+        marker_size (float,optional): base marker size for maximal Nmax
+
+        Nmax_symbol_scale, ... (callable, optional): functions to provide
+            specific styling parameters as function of relative Nmax
+
+    Returns:
+
+        (dict): kwargs for ax.plot
+
+    """
+
+    return dict(
+        markersize=marker_size,
+        ##markersize=marker_size*Nmax_symbol_scale(Nmax_relative),
+        ##markerfacecolor=(None if Nmax_marker_face_color is None else Nmax_marker_face_color(Nmax_relative)),
+        ## linewidth=1,
+        ##dashes=Nmax_dashing(Nmax_relative),
+        ##color=Nmax_color(Nmax_relative),
+        )
+
 ################################################################
 # (Nmax,hw) multi-indexed data ("hw scan")
 ################################################################
@@ -1706,9 +1942,38 @@ def set_up_hw_scan_axes(
 
         hw_range_extension (tuple of float, optional): x range relative extension
 
+        observable_range_extension (tuple of float, optional): y range relative extension
+
     """
     ax.set_xlabel(HW_AXIS_LABEL_TEXT)
     ax.set_xlim(*extend_interval_relative(hw_range,hw_range_extension))
+    ax.set_ylabel(r"${}$".format(make_observable_axis_label_text(nuclide_observable)))
+    if (observable_range is not None) and np.isfinite(observable_range[0]).all():
+        ax.set_ylim(*extend_interval_relative(observable_range,observable_range_extension))
+
+def set_up_Nmax_scan_axes(
+        ax,nuclide_observable,Nmax_range,observable_range,
+        Nmax_range_extension=(0.05,0.05),observable_range_extension=(0.05,0.05)
+):
+    """ Set up axes.
+
+    Arguments:
+
+        ax (mpl.axes.Axes): axes object
+
+        nuclide_observable (tuple): standard nuclide/observable pair or compound
+
+        Nmax_range (tuple of int): x range, before extension
+
+        observable_range (tuple of float): y range, or None for matplotlib auto
+
+        Nmax_range_extension (tuple of float, optional): x range relative extension
+
+        observable_range_extension (tuple of float, optional): y range relative extension
+
+    """
+    ax.set_xlabel(NMAX_AXIS_LABEL_TEXT)
+    ax.set_xlim(*extend_interval_relative(Nmax_range,Nmax_range_extension))
     ax.set_ylabel(r"${}$".format(make_observable_axis_label_text(nuclide_observable)))
     if (observable_range is not None) and np.isfinite(observable_range[0]).all():
         ax.set_ylim(*extend_interval_relative(observable_range,observable_range_extension))
@@ -1761,11 +2026,13 @@ def add_hw_scan_plot(
 
         marker (str): matplotlib marker specifier
 
-        Nmax_plot_style_kw (dict, optional): styling options to pass through to plot styling function
+        Nmax_plot_style_kw (dict, optional): styling options to pass through to
+        plot styling function
 
         Nmax_plot_style (callable, optional): function to provide styling kwargs
             as function of Nmax_relative (rarely needed, since normally instead
-            can simply use Nmax_plot_style_kw)
+            can simply use Nmax_plot_style_kw with the default styling function
+            Nmax_plot_style)
 
     """
 
@@ -1774,6 +2041,40 @@ def add_hw_scan_plot(
             group["hw"],group["value"],
             marker=marker,
             **Nmax_plot_style(Nmax-Nmax_max,**Nmax_plot_style_kw)
+        )
+
+def add_Nmax_scan_plot(
+        ax,observable_data,
+        marker=".",
+        hw_plot_style_kw={},
+        hw_plot_style=hw_plot_style,
+        verbose=False
+):
+    """Add hw scan plot to axes.
+
+    Arguments:
+
+        ax (mpl.axes.Axes): axes object
+
+        observable_data (pd.DataFrame): data multi-indexed by (Nmax,hw)
+
+        marker (str): matplotlib marker specifier
+
+        hw_plot_style_kw (dict, optional): styling options to pass through to
+        plot styling function
+
+        hw_plot_style (callable, optional): function to provide styling kwargs
+            as function of hw
+
+    """
+
+    for hw, group in observable_data.reset_index().groupby("hw"):
+        if verbose:
+            print("hw {}\n {}".format(hw,group))
+        ax.plot(
+            group["Nmax"],group["value"],
+            marker=marker,
+            **hw_plot_style(hw,**hw_plot_style_kw)
         )
 
 def write_hw_scan_plot(
@@ -1788,7 +2089,13 @@ def write_hw_scan_plot(
         panel_label_kwargs = {},
         verbose=False
 ):
-    """ Generate full "canned" hw scan plot.
+    """Generate full "canned" hw scan plot.
+
+    This is for "quick and dirty" plots for analysis, and to serve as a model
+    for the basic elements of creating a figure containing an hw scan plot.  For
+    "production" figures for publication, where you need more control, and may
+    combine several plots in different panels, you would generally write control
+    code along these lines yourself, instead of using this canned routine.
 
     Arguments:
 

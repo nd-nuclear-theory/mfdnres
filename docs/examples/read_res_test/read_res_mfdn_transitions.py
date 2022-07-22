@@ -1,10 +1,14 @@
 """read_res_mfdn_transitions.py
 
-    Provides simple example of reading and accessing MFDn transitions run results.
+    Provides simple example of reading and accessing MFDn postprocessor results.
+
+    In practice, such results may need to be "merged" with results from mfdn.
 
     Required test data:
-        type_specimens/mfdn-transitions/runtest01-transitions-ob-Z3-N3-Daejeon16-coul1-hw15.000-Nmax02.res
-        type_specimens/mfdn-transitions/runtest01-transitions-tb-Z3-N3-Daejeon16-coul1-hw15.000-Nmax02.res
+        data/mfdn-transitions/runtransitions00-transitions-ob-Z3-N3-Daejeon16-coul1-hw15.000-Nmax02.res
+        data/mfdn-transitions/runtransitions00-transitions-tb-Z3-N3-Daejeon16-coul1-hw15.000-Nmax02.res
+
+        This example output is produced by mcscript-ncci/docs/examples/runtransitions00.py.
 
     Mark A. Caprio
     University of Notre Dame
@@ -12,8 +16,12 @@
     Language: Python 3
 
     - 09/17/20 (mac): Created.
+    - 05/18/22 (mac): Update example file.
+    - 07/12/22 (mac): Provide example use of two-body RME accessor.
 
 """
+
+import os
 
 import mfdnres
 import mfdnres.ncci
@@ -27,11 +35,11 @@ def read_data():
     """
 
     print("Reading input file...")
+    data_dir = os.path.join("data","mfdn-transitions")
     mesh_data = mfdnres.input.slurp_res_files(
-        ["type_specimens/mfdn-transitions"],
+        data_dir,
         res_format="mfdn_v15",
         filename_format="mfdn_format_7_ho",
-        glob_pattern="runtest01-transitions-*-Z3-N3-Daejeon16-coul1-hw15.000-Nmax02.res",
         verbose=True
     )
     print()
@@ -64,9 +72,8 @@ def read_data():
 # explore single mesh point
 ################################################################
 
-def explore_point(mesh_data):
-    """Pick out single hw mesh point and examine spncci_results_data members and
-    results of accessors.
+def explore_point(results_data):
+    """Examine mfdn_results_data members and results of accessors, for MFDn postprocessor results.
     """
 
     # pick out mesh point manually
@@ -82,13 +89,18 @@ def explore_point(mesh_data):
     print("Test accessors (one-body)...")
     print("M1 moment (from dipole term rmes) {}".format(results_data.get_moment("M1",(1.0,0,1))))
     print("M1 rme (from dipole term rmes) {}".format(results_data.get_rme("M1",((1.0,0,1),(1.0,0,1)))))
-    print("E2 moment (from dipole term rmes) {}".format(results_data.get_moment("E2p",(1.0,0,1))))
-    print("E2 rme (from dipole term rmes) {}".format(results_data.get_rme("E2p",((1.0,0,1),(1.0,0,1)))))
+    print("E2 moment {}".format(results_data.get_moment("E2p",(1.0,0,1))))
+    print("E2 rme {}".format(results_data.get_rme("E2p",((1.0,0,1),(1.0,0,1)))))
     print()
 
     # access tb rmes
     print("Test accessors (two-body)...")
-    print("TODO")
+    print("QxQ_0 rme {}".format(results_data.get_rme("QxQ_0",((2.0,0,1),(2.0,0,1)),rank="tb")))
+    print()
+
+    print("Test get_rme verbose mode...")
+    print("E2 rme {}".format(results_data.get_rme("E2p",((1.0,0,1),(1.0,0,1)),verbose=True)))
+    print("E2 rme {}".format(results_data.get_rme("E2p",((1.0,0,1),(1.0,1,1)),verbose=True)))  # invalid state pair
     print()
     
 ################################################################
@@ -97,4 +109,4 @@ def explore_point(mesh_data):
 
 # read data
 mesh_data = read_data()
-explore_point(mesh_data)
+explore_point(mesh_data[0])
