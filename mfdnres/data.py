@@ -36,10 +36,12 @@
     - 05/22/22 (mac): Add element_str labeling function.
     - 06/09/22 (mac/aem): Add LevelSelectorOverride.
     - 06/21/22 (mac): Add nuclide_str() and qn_str().
+    - 07/24/22 (mac): Provide traceback diagnostics for failed level selection in resolve_qn().
 """
 
 import collections
 import os
+import traceback
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -542,7 +544,7 @@ NMAX_AXIS_LABEL_TEXT = r"$N_{\mathrm{max}}$"
 # tools for dispatching LevelSelector or traditional quantum numbers
 ################################################################
 
-def resolve_qn(results_data, level_selector):
+def resolve_qn(results_data, level_selector, verbose=False):
     """Resolve (J,g,n) quantum number tuple or level selector to quantum number tuple.
 
     Arguments:
@@ -559,10 +561,16 @@ def resolve_qn(results_data, level_selector):
     if isinstance(level_selector,tuple):
         resolved_qn = level_selector
     elif isinstance(level_selector,LevelSelector):
-        resolved_qn = level_selector.select_level(results_data)
+        try:
+            resolved_qn = level_selector.select_level(results_data)
+        except Exception as err:
+            print("level_selector.select_level failed with exception: {}".format(err))
+            traceback.print_exception(etype=type(err), value=err, tb=err.__traceback__)
+            ##traceback.print_tb(err.__traceback__)
+            raise
     else:
         raise(TypeError("Unexpected value for level selector"))
-
+    
     return resolved_qn
 
 def resolve_qn_text(level_selector):
