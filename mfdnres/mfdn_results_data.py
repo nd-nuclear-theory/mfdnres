@@ -699,7 +699,8 @@ class MFDnResultsData(results_data.ResultsData):
                 qn_ket = (J_ket,g_ket,ket_index+1)  # convert to spectroscopic 1-based numbering
                 rme_matrix[bra_index,ket_index] = self.get_rme(
                     observable, (qn_bra,qn_ket),
-                    rank,allow_mfdn_native,deduce_e0_from_radius,default,verbose
+                    rank=rank,allow_mfdn_native=allow_mfdn_native,deduce_e0_from_radius=deduce_e0_from_radius,
+                    default=default,verbose=verbose,
                 )
 
         if (verbose):
@@ -733,7 +734,7 @@ class MFDnResultsData(results_data.ResultsData):
 
     def get_expectation_value(
             self, observable, qn,
-            rank="ob", allow_mfdn_native=True,
+            rank="ob", allow_mfdn_native=True, deduce_e0_from_radius=True,
             default=np.nan, verbose=False
     ):
         """ Retrieve expectation value (deduced from RME).
@@ -746,7 +747,9 @@ class MFDnResultsData(results_data.ResultsData):
 
         # retrieve underlying rme
         rme = self.get_rme(
-            observable,(qn,qn),rank,allow_mfdn_native,deduce_e0_from_radius,default,verbose
+            observable,(qn,qn),
+            rank=rank,allow_mfdn_native=allow_mfdn_native,deduce_e0_from_radius=deduce_e0_from_radius,
+            default=default,verbose=verbose,
         )
 
         # derive final value from rme
