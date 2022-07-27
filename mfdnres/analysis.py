@@ -49,7 +49,7 @@ import copy
 import functools
 import itertools
 import more_itertools
-import math
+import traceback
 
 import numpy as np
 
@@ -546,7 +546,7 @@ def merged_mesh(mesh,keys,preprocessor=None,postprocessor=None,verbose=False):
 # "make table" functions now DEPRECATED in favor of pandas-based analysis in
 # mfdnres.data.
 
-def make_obs_table(mesh_data,key_descriptor,obs_extractor,key_list=None,prune=False):
+def make_obs_table(mesh_data,key_descriptor,obs_extractor,key_list=None,prune=False,verbose=False):
     """Generate tabulation of generic observable on parameter mesh.
 
     The key descriptor is used to provide the parameter columns of the
@@ -593,7 +593,10 @@ def make_obs_table(mesh_data,key_descriptor,obs_extractor,key_list=None,prune=Fa
         results_data = results_dict[key]
         try:
             value = obs_extractor(results_data)
-        except:
+        except Exception as err:
+            if verbose:
+                print("observable extractor failed with exception")
+                traceback.print_exception(etype=type(err), value=err, tb=err.__traceback__)
             value = np.nan
         if (prune and np.isnan(value)):
             continue
