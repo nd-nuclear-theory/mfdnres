@@ -278,12 +278,11 @@ def nuclide_observable_descriptor(nuclide_observable):
     # unpack arguments
     (nuclide,observable) = nuclide_observable
     (observable_type,observable_operator,observable_qn_list) = unpack_observable(observable)
-
     qn_list_str = "-".join([
         (
-            qn_str(observable_qn)
-            if type(observable_qn) is tuple
-            else observable_qn.descriptor_str  # provide support for LevelSelector object
+            observable_qn.descriptor_str if isinstance(observable_qn,LevelSelector)
+            else qn_str(observable_qn) if type(observable_qn) is tuple
+            else str(observable_qn)  # fall through (e.g., for integer)
         )
         for observable_qn in observable_qn_list
     ])
@@ -558,9 +557,9 @@ def resolve_qn(results_data, level_selector, verbose=False):
         resolved_qn_list (list): (J,g,n) tuple or None
 
     """
-    if isinstance(level_selector,tuple):
+    if isinstance(level_selector, tuple):
         resolved_qn = level_selector
-    elif isinstance(level_selector,LevelSelector):
+    elif isinstance(level_selector, LevelSelector):
         try:
             resolved_qn = level_selector.select_level(results_data)
         except Exception as err:
@@ -919,69 +918,6 @@ class ObservableExtractor(object):
         return observable_str, units_str
 
 
-###############################################################
-# ObservableExtractor objects
-################################################################
-
-def nuclide_descriptor_str(nuclide):
-    """ Text string describing nuclide.
-
-    Arguments:
-
-        nuclide (tuple): (Z,N)
-
-    Returns:
-
-        descriptor (str): Text Z<zz>-N<nn>.
-    """
-    return "Z{nuclide[0]:02d}-N{nuclide[1]:02d}".format(nuclide)
-
-class Energy(ObservableExtractor):
-    """ Provides observable extractor for level energy.
-    """
-
-    def __init__(self, nuclide, level):
-        """ Initialize with given parameters.
-
-        Arguments:
-            level (LevelSelector): Level
-        """
-        super().__init__()
-        self._nuclide = nuclide
-        self._level = level
-
-    def observable(self, results_data):
-        """ Extract observable.
-        """
-        qn = self._level.select_level(results_data)
-        return results_data.get_energy(qn)
-
-    @property
-    def descriptor_str(self):
-        """ Text string describing observable.
-        """
-        return "-".join([
-            nuclide_descriptor_str(self._nuclide),
-            "energy",
-            self._level.descriptor_str,
-        ])
-
-    @property
-    def observable_label_text(self):
-        """ Formatted LaTeX text representing observable.
-        """
-        observable_text = r"E"
-        level_text = self._level.label_text
-        label = r"{}({})".format(observable_text,level_text)
-        return label
-
-    @property
-    def axis_label_text(self):
-        """ Formatted LaTeX text representing axis label.
-        """
-        observable_text = r"E"
-        units_text = r"\mathrm{MeV}"
-        return observable_text, units_text
 
 
 ################################################################
