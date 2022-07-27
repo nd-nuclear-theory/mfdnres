@@ -79,6 +79,18 @@ def update_observable_dictionary(self_dict,other_dict):
 # MFDnResultsData
 #################################################
 
+OBSERVABLE_ALIASES = {
+    # physical electric operators
+    "E0": "E0p",
+    "E1": "E1p",
+    "E2": "E2p",
+    # sensible names for M1 components (a.k.a. "dipole terms")
+    "M1lp": "Dlp",
+    "M1ln": "Dln",
+    "M1sp": "Dsp",
+    "M1sn": "Dsn",
+}
+
 class MFDnResultsData(results_data.ResultsData):
     """Container for results from single MFDn run.
 
@@ -376,7 +388,13 @@ class MFDnResultsData(results_data.ResultsData):
         
         if verbose:
             print("get_moment {} {}".format(observable,qn))
-            
+
+        # apply aliases
+        if observable in OBSERVABLE_ALIASES:
+            observable = OBSERVABLE_ALIASES[observable]
+            if verbose:
+                print("    observable aliased to {}".format(observable))
+
         # trap deduced observables
         if (observable in {"E20","E21"}):
             # isoscalar/isovector E2
@@ -394,15 +412,6 @@ class MFDnResultsData(results_data.ResultsData):
                 value = E2p+E2n
             else:
                 value = E2p-E2n
-            return value
-        elif (observable == "E2"):
-            # physical E2 (alias for E2p)
-            E2p = self.get_moment(
-                "E2p", qn,
-                allow_mfdn_native=allow_mfdn_native, allow_moment_from_rme=allow_moment_from_rme, allow_e0_from_radius=allow_e0_from_radius,
-                default=default, verbose=verbose,
-            )
-            value = E2p
             return value
         elif (observable == "M1"):
             # physical M1
@@ -619,6 +628,13 @@ class MFDnResultsData(results_data.ResultsData):
 
         if verbose:
             print("get_rme {} {} {}".format(observable, qn_pair, rank))
+
+
+        # apply aliases
+        if observable in OBSERVABLE_ALIASES:
+            observable = OBSERVABLE_ALIASES[observable]
+            if verbose:
+                print("    observable aliased to {}".format(observable))
             
         # trap deduced observables
         if (observable in {"E20","E21"}):
@@ -638,24 +654,6 @@ class MFDnResultsData(results_data.ResultsData):
             else:
                 value = E2p-E2n
             return value
-        elif (observable == "E2"):
-            # physical E2 (alias for E2p)
-            E2p = self.get_rme(
-                "E2p", qn_pair, rank=rank,
-                allow_mfdn_native=allow_mfdn_native, allow_rme_from_moment=allow_rme_from_moment, allow_e0_from_radius=allow_e0_from_radius,
-                default=default, verbose=verbose,
-            )
-            value = E2p
-            return value
-        elif (observable == "E1"):
-            # physical E1 (alias for E1p)
-            E1p = self.get_rme(
-                "E1p", qn_pair, rank=rank,
-                allow_mfdn_native=allow_mfdn_native, allow_rme_from_moment=allow_rme_from_moment, allow_e0_from_radius=allow_e0_from_radius,
-                default=default, verbose=verbose,
-            )
-            value = E1p
-            return value
         elif (observable in {"E00","E01"}):
             # isoscalar/isovector E0
             E0p = self.get_rme(
@@ -673,15 +671,6 @@ class MFDnResultsData(results_data.ResultsData):
                 value = E0p+E0n
             else:
                 value = E0p-E0n
-            return value
-        elif (observable == "E0"):
-            # physical E0 (alias for E0p)
-            E0p = self.get_rme(
-                "E0p", qn_pair, rank=rank,
-                allow_mfdn_native=allow_mfdn_native, allow_rme_from_moment=allow_rme_from_moment, allow_e0_from_radius=allow_e0_from_radius,
-                default=default, verbose=verbose,
-            )
-            value = E0p
             return value
         elif (observable in {"E0p","E0n"} and qn_pair[0]==qn_pair[1]):
             # diagonal E0 -- deduce from radius or suppress due to spurious contribution
