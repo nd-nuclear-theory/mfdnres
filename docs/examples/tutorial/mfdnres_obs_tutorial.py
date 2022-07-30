@@ -461,43 +461,71 @@ def make_gallery(mesh_data):
             mfdnres.data.LevelSelectorQN((1.5,1,1))
         ) : (0., 3.5),
         
+        mfdnres.observable.Moment(
+            (4,5),
+            "M1",
+            mfdnres.data.LevelSelectorQN((1.5,1,1))
+        ) : (-1.5, 0.),
+
+        mfdnres.observable.Moment(
+            (4,5),
+            "E2",
+            mfdnres.data.LevelSelectorQN((1.5,1,1))
+        ) : (0., 10.0),
+        
+        mfdnres.observable.RME(
+            (4,5),
+            "E2",
+            mfdnres.data.LevelSelectorQN((1.5,1,1)),
+            mfdnres.data.LevelSelectorQN((2.5,1,1)),
+        ) : (-20., 20.),
+
+        mfdnres.observable.RTP(
+            (4,5),
+            "E2",
+            mfdnres.data.LevelSelectorQN((1.5,1,1)),
+            mfdnres.data.LevelSelectorQN((2.5,1,1)),
+        ) : (0., 40.),
+        
+        
         # derived observables
         
-        mfdnres.observable.Difference(
-            mfdnres.observable.Energy(
-                (4,5),
-                mfdnres.data.LevelSelectorQN((2.5,1,1))
-            ),
-            mfdnres.observable.Energy(
-                (4,5),
-                mfdnres.data.LevelSelectorQN((1.5,1,1))
-            ),
-        ) : (0.0, 3.2),
-
+        ## mfdnres.observable.Difference(
+        ##     mfdnres.observable.Energy(
+        ##         (4,5),
+        ##         mfdnres.data.LevelSelectorQN((2.5,1,1))
+        ##     ),
+        ##     mfdnres.observable.Energy(
+        ##         (4,5),
+        ##         mfdnres.data.LevelSelectorQN((1.5,1,1))
+        ##     ),
+        ## ) : (0.0, 3.2),
+        ## 
+        ## 
+        ## mfdnres.observable.Ratio(
+        ##     mfdnres.observable.Difference(
+        ##         mfdnres.observable.Energy(
+        ##             (4,5),
+        ##             mfdnres.data.LevelSelectorQN((3.5,1,1))
+        ##         ),
+        ##         mfdnres.observable.Energy(
+        ##             (4,5),
+        ##             mfdnres.data.LevelSelectorQN((1.5,1,1))
+        ##         ),
+        ##     ),
+        ##     mfdnres.observable.Difference(
+        ##         mfdnres.observable.Energy(
+        ##             (4,5),
+        ##             mfdnres.data.LevelSelectorQN((2.5,1,1))
+        ##         ),
+        ##         mfdnres.observable.Energy(
+        ##             (4,5),
+        ##             mfdnres.data.LevelSelectorQN((1.5,1,1))
+        ##         ),
+        ##     ),
+        ##     observable_label_delimiters = (("[","]"),("[","]"))
+        ## )  : (0.0, 3.2),
         
-        mfdnres.observable.Ratio(
-            mfdnres.observable.Difference(
-                mfdnres.observable.Energy(
-                    (4,5),
-                    mfdnres.data.LevelSelectorQN((3.5,1,1))
-                ),
-                mfdnres.observable.Energy(
-                    (4,5),
-                    mfdnres.data.LevelSelectorQN((1.5,1,1))
-                ),
-            ),
-            mfdnres.observable.Difference(
-                mfdnres.observable.Energy(
-                    (4,5),
-                    mfdnres.data.LevelSelectorQN((2.5,1,1))
-                ),
-                mfdnres.observable.Energy(
-                    (4,5),
-                    mfdnres.data.LevelSelectorQN((1.5,1,1))
-                ),
-            ),
-            observable_label_delimiters = (("[","]"),("[","]"))
-        )  : (0.0, 3.2),
     }    
 
     for observable, observable_range in observable_range_list.items():
@@ -507,7 +535,7 @@ def make_gallery(mesh_data):
             mesh_data, observable,
             selector =  {"interaction": interaction, "coulomb": coulomb},
             Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range,
-            verbose = False
+            verbose = True
             )
        
         # write data
@@ -527,96 +555,6 @@ def make_gallery(mesh_data):
             directory=plot_directory,
             verbose=True
         )
-
-################################################################
-# Example: series of basic single plots ("canned" version)
-################################################################
-
-def make_plot_series(mesh_data):
-    """ Make a series of standalone plots for analysis purposes.
-
-    We take the observables from bebands Fig. 6 for this example, but with
-    mutltiple interactions.
-    """
-
-    plot_directory="plots/series"
-    os.makedirs(plot_directory, exist_ok=True)
-
-    # observable definitions
-
-    # TUTORIAL: This was originally just a list of (nuclide,observable) pairs.
-    # But we've turned it into a dictionary, which we use to manually specify a
-    # plot range, as well.
-    #
-    # Note the use of "compound" observables, automatically constructed as
-    # differences or ratios of other (simple) observables.  The descriptor
-    # string, plot labels, etc., will also be automatically constructed out of
-    # those for the individual simple observables, as well.
-
-    nuclide = (4,5)  # for choosing Nmax_max
-    nuclide_observable_list = {
-
-        # energies
-        ((4,5), ("energy", (1.5,1,1))): (-60,-40),
-        ## ((4,5), ("energy", (2.5,1,1))): (-60,-40),
-
-        # excitation energy
-        ("diff", ((4,5), ("energy", (2.5,1,1))), ((4,5), ("energy", (1.5,1,1)))): (0.,5.),
-
-        # B(E2)s
-        ((4,5), ("rtp", "E2p", (1.5,1,1), (2.5,1,1))): (0.,30.),
-        ## ((4,5), ("rtp", "E2p", (1.5,1,1), (3.5,1,1))): (0.,30.),
-
-        # B(E2) ratio
-        ("ratio", ((4,5), ("rtp", "E2p", (1.5,1,1), (2.5,1,1))), ((4,5), ("rtp", "E2p", (1.5,1,1), (3.5,1,1)))): (0.,5.),
-    }
-
-    # tabulate and plot
-    for interaction_coulomb in INTERACTION_COULOMB_LIST:
-        for nuclide_observable in nuclide_observable_list:
-
-            interaction, coulomb = interaction_coulomb
-
-            # generate descriptor
-            descriptor=mfdnres.data.hw_scan_descriptor(interaction_coulomb,nuclide_observable)
-
-            # tabulate
-            hw_range = HW_RANGE_BY_INTERACTION_COULOMB[interaction_coulomb]
-            Nmax_max = NMAX_MAX_BY_NUCLIDE[nuclide]
-            observable_data = mfdnres.data.make_hw_scan_data(
-                mesh_data,nuclide_observable,
-                selector =  {"interaction": interaction, "coulomb": coulomb},
-                Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range
-            )
-            
-            # TUTORIAL: To see the pandas data frames...
-            if False:
-                print(observable_data)
-        
-            # write data
-            mfdnres.data.write_hw_scan_data(
-                descriptor,observable_data,
-                directory=plot_directory
-            )
-
-            # make plot
-
-            observable_range = nuclide_observable_list[nuclide_observable]
-
-            # TUTORIAL: Alternatively, if you wanted to to choose a range
-            # including zero and the extremes of data, ...
-            ## observable_range = (min(observable_data.min()["value"],0),max(observable_data.max()["value"],0))
-            
-            mfdnres.data.write_hw_scan_plot(
-                descriptor,
-                interaction_coulomb,nuclide_observable,
-                observable_data,
-                hw_range=hw_range,
-                observable_range=observable_range,
-                Nmax_max=Nmax_max,
-                directory=plot_directory,
-                verbose=True
-            )
 
 ################################################################
 # Example: multipage survey plot
@@ -676,7 +614,10 @@ def make_survey_plot(mesh_data):
             observable_data_by_col = {}
             
             # define observable
-            nuclide_observable = ("diff", (nuclide, ("energy", qn)), (nuclide, ("energy", qn_ref)))
+            observable = mfdnres.observable.Difference(
+                mfdnres.observable.Energy(nuclide, mfdnres.data.LevelSelectorQN(qn)),
+                mfdnres.observable.Energy(nuclide, mfdnres.data.LevelSelectorQN(qn_ref)),
+            )
 
             # first pass over columns -- tabulate
             for col, interaction_coulomb in enumerate(INTERACTION_COULOMB_LIST):
@@ -684,13 +625,13 @@ def make_survey_plot(mesh_data):
                 (interaction,coulomb) = interaction_coulomb
 
                 # generate descriptor
-                descriptor=mfdnres.data.hw_scan_descriptor(interaction_coulomb,nuclide_observable)
+                descriptor=mfdnres.data.hw_scan_descriptor(interaction_coulomb,observable)
 
                 # tabulate
                 hw_range = HW_RANGE_BY_INTERACTION_COULOMB[interaction_coulomb]
                 Nmax_max = NMAX_MAX_BY_NUCLIDE[nuclide]
                 observable_data = mfdnres.data.make_hw_scan_data(
-                    mesh_data,nuclide_observable,
+                    mesh_data,observable,
                     selector =  {"interaction": interaction, "coulomb": coulomb},
                     Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range
                 )
@@ -721,7 +662,7 @@ def make_survey_plot(mesh_data):
                 hw_range = HW_RANGE_BY_INTERACTION_COULOMB[interaction_coulomb]
                 mfdnres.data.set_up_hw_scan_axes(
                     ax,
-                    nuclide_observable,
+                    observable,
                     hw_range,
                     observable_range,
                     observable_range_extension=(0.05,0.10)
@@ -739,7 +680,7 @@ def make_survey_plot(mesh_data):
                 mfdnres.data.add_observable_panel_label(
                     ax,
                     interaction_coulomb,
-                    nuclide_observable
+                    observable
                 )
 
                 # make plot
@@ -794,31 +735,65 @@ def make_multipanel_plot(mesh_data):
         (0,1): (-1,30,5,5),
         (1,1): (-1,6,1,5),
     }
-    nuclide_observable_list_by_panel = {
+    observable_list_by_panel = {
 
         (0,0): [
             # energies
-            ((4,5), ("energy", (1.5,1,1))),
-            ((4,5), ("energy", (2.5,1,1))),
+            mfdnres.observable.Energy(
+                (4,5),
+                mfdnres.data.LevelSelectorQN((1.5,1,1))
+            ),
+            mfdnres.observable.Energy(
+                (4,5),
+                mfdnres.data.LevelSelectorQN((2.5,1,1))
+            ),
         ],
 
         (1,0): [
-        # excitation energy
-        ("diff", ((4,5), ("energy", (2.5,1,1))), ((4,5), ("energy", (1.5,1,1)))),
+            # excitation energy
+            mfdnres.observable.Difference(
+                mfdnres.observable.Energy(
+                    (4,5),
+                    mfdnres.data.LevelSelectorQN((2.5,1,1))
+                ),
+                mfdnres.observable.Energy(
+                    (4,5),
+                    mfdnres.data.LevelSelectorQN((1.5,1,1))
+                ),
+            ),
         ],
 
         (0,1): [
             # B(E2)s
-            ((4,5), ("rtp", "E2p", (1.5,1,1), (2.5,1,1))),
-            ((4,5), ("rtp", "E2p", (1.5,1,1), (3.5,1,1))),
+            mfdnres.observable.RTP(
+                (4,5),
+                "E2p",
+                mfdnres.data.LevelSelectorQN((1.5,1,1)),
+                mfdnres.data.LevelSelectorQN((2.5,1,1)),
+            ),
+            mfdnres.observable.RTP(
+                (4,5),
+                "E2p",
+                mfdnres.data.LevelSelectorQN((1.5,1,1)),
+                mfdnres.data.LevelSelectorQN((3.5,1,1)),
+            ),
         ],
 
         (1,1): [
             # B(E2) ratio
-            (
-                "ratio",
-                ((4,5), ("rtp", "E2p", (1.5,1,1), (2.5,1,1))),
-                ((4,5), ("rtp", "E2p", (1.5,1,1), (3.5,1,1)))
+            mfdnres.observable.Ratio(
+                mfdnres.observable.RTP(
+                    (4,5),
+                    "E2p",
+                    mfdnres.data.LevelSelectorQN((1.5,1,1)),
+                    mfdnres.data.LevelSelectorQN((2.5,1,1)),
+                ),
+                mfdnres.observable.RTP(
+                    (4,5),
+                    "E2p",
+                    mfdnres.data.LevelSelectorQN((1.5,1,1)),
+                    mfdnres.data.LevelSelectorQN((3.5,1,1)),
+                ),
             ),
         ],
     }
@@ -835,7 +810,7 @@ def make_multipanel_plot(mesh_data):
     
     for panel_indices in mfdnres.multipanel.grid_iterator(dimensions):
 
-        nuclide_observable_list = nuclide_observable_list_by_panel[panel_indices]
+        observable_list = observable_list_by_panel[panel_indices]
 
         # find range parameters
         hw_range = HW_RANGE_BY_INTERACTION_COULOMB[interaction_coulomb]
@@ -876,7 +851,7 @@ def make_multipanel_plot(mesh_data):
 
         mfdnres.data.set_up_hw_scan_axes(
             ax,
-            nuclide_observable_list[0],
+            observable_list[0],
             hw_range,
             observable_range,
             hw_range_extension=(0.15,0.15),
@@ -921,15 +896,15 @@ def make_multipanel_plot(mesh_data):
             )
 
         # tabulate and plot each observable
-        for plot_index, nuclide_observable in enumerate(nuclide_observable_list):
+        for plot_index, observable in enumerate(observable_list):
 
             # generate descriptor
-            descriptor=mfdnres.data.hw_scan_descriptor(interaction_coulomb,nuclide_observable)
+            descriptor=mfdnres.data.hw_scan_descriptor(interaction_coulomb,observable)
 
             # tabulate
             (interaction,coulomb) = interaction_coulomb
             observable_data = mfdnres.data.make_hw_scan_data(
-                mesh_data,nuclide_observable,
+                mesh_data,observable,
                 selector =  {"interaction": interaction, "coulomb": coulomb},
                 Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range,
             )
@@ -989,12 +964,12 @@ def make_teardrop_plot(mesh_data):
 
     # plot contents
     nuclide = (4,5)
-    nuclide_observable_list = [
-        ((4,5), ("moment", "M1", (1.5,1,1))),
-        ((4,5), ("moment", "Dlp", (1.5,1,1))),
-        ((4,5), ("moment", "Dln", (1.5,1,1))),
-        ((4,5), ("moment", "Dsp", (1.5,1,1))),
-        ((4,5), ("moment", "Dsn", (1.5,1,1))),
+    observable_list = [
+        mfdnres.observable.Moment((4,5), "M1", mfdnres.data.LevelSelectorQN((1.5,1,1))),
+        mfdnres.observable.Moment((4,5), "M1lp", mfdnres.data.LevelSelectorQN((1.5,1,1))),
+        mfdnres.observable.Moment((4,5), "M1ln", mfdnres.data.LevelSelectorQN((1.5,1,1))),
+        mfdnres.observable.Moment((4,5), "M1sp", mfdnres.data.LevelSelectorQN((1.5,1,1))),
+        mfdnres.observable.Moment((4,5), "M1sn", mfdnres.data.LevelSelectorQN((1.5,1,1))),
         ]
 
     # initialize plot
@@ -1002,13 +977,13 @@ def make_teardrop_plot(mesh_data):
     observable_range = (-1.75,1)
     observable_range_extension = (0.02,0.02)
     marker_size = 6
-    dimensions = (1,len(nuclide_observable_list))
+    dimensions = (1,len(observable_list))
     fig, gs = mfdnres.multipanel.multipanel_fig_gs(dimensions=dimensions,panel_size=(0.75,3.))
 
     # tabulate observables
     for panel_indices in mfdnres.multipanel.grid_iterator(dimensions):
         observable_index = mfdnres.multipanel.panel_index(dimensions,panel_indices)
-        nuclide_observable = nuclide_observable_list[observable_index]
+        observable = observable_list[observable_index]
 
         # construct axes
         row, col = panel_indices
@@ -1018,9 +993,9 @@ def make_teardrop_plot(mesh_data):
         ax.set_xticks([])
         ax.set_axisbelow(b=True)
         
-        ax.set_ylabel(r"${}$".format(mfdnres.data.make_observable_axis_label_text(nuclide_observable)))
+        ax.set_ylabel(r"${}$".format(mfdnres.data.make_observable_axis_label_text(observable)))
         ax.set_ylim(*mfdnres.data.extend_interval_relative(observable_range,observable_range_extension))
-        ax.grid(axis="y",linewidth=0.5,linestyle=":",color="gray")
+        ## ax.grid(axis="y",linewidth=0.5,linestyle=":",color="gray")
         mfdnres.multipanel.suppress_interior_labels(ax)
         ## if not ax.is_first_col():
         ##     ax.tick_params(axis="y", length=0)
@@ -1031,7 +1006,7 @@ def make_teardrop_plot(mesh_data):
             
         # label for observable
         ax.annotate(
-            r"${}$".format(mfdnres.data.make_observable_text(nuclide_observable)),
+            r"${}$".format(observable.observable_label_text),
             xy=(0.5,0),
             xycoords=("axes fraction","axes fraction"),
             multialignment="left",
@@ -1050,7 +1025,7 @@ def make_teardrop_plot(mesh_data):
             hw = HW_BY_INTERACTION_COULOMB[interaction_coulomb]
             Nmax_max = NMAX_MAX_BY_NUCLIDE[nuclide]
             observable_data = mfdnres.data.make_hw_scan_data(
-                mesh_data,nuclide_observable,
+                mesh_data,observable,
                 selector =  {"interaction": interaction, "coulomb": coulomb},
                 Nmax_range = (NMAX_MIN,Nmax_max), hw_range = (hw,hw)
             )
@@ -1060,20 +1035,23 @@ def make_teardrop_plot(mesh_data):
             plot_data["x"] = 0.3+0.2*interaction_index
             plot_data["s"] = (marker_size*((plot_data["Nmax"]-Nmax_max).transform(mfdnres.data.Nmax_symbol_scale)))**2
             plot_data["c"] = (plot_data["Nmax"]-Nmax_max).transform(mfdnres.data.Nmax_color)
-            ##print(plot_data)
+            # markerless plot to generate line
             ax.plot(
                 "x","value",
                 data=plot_data,
                 marker=None,
                 zorder=2.1
             )
+            # markers only
             ax.scatter(
                 "x","value",
                 s="s",c="c",
                 ##c=plot_data["c"],s=plot_data["s"],
                 data=plot_data,
-                edgecolors="black",
-                marker=MARKER_BY_INTERACTION_COULOMB[interaction_coulomb],
+                ## edgecolors="black",
+                ## marker=MARKER_BY_INTERACTION_COULOMB[interaction_coulomb],
+                facecolors="black",
+                marker="_",
                 zorder=2.2
             )
 
@@ -1095,12 +1073,11 @@ def main():
 
     mesh_data=read_data()
 
-    ## make_basic_plot(mesh_data)
+    make_basic_plot(mesh_data)
     make_gallery(mesh_data)
-    ## make_plot_series(mesh_data)
-    ## make_survey_plot(mesh_data)
-    ## make_multipanel_plot(mesh_data)
-    ## make_teardrop_plot(mesh_data)
+    make_survey_plot(mesh_data)
+    make_multipanel_plot(mesh_data)
+    make_teardrop_plot(mesh_data)
 
 if __name__ == "__main__":
     main()

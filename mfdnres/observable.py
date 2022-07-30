@@ -58,7 +58,7 @@ class Observable(object):
         """ Null initialize."""
         pass
 
-    def data(self, mesh_data, key_descriptor):
+    def data(self, mesh_data, key_descriptor, verbose=False):
         """Extract data frame of observable values over mesh.
 
         To be overridden by child object if object does not identify with a
@@ -78,7 +78,7 @@ class Observable(object):
         #
         # e.g., key_descriptor = (("Nmax",int),("hw",float))
         extractor = lambda results_data : self.value(results_data)  # is there a better way to return an instance method as a callable?
-        table = analysis.make_obs_table(mesh_data_selected, key_descriptor, extractor)
+        table = analysis.make_obs_table(mesh_data_selected, key_descriptor, extractor, verbose=verbose)
 
         # structure table into DataFrame with compound index
         keys = [key for key, _ in key_descriptor]
@@ -173,10 +173,13 @@ class Difference(Observable):
         self._arguments = observable1, observable2
         self._observable_label_delimiters = observable_label_delimiters
 
-    def data(self, mesh_data, key_descriptor):
+    def data(self, mesh_data, key_descriptor, verbose=False):
         """ Extract data frame of observable values over mesh.
         """
-        data_meshes = self._arguments[0].data(mesh_data, key_descriptor), self._arguments[1].data(mesh_data, key_descriptor)
+        data_meshes = (
+            self._arguments[0].data(mesh_data, key_descriptor, verbose=verbose),
+            self._arguments[1].data(mesh_data, key_descriptor, verbose=verbose),
+            )
         return data_meshes[0] - data_meshes[1]
 
     @property
@@ -259,10 +262,13 @@ class Ratio(Observable):
         self._arguments = observable1, observable2
         self._observable_label_delimiters = observable_label_delimiters
 
-    def data(self, mesh_data, key_descriptor):
+    def data(self, mesh_data, key_descriptor, verbose=False):
         """ Extract data frame of observable values over mesh.
         """
-        data_meshes = self._arguments[0].data(mesh_data, key_descriptor), self._arguments[1].data(mesh_data, key_descriptor)
+        data_meshes = (
+            self._arguments[0].data(mesh_data, key_descriptor, verbose=verbose),
+            self._arguments[1].data(mesh_data, key_descriptor, verbose=verbose),
+            )
         return data_meshes[0] / data_meshes[1]
 
     @property
@@ -578,3 +584,277 @@ class Radius(Observable):
         return observable_text, units_text
 
     
+################################################################
+# observable: RadiusSqr
+################################################################
+
+# TODO
+
+# or replace with special ratio observables
+
+
+################################################################
+# observable: RadiusQuart
+################################################################
+
+# TODO
+
+# or replace with special ratio observables
+
+
+################################################################
+# observable: Moment
+################################################################
+
+class Moment(Observable):
+    """ Observable extractor for electromagnetic moment.
+
+    """
+
+    def __init__(self, nuclide, operator, level):
+        """Initialize with given parameters.
+
+        Arguments:
+
+            nuclide (tuple): (Z, N)
+
+            operator (str): identifier for electromagnetic operator, as accepted
+            by MFDnResultsData.get_moment()
+
+            level (LevelSelector): level
+
+        """
+        super().__init__()
+        self._nuclide = nuclide
+        self._operator = operator
+        self._level = level
+
+    def value(self, results_data):
+        """ Extract observable.
+        """
+        qn = self._level.select_level(results_data)
+        return results_data.get_moment(self._operator, qn)
+
+    @property
+    def descriptor_str(self):
+        """ Text string describing observable.
+        """
+        return "-".join([
+            data.nuclide_str(self._nuclide),
+            "moment",
+            self._operator,
+            self._level.descriptor_str,
+        ])
+
+    @property
+    def observable_label_text(self):
+        """ Formatted LaTeX text representing observable.
+        """
+        if self._operator == "M1":
+            observable_text = r"\mu"
+        elif self._operator in {
+                "Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1",
+                "M1lp","M1ln","M1sp","M1sn","M1l0","M1l1","M1s0","M1s1",
+        }:
+            observable_text = r"\mu_{{{}}}".format(self._operator[-2:])
+        elif self._operator in {"E2p","E2n","E20","E21","E2"}:
+            observable_text = r"Q_{{{}}}".format(self._operator[2:])
+        level_text = self._level.label_text
+        label = r"{}({})".format(observable_text,level_text)
+        return label
+
+    @property
+    def axis_label_text(self):
+        """ Formatted LaTeX text representing axis label.
+        """
+        if self._operator in {
+                "M1",
+                "Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1",
+                "M1lp","M1ln","M1sp","M1sn","M1l0","M1l1","M1s0","M1s1",
+        }:
+            observable_text = r"\mu"
+            units_text = r"\mu_N"
+        elif self._operator in {"E2p","E2n","E20","E21","E2"}:
+            observable_text = r"Q"  ## r"eQ"
+            units_text = r"\mathrm{fm}^{2}"  ## r"e\,\mathrm{fm}^{2}"
+        return observable_text, units_text
+
+    
+################################################################
+# observable: MomentSqr
+################################################################
+
+# TODO
+
+# or replace with special ratio observables
+
+
+################################################################
+# observable: RME
+################################################################
+
+class RME(Observable):
+    """ Observable extractor for electromagnetic reduced matrix element.
+
+    """
+
+    # TODO restore E0 and E1 functionality
+    
+    def __init__(self, nuclide, operator, levelf, leveli):
+        """Initialize with given parameters.
+
+        Arguments:
+
+            nuclide (tuple): (Z, N)
+
+            operator (str): identifier for electromagnetic operator, as accepted
+            by MFDnResultsData.get_rme()
+
+            level (LevelSelector): level
+
+        """
+        super().__init__()
+        self._nuclide = nuclide
+        self._operator = operator
+        self._level_pair = levelf, leveli
+
+    def value(self, results_data):
+        """ Extract observable.
+        """
+        qn_pair = self._level_pair[0].select_level(results_data), self._level_pair[1].select_level(results_data)
+        return results_data.get_rme(self._operator, qn_pair)
+
+    @property
+    def descriptor_str(self):
+        """ Text string describing observable.
+        """
+        return "-".join([
+            data.nuclide_str(self._nuclide),
+            "rme",
+            self._operator,
+            self._level_pair[0].descriptor_str,
+            self._level_pair[1].descriptor_str,
+        ])
+
+    @property
+    def observable_label_text(self):
+        """ Formatted LaTeX text representing observable.
+        """
+        if self._operator == "M1":
+            ## observable_text = r"M_1"
+            observable_text = r"M1"
+        elif self._operator in {
+                "Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1",
+                "M1lp","M1ln","M1sp","M1sn","M1l0","M1l1","M1s0","M1s1",
+        }:
+            ## observable_text = r"M1_{{{}}}".format(self._operator[-2:])
+            observable_text = r"M_{{1{}}}".format(self._operator[-2:])
+        elif self._operator in {"E2p","E2n","E20","E21","E2"}:
+            ## observable_text = r"Q_{{2{}}}".format(self._operator[2:])
+            observable_text = r"E2_{{{}}}".format(self._operator[2:])
+        level_pair_text = self._level_pair[0].label_text, self._level_pair[1].label_text
+        label = r"\langle {} \Vert \mathcal{{M}}({}) \Vert {} \rangle".format(level_pair_text[0],observable_text,level_pair_text[1])  # <f|O|i> = i->f
+        return label
+
+    @property
+    def axis_label_text(self):
+        """ Formatted LaTeX text representing axis label.
+        """
+        if self._operator in {
+                "M1",
+                "Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1",
+                "M1lp","M1ln","M1sp","M1sn","M1l0","M1l1","M1s0","M1s1",
+        }:
+            ## observable_text = r"\langle M_1 \rangle"
+            observable_text = r"\langle \mathcal{{M}}(M1) \rangle"
+            units_text = r"\mu_N"
+        elif self._operator in {"E2p","E2n","E20","E21","E2"}:
+            ## observable_text = r"\langle Q_2 \rangle"
+            observable_text = r"\langle \mathcal{{M}}(E2) \rangle"
+            units_text = r"e\,\mathrm{fm}^{2}"
+        return observable_text, units_text
+
+    
+
+################################################################
+# observable: RTP
+################################################################
+
+class RTP(Observable):
+    """Observable extractor for electromagnetic reduced transition probability.
+
+    """
+
+    # TODO restore E0 and E1 functionality
+    
+    def __init__(self, nuclide, operator, levelf, leveli):
+        """Initialize with given parameters.
+
+        Arguments:
+
+            nuclide (tuple): (Z, N)
+
+            operator (str): identifier for electromagnetic operator, as accepted
+            by MFDnResultsData.get_rme()
+
+            level (LevelSelector): level
+
+        """
+        super().__init__()
+        self._nuclide = nuclide
+        self._operator = operator
+        self._level_pair = levelf, leveli
+
+    def value(self, results_data):
+        """ Extract observable.
+        """
+        qn_pair = self._level_pair[0].select_level(results_data), self._level_pair[1].select_level(results_data)
+        return results_data.get_rtp(self._operator, qn_pair)
+
+    @property
+    def descriptor_str(self):
+        """ Text string describing observable.
+        """
+        return "-".join([
+            data.nuclide_str(self._nuclide),
+            "rtp",
+            self._operator,
+            self._level_pair[0].descriptor_str,
+            self._level_pair[1].descriptor_str,
+        ])
+
+    @property
+    def observable_label_text(self):
+        """ Formatted LaTeX text representing observable.
+        """
+        if self._operator == "M1":
+            observable_text = r"M1"
+        elif self._operator in {
+                "Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1",
+                "M1lp","M1ln","M1sp","M1sn","M1l0","M1l1","M1s0","M1s1",
+        }:
+            observable_text = r"M1_{{{}}}".format(self._operator[-2:])
+        elif self._operator in {"E2p","E2n","E20","E21","E2"}:
+            observable_text = r"E2_{{{}}}".format(self._operator[2:])
+        level_pair_text = self._level_pair[0].label_text, self._level_pair[1].label_text
+        label = r"B({};{}\rightarrow{})".format(observable_text,level_pair_text[1],level_pair_text[0])  # <f|O|i> = i->f
+        return label
+
+    @property
+    def axis_label_text(self):
+        """ Formatted LaTeX text representing axis label.
+        """
+        if self._operator in {
+                "M1",
+                "Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1",
+                "M1lp","M1ln","M1sp","M1sn","M1l0","M1l1","M1s0","M1s1",
+        }:
+            observable_text = r"B(M1)"
+            units_text = r"\mu_N^2"
+        elif self._operator in {"E2p","E2n","E20","E21","E2"}:
+            observable_text = r"B(E2)"
+            units_text = r"e^2\,\mathrm{fm}^{4}"
+        return observable_text, units_text
+
+    
+

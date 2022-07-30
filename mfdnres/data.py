@@ -1802,7 +1802,7 @@ def make_hw_scan_data(
         if selector is None:
             selector = {}
         mesh_data_selected = analysis.selected_mesh_data(mesh_data,selector)
-        observable_data = nuclide_observable.data(mesh_data_selected, KEY_DESCRIPTOR_NMAX_HW)
+        observable_data = nuclide_observable.data(mesh_data_selected, KEY_DESCRIPTOR_NMAX_HW, verbose=verbose)
     else:
     
         # trap compound observable
