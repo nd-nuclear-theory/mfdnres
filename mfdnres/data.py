@@ -51,6 +51,7 @@ import re
 
 from . import (
     analysis,
+    ## observable,
     tools
 )
 
@@ -661,6 +662,7 @@ class LevelSelectorQN(LevelSelector):
         """ Initialize with given parameters.
 
         Arguments:
+
             qn (tuple): (J, g, n)
         """
         super().__init__()
@@ -916,9 +918,6 @@ class ObservableExtractor(object):
         observable_str = r""
         units_str = None
         return observable_str, units_str
-
-
-
 
 ################################################################
 # observable registry
@@ -1428,29 +1427,36 @@ def make_observable_axis_label_text(nuclide_observable):
 
         label (str): label string, to be interpreted in math mode
     """
-    # trap compound observable
-    if nuclide_observable[0] in {"diff","ratio","fix-sign-to"}:
-        (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
-        if arithmetic_operation == "diff":
-            return r"\Delta {}".format(make_observable_axis_label_text(nuclide_observable1))
-        elif arithmetic_operation == "ratio":
-            return r"\mathrm{Ratio}"
-        elif arithmetic_operation == "fix-sign-to":
+
+    if isinstance(nuclide_observable, tuple):
+        
+        # trap compound observable
+        if nuclide_observable[0] in {"diff","ratio","fix-sign-to"}:
+            (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
+            if arithmetic_operation == "diff":
+                return r"\Delta {}".format(make_observable_axis_label_text(nuclide_observable1))
+            elif arithmetic_operation == "ratio":
+                return r"\mathrm{Ratio}"
+            elif arithmetic_operation == "fix-sign-to":
+                return make_observable_axis_label_text(nuclide_observable1)
+        elif nuclide_observable[0] in {"minus"}:
+            (arithmetic_operation,nuclide_observable1) = nuclide_observable
             return make_observable_axis_label_text(nuclide_observable1)
-    elif nuclide_observable[0] in {"minus"}:
-        (arithmetic_operation,nuclide_observable1) = nuclide_observable
-        return make_observable_axis_label_text(nuclide_observable1)
+    
+        # unpack arguments
+        (nuclide,observable) = nuclide_observable
+        (observable_type,observable_operator,observable_qn_list) = unpack_observable(observable)
+    
+        # construct label
+        if observable_type in OBSERVABLE_BY_OBSERVABLE_TYPE:
+            (observable_str, units_str) = OBSERVABLE_BY_OBSERVABLE_TYPE[observable_type].axis_label_generator(nuclide,observable_operator,observable_qn_list)
+        else:
+            raise(ValueError("unrecognized observable type {}".format(observable_type)))
 
-    # unpack arguments
-    (nuclide,observable) = nuclide_observable
-    (observable_type,observable_operator,observable_qn_list) = unpack_observable(observable)
-
-    # construct label
-    if observable_type in OBSERVABLE_BY_OBSERVABLE_TYPE:
-        (observable_str, units_str) = OBSERVABLE_BY_OBSERVABLE_TYPE[observable_type].axis_label_generator(nuclide,observable_operator,observable_qn_list)
     else:
-        raise(ValueError("unrecognized observable type {}".format(observable_type)))
-
+        ##if isinstance(nuclide_observable, observable.Observable):
+        observable_str, units_str = nuclide_observable.axis_label_text
+        
     if units_str is None:
         label = observable_str
     else:
@@ -1688,7 +1694,7 @@ def hw_plot_style(
 ################################################################
 
 
-def hw_scan_descriptor(interaction_coulomb,nuclide_observable,verbose=False):
+def hw_scan_descriptor(interaction_coulomb, nuclide_observable, verbose=False):
     """ Generate standard descriptor string for a (nuclide,observable) pair.
 
     Arguments:
@@ -1701,6 +1707,11 @@ def hw_scan_descriptor(interaction_coulomb,nuclide_observable,verbose=False):
     if verbose:
         print("Generating hw_scan_descriptor: {} {}".format(interaction_coulomb,nuclide_observable))
 
+    # trap new-style observable
+    if not isinstance(nuclide_observable, tuple):
+        ##if isinstance(nuclide_observable, observable.Observable):
+        return nuclide_observable.descriptor_str
+        
     descriptor="hw-scan_{interaction_coulomb[0]:s}-{interaction_coulomb[1]:1d}_{nuclide_observable_descriptor}".format(
         interaction_coulomb=interaction_coulomb,
         nuclide_observable_descriptor=nuclide_observable_descriptor(nuclide_observable)
@@ -1783,51 +1794,61 @@ def make_hw_scan_data(
 
     """
 
-    # trap compound observable
-    if nuclide_observable[0] in {"diff","ratio","fix-sign-to"}:
-        (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
-        data1 = make_hw_scan_data(mesh_data,nuclide_observable1,selector=selector,Nmax_range=Nmax_range,hw_range=hw_range)
-        data2 = make_hw_scan_data(mesh_data,nuclide_observable2,selector=selector,Nmax_range=Nmax_range,hw_range=hw_range)
-        if arithmetic_operation == "diff":
-            return data1-data2
-        elif arithmetic_operation == "ratio":
-            return data1/data2
-        elif arithmetic_operation == "fix-sign-to":
-            return data1*data2.apply(np.sign,raw=True)
-    elif nuclide_observable[0] in {"minus"}:
-        (arithmetic_operation,nuclide_observable1) = nuclide_observable
-        data1 = make_hw_scan_data(mesh_data,nuclide_observable1,selector=selector,Nmax_range=Nmax_range,hw_range=hw_range)
-        return -data1
-
-    # unpack arguments
-    (nuclide,observable) = nuclide_observable
-    (observable_type,observable_operator,observable_qn_list) = unpack_observable(observable)
-
-    # select nuclide
-    full_selector = {"nuclide":nuclide}
-    if selector is not None:
-        full_selector.update(selector)
-    mesh_data_selected = analysis.selected_mesh_data(mesh_data,full_selector)
-    analysis.mesh_key_listing(
-        mesh_data_selected,
-        ("nuclide","interaction","coulomb","hw","Nmax","parity"),
-        verbose=verbose
-    )
-
-    # generate table
-
-    # NOTE: May ultimately supplant analysis.make_obs_table ndarray step with
-    # direct construction of pandas data frame.
-
     KEY_DESCRIPTOR_NMAX_HW = (("Nmax",int),("hw",float))
-    if observable_type in OBSERVABLE_BY_OBSERVABLE_TYPE:
-        extractor = OBSERVABLE_BY_OBSERVABLE_TYPE[observable_type].extractor_generator(nuclide,observable_operator,observable_qn_list)
-        table = analysis.make_obs_table(mesh_data_selected,KEY_DESCRIPTOR_NMAX_HW,extractor)
+    
+    # trap new-style observable
+    if not isinstance(nuclide_observable, tuple):
+        ##if isinstance(nuclide_observable, observable.Observable):
+        if selector is None:
+            selector = {}
+        mesh_data_selected = analysis.selected_mesh_data(mesh_data,selector)
+        observable_data = nuclide_observable.data(mesh_data_selected, KEY_DESCRIPTOR_NMAX_HW)
     else:
-        raise(ValueError("unrecognized observable type {} (not in {})".format(observable_type,list(OBSERVABLE_BY_OBSERVABLE_TYPE.keys()))))
+    
+        # trap compound observable
+        if nuclide_observable[0] in {"diff","ratio","fix-sign-to"}:
+            (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
+            data1 = make_hw_scan_data(mesh_data,nuclide_observable1,selector=selector,Nmax_range=Nmax_range,hw_range=hw_range)
+            data2 = make_hw_scan_data(mesh_data,nuclide_observable2,selector=selector,Nmax_range=Nmax_range,hw_range=hw_range)
+            if arithmetic_operation == "diff":
+                return data1-data2
+            elif arithmetic_operation == "ratio":
+                return data1/data2
+            elif arithmetic_operation == "fix-sign-to":
+                return data1*data2.apply(np.sign,raw=True)
+        elif nuclide_observable[0] in {"minus"}:
+            (arithmetic_operation,nuclide_observable1) = nuclide_observable
+            data1 = make_hw_scan_data(mesh_data,nuclide_observable1,selector=selector,Nmax_range=Nmax_range,hw_range=hw_range)
+            return -data1
 
-    # convert to DataFrame
-    observable_data = pd.DataFrame(table).set_index(["Nmax","hw"])
+        # unpack arguments
+        (nuclide,observable) = nuclide_observable
+        (observable_type,observable_operator,observable_qn_list) = unpack_observable(observable)
+
+        # select nuclide
+        full_selector = {"nuclide":nuclide}
+        if selector is not None:
+            full_selector.update(selector)
+        mesh_data_selected = analysis.selected_mesh_data(mesh_data,full_selector)
+        analysis.mesh_key_listing(
+            mesh_data_selected,
+            ("nuclide","interaction","coulomb","hw","Nmax","parity"),
+            verbose=verbose
+        )
+
+        # generate table
+
+        # NOTE: May ultimately supplant analysis.make_obs_table ndarray step with
+        # direct construction of pandas data frame.
+
+        if observable_type in OBSERVABLE_BY_OBSERVABLE_TYPE:
+            extractor = OBSERVABLE_BY_OBSERVABLE_TYPE[observable_type].extractor_generator(nuclide,observable_operator,observable_qn_list)
+            table = analysis.make_obs_table(mesh_data_selected,KEY_DESCRIPTOR_NMAX_HW,extractor)
+        else:
+            raise(ValueError("unrecognized observable type {} (not in {})".format(observable_type,list(OBSERVABLE_BY_OBSERVABLE_TYPE.keys()))))
+
+        # convert to DataFrame
+        observable_data = pd.DataFrame(table).set_index(["Nmax","hw"])
 
     # drop nan values
     observable_data = hw_scan_drop_nan(observable_data)
@@ -1938,12 +1959,18 @@ def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**kwarg
     """
 
     # panel label
+    if isinstance(nuclide_observable, tuple):
+        nuclide_text = make_nuclide_text(nuclide_observable)
+        observable_text = make_observable_text(nuclide_observable),
+    else:
+        ##if isinstance(nuclide_observable, observable.Observable):
+        nuclide_text = nuclide_observable.nuclide_label_text
+        observable_text = nuclide_observable.observable_label_text
+
+    interaction_text = make_interaction_text(interaction_coulomb)
+        
     ax.annotate(
-        "${}$ ${}$\n$^{}$".format(
-            make_nuclide_text(nuclide_observable),
-            make_observable_text(nuclide_observable),
-            make_interaction_text(interaction_coulomb)
-        ),
+        "${}$ ${}$\n$^{}$".format(nuclide_text,observable_text,interaction_text),
         xy=(0.95,0.05),xycoords="axes fraction",
         multialignment="left",
         horizontalalignment="right",

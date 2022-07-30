@@ -614,10 +614,9 @@ class MFDnResultsData(results_data.ResultsData):
 
         """
 
-        # TODO 07/12/22 (mac): Migrate M1 observable names from D?? to M1??.
-        # 
-        # TODO 07/12/22 (mac): It would be useful to be able to deduce generic TBO
-        # rmes from mfdn native two-body observable expectation values.
+        # TODO 07/12/22 (mac): It would be useful to be able to deduce generic
+        # TBO rmes from mfdn native two-body observable expectation values,
+        # similar to the fall-throughs done for the ob observables.
         # 
         # TODO 07/17/22 (mac): For diagonal E0 rme in CMF calculation, could apply
         # analytic cm correction, rather than simply suppressing.  However, this

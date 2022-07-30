@@ -77,7 +77,6 @@ Setup
     - 04/10/21 (mac): Use os.makedirs.  Add experimental use of mfdnres.ticks.
     - 11/01/21 (mac,zz): Update examples to use newer mfdnres.ticks and mfdnres.multipanel tools.
     - 05/18/22 (mac): Add tick styling to multipanel example.
-    - 07/30/22 (mac): Update to new Observable object interface.
 
 """
 
@@ -91,11 +90,10 @@ import numpy as np
 import pandas as pd
 
 import mfdnres
+import mfdnres.ticks
 import mfdnres.data
 import mfdnres.multipanel
 import mfdnres.ncci
-import mfdnres.observable
-import mfdnres.ticks
 
 ################################################################
 # global plot styling
@@ -292,17 +290,14 @@ def make_basic_plot(mesh_data):
     # See the docstring to data.make_hw_scan_data for a summary of the syntax
     # for observables.
     
-    observable = mfdnres.observable.Energy(
-        (4,5),
-        mfdnres.data.LevelSelectorQN((1.5,1,1))
-    )
-    
+    nuclide_observable = ((4,5), ("energy", (1.5,1,1)))
+        
     # generate descriptor
 
     # TUTORIAL: The "descriptor" is a standard string representation of the
     # observable, which we will use in output filenames.
     
-    descriptor = mfdnres.data.hw_scan_descriptor(interaction_coulomb,observable)
+    descriptor = mfdnres.data.hw_scan_descriptor(interaction_coulomb,nuclide_observable)
 
     # TUTORIAL: To see the descriptors...
     if False:
@@ -348,12 +343,12 @@ def make_basic_plot(mesh_data):
 
     interaction, coulomb = interaction_coulomb
     observable_data = mfdnres.data.make_hw_scan_data(
-        mesh_data, observable,
+        mesh_data,nuclide_observable,
         selector =  {"interaction": interaction, "coulomb": coulomb},
         Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range,
         verbose = False
         )
-   
+
     # write data
 
     # TUTORIAL: Right here and now we write out the tabular data.  This way we
@@ -403,11 +398,10 @@ def make_basic_plot(mesh_data):
     # will be allowed to pick the plot range according to its defaults.
     
     observable_range = (-60.,-40.)
-        
     ## print(observable_range)
     mfdnres.data.write_hw_scan_plot(
         descriptor,
-        interaction_coulomb,observable,
+        interaction_coulomb,nuclide_observable,
         observable_data,
         hw_range=hw_range,
         observable_range=observable_range,
@@ -415,118 +409,6 @@ def make_basic_plot(mesh_data):
         directory=plot_directory,
         verbose=True
     )
-
-################################################################
-# Example: Gallery of observables
-################################################################
-
-def make_gallery(mesh_data):
-    """ Provides a gallery of plots of different observables.
-
-    """
-
-    # plot directory
-    plot_directory="plots/gallery"
-    os.makedirs(plot_directory, exist_ok=True)
-
-    # mesh parameters
-    interaction_coulomb = INTERACTION_COULOMB_LIST[0]
-    hw_range = HW_RANGE_BY_INTERACTION_COULOMB[interaction_coulomb]
-    nuclide = (4,5)
-    Nmax_max = NMAX_MAX_BY_NUCLIDE[nuclide]
-
-    # define observables
-    observable_range_list = {
-
-        # elementary observables
-        
-        mfdnres.observable.Energy(
-            (4,5),
-            mfdnres.data.LevelSelectorQN((1.5,1,1))
-        ) : (-60.0, -40.0),
-
-        mfdnres.observable.Isospin(
-            (4,5),
-            mfdnres.data.LevelSelectorQN((1.5,1,1))
-        ) : (0., 1.0),
-        
-        mfdnres.observable.LevelIndex(
-            (4,5),
-            mfdnres.data.LevelSelectorQN((1.5,1,1))
-        ) : (0., 1.5),
-
-        mfdnres.observable.Radius(
-            (4,5),
-            "rp",
-            mfdnres.data.LevelSelectorQN((1.5,1,1))
-        ) : (0., 3.5),
-        
-        # derived observables
-        
-        mfdnres.observable.Difference(
-            mfdnres.observable.Energy(
-                (4,5),
-                mfdnres.data.LevelSelectorQN((2.5,1,1))
-            ),
-            mfdnres.observable.Energy(
-                (4,5),
-                mfdnres.data.LevelSelectorQN((1.5,1,1))
-            ),
-        ) : (0.0, 3.2),
-
-        
-        mfdnres.observable.Ratio(
-            mfdnres.observable.Difference(
-                mfdnres.observable.Energy(
-                    (4,5),
-                    mfdnres.data.LevelSelectorQN((3.5,1,1))
-                ),
-                mfdnres.observable.Energy(
-                    (4,5),
-                    mfdnres.data.LevelSelectorQN((1.5,1,1))
-                ),
-            ),
-            mfdnres.observable.Difference(
-                mfdnres.observable.Energy(
-                    (4,5),
-                    mfdnres.data.LevelSelectorQN((2.5,1,1))
-                ),
-                mfdnres.observable.Energy(
-                    (4,5),
-                    mfdnres.data.LevelSelectorQN((1.5,1,1))
-                ),
-            ),
-            observable_label_delimiters = (("[","]"),("[","]"))
-        )  : (0.0, 3.2),
-    }    
-
-    for observable, observable_range in observable_range_list.items():
-        descriptor = mfdnres.data.hw_scan_descriptor(interaction_coulomb,observable)
-        interaction, coulomb = interaction_coulomb
-        observable_data = mfdnres.data.make_hw_scan_data(
-            mesh_data, observable,
-            selector =  {"interaction": interaction, "coulomb": coulomb},
-            Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range,
-            verbose = False
-            )
-       
-        # write data
-        mfdnres.data.write_hw_scan_data(
-            descriptor,observable_data,
-            directory=plot_directory
-        )
-    
-        # make plot
-        mfdnres.data.write_hw_scan_plot(
-            descriptor,
-            interaction_coulomb,observable,
-            observable_data,
-            hw_range=hw_range,
-            observable_range=observable_range,
-            Nmax_max=Nmax_max,
-            directory=plot_directory,
-            verbose=True
-        )
 
 ################################################################
 # Example: series of basic single plots ("canned" version)
@@ -1095,8 +977,7 @@ def main():
 
     mesh_data=read_data()
 
-    ## make_basic_plot(mesh_data)
-    make_gallery(mesh_data)
+    make_basic_plot(mesh_data)
     ## make_plot_series(mesh_data)
     ## make_survey_plot(mesh_data)
     ## make_multipanel_plot(mesh_data)
