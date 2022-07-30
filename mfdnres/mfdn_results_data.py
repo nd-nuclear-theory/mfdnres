@@ -328,7 +328,7 @@ class MFDnResultsData(results_data.ResultsData):
 
     def get_moment(
         self, observable, qn,
-        allow_mfdn_native=True, allow_moment_from_rme=True,
+        allow_mfdn_native=True, allow_moment_from_rme=True, allow_e0_from_radius=True,
         default=np.nan, verbose=False
     ):
         """Retrieve moment value.
@@ -365,6 +365,9 @@ class MFDnResultsData(results_data.ResultsData):
                 rather than using native calculated moment (which may have been
                 truncated to lower precision on output)
 
+            allow_e0_from_radius (bool, optional): whether or not to enable
+                calculation of diagonal E0 rme from radius
+ 
             default (float,optional): default value to return for missing observable
 
         Returns
