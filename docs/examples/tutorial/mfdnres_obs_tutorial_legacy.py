@@ -978,10 +978,10 @@ def main():
     mesh_data=read_data()
 
     make_basic_plot(mesh_data)
-    ## make_plot_series(mesh_data)
-    ## make_survey_plot(mesh_data)
-    ## make_multipanel_plot(mesh_data)
-    ## make_teardrop_plot(mesh_data)
+    make_plot_series(mesh_data)
+    make_survey_plot(mesh_data)
+    make_multipanel_plot(mesh_data)
+    make_teardrop_plot(mesh_data)
 
 if __name__ == "__main__":
     main()

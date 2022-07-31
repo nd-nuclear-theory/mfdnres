@@ -294,7 +294,7 @@ def make_basic_plot(mesh_data):
     
     observable = mfdnres.observable.Energy(
         (4,5),
-        mfdnres.data.LevelSelectorQN((1.5,1,1))
+        mfdnres.level.LevelQN((1.5,1,1))
     )
     
     # generate descriptor
@@ -442,62 +442,62 @@ def make_gallery(mesh_data):
         
         mfdnres.observable.Energy(
             (4,5),
-            mfdnres.data.LevelSelectorQN((1.5,1,1))
+            mfdnres.level.LevelQN((1.5,1,1))
         ) : (-60.0, -40.0),
 
         mfdnres.observable.Isospin(
             (4,5),
-            mfdnres.data.LevelSelectorQN((1.5,1,1))
+            mfdnres.level.LevelQN((1.5,1,1))
         ) : (0., 1.0),
         
         mfdnres.observable.LevelIndex(
             (4,5),
-            mfdnres.data.LevelSelectorQN((1.5,1,1))
+            mfdnres.level.LevelQN((1.5,1,1))
         ) : (0., 1.5),
 
         mfdnres.observable.Radius(
             (4,5),
             "rp",
-            mfdnres.data.LevelSelectorQN((1.5,1,1))
+            mfdnres.level.LevelQN((1.5,1,1))
         ) : (0., 3.5),
         
         mfdnres.observable.Moment(
             (4,5),
             "M1",
-            mfdnres.data.LevelSelectorQN((1.5,1,1))
+            mfdnres.level.LevelQN((1.5,1,1))
         ) : (-1.5, 0.),
 
         mfdnres.observable.Moment(
             (4,5),
             "M1lp",
-            mfdnres.data.LevelSelectorQN((1.5,1,1))
+            mfdnres.level.LevelQN((1.5,1,1))
         ) : (0., 0.5),
         
         mfdnres.observable.Moment(
             (4,5),
             "E2",
-            mfdnres.data.LevelSelectorQN((1.5,1,1))
+            mfdnres.level.LevelQN((1.5,1,1))
         ) : (0., 10.0),
         
         mfdnres.observable.RME(
             (4,5),
             "M1",
-            mfdnres.data.LevelSelectorQN((1.5,1,1)),
-            mfdnres.data.LevelSelectorQN((2.5,1,1)),
+            mfdnres.level.LevelQN((1.5,1,1)),
+            mfdnres.level.LevelQN((2.5,1,1)),
         ) : (-3., 3.),
 
         mfdnres.observable.RTP(
             (4,5),
             "E2",
-            mfdnres.data.LevelSelectorQN((1.5,1,1)),
-            mfdnres.data.LevelSelectorQN((2.5,1,1)),
+            mfdnres.level.LevelQN((1.5,1,1)),
+            mfdnres.level.LevelQN((2.5,1,1)),
         ) : (0., 40.),
 
         mfdnres.observable.RTP(
             (4,5),
             "M1",
-            mfdnres.data.LevelSelectorQN((1.5,1,1)),
-            mfdnres.data.LevelSelectorQN((2.5,1,1)),
+            mfdnres.level.LevelQN((1.5,1,1)),
+            mfdnres.level.LevelQN((2.5,1,1)),
         ) : (0., 0.7),
 
         
@@ -506,11 +506,11 @@ def make_gallery(mesh_data):
         mfdnres.observable.Difference(
             mfdnres.observable.Energy(
                 (4,5),
-                mfdnres.data.LevelSelectorQN((2.5,1,1))
+                mfdnres.level.LevelQN((2.5,1,1))
             ),
             mfdnres.observable.Energy(
                 (4,5),
-                mfdnres.data.LevelSelectorQN((1.5,1,1))
+                mfdnres.level.LevelQN((1.5,1,1))
             ),
         ) : (0.0, 3.2),
         
@@ -519,21 +519,21 @@ def make_gallery(mesh_data):
             mfdnres.observable.Difference(
                 mfdnres.observable.Energy(
                     (4,5),
-                    mfdnres.data.LevelSelectorQN((3.5,1,1))
+                    mfdnres.level.LevelQN((3.5,1,1))
                 ),
                 mfdnres.observable.Energy(
                     (4,5),
-                    mfdnres.data.LevelSelectorQN((1.5,1,1))
+                    mfdnres.level.LevelQN((1.5,1,1))
                 ),
             ),
             mfdnres.observable.Difference(
                 mfdnres.observable.Energy(
                     (4,5),
-                    mfdnres.data.LevelSelectorQN((2.5,1,1))
+                    mfdnres.level.LevelQN((2.5,1,1))
                 ),
                 mfdnres.observable.Energy(
                     (4,5),
-                    mfdnres.data.LevelSelectorQN((1.5,1,1))
+                    mfdnres.level.LevelQN((1.5,1,1))
                 ),
             ),
             observable_label_delimiters = (("[","]"),("[","]"))
@@ -548,7 +548,7 @@ def make_gallery(mesh_data):
             mesh_data, observable,
             selector =  {"interaction": interaction, "coulomb": coulomb},
             Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range,
-            verbose = True
+            verbose = False  # set to True if debugging new observable
             )
        
         # write data
@@ -628,8 +628,8 @@ def make_survey_plot(mesh_data):
             
             # define observable
             observable = mfdnres.observable.Difference(
-                mfdnres.observable.Energy(nuclide, mfdnres.data.LevelSelectorQN(qn)),
-                mfdnres.observable.Energy(nuclide, mfdnres.data.LevelSelectorQN(qn_ref)),
+                mfdnres.observable.Energy(nuclide, mfdnres.level.LevelQN(qn)),
+                mfdnres.observable.Energy(nuclide, mfdnres.level.LevelQN(qn_ref)),
             )
 
             # first pass over columns -- tabulate
@@ -754,11 +754,11 @@ def make_multipanel_plot(mesh_data):
             # energies
             mfdnres.observable.Energy(
                 (4,5),
-                mfdnres.data.LevelSelectorQN((1.5,1,1))
+                mfdnres.level.LevelQN((1.5,1,1))
             ),
             mfdnres.observable.Energy(
                 (4,5),
-                mfdnres.data.LevelSelectorQN((2.5,1,1))
+                mfdnres.level.LevelQN((2.5,1,1))
             ),
         ],
 
@@ -767,11 +767,11 @@ def make_multipanel_plot(mesh_data):
             mfdnres.observable.Difference(
                 mfdnres.observable.Energy(
                     (4,5),
-                    mfdnres.data.LevelSelectorQN((2.5,1,1))
+                    mfdnres.level.LevelQN((2.5,1,1))
                 ),
                 mfdnres.observable.Energy(
                     (4,5),
-                    mfdnres.data.LevelSelectorQN((1.5,1,1))
+                    mfdnres.level.LevelQN((1.5,1,1))
                 ),
             ),
         ],
@@ -781,14 +781,14 @@ def make_multipanel_plot(mesh_data):
             mfdnres.observable.RTP(
                 (4,5),
                 "E2p",
-                mfdnres.data.LevelSelectorQN((1.5,1,1)),
-                mfdnres.data.LevelSelectorQN((2.5,1,1)),
+                mfdnres.level.LevelQN((1.5,1,1)),
+                mfdnres.level.LevelQN((2.5,1,1)),
             ),
             mfdnres.observable.RTP(
                 (4,5),
                 "E2p",
-                mfdnres.data.LevelSelectorQN((1.5,1,1)),
-                mfdnres.data.LevelSelectorQN((3.5,1,1)),
+                mfdnres.level.LevelQN((1.5,1,1)),
+                mfdnres.level.LevelQN((3.5,1,1)),
             ),
         ],
 
@@ -798,14 +798,14 @@ def make_multipanel_plot(mesh_data):
                 mfdnres.observable.RTP(
                     (4,5),
                     "E2p",
-                    mfdnres.data.LevelSelectorQN((1.5,1,1)),
-                    mfdnres.data.LevelSelectorQN((2.5,1,1)),
+                    mfdnres.level.LevelQN((1.5,1,1)),
+                    mfdnres.level.LevelQN((2.5,1,1)),
                 ),
                 mfdnres.observable.RTP(
                     (4,5),
                     "E2p",
-                    mfdnres.data.LevelSelectorQN((1.5,1,1)),
-                    mfdnres.data.LevelSelectorQN((3.5,1,1)),
+                    mfdnres.level.LevelQN((1.5,1,1)),
+                    mfdnres.level.LevelQN((3.5,1,1)),
                 ),
             ),
         ],
@@ -978,11 +978,11 @@ def make_teardrop_plot(mesh_data):
     # plot contents
     nuclide = (4,5)
     observable_list = [
-        mfdnres.observable.Moment((4,5), "M1", mfdnres.data.LevelSelectorQN((1.5,1,1))),
-        mfdnres.observable.Moment((4,5), "M1lp", mfdnres.data.LevelSelectorQN((1.5,1,1))),
-        mfdnres.observable.Moment((4,5), "M1ln", mfdnres.data.LevelSelectorQN((1.5,1,1))),
-        mfdnres.observable.Moment((4,5), "M1sp", mfdnres.data.LevelSelectorQN((1.5,1,1))),
-        mfdnres.observable.Moment((4,5), "M1sn", mfdnres.data.LevelSelectorQN((1.5,1,1))),
+        mfdnres.observable.Moment((4,5), "M1", mfdnres.level.LevelQN((1.5,1,1))),
+        mfdnres.observable.Moment((4,5), "M1lp", mfdnres.level.LevelQN((1.5,1,1))),
+        mfdnres.observable.Moment((4,5), "M1ln", mfdnres.level.LevelQN((1.5,1,1))),
+        mfdnres.observable.Moment((4,5), "M1sp", mfdnres.level.LevelQN((1.5,1,1))),
+        mfdnres.observable.Moment((4,5), "M1sn", mfdnres.level.LevelQN((1.5,1,1))),
         ]
 
     # initialize plot

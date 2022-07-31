@@ -37,6 +37,8 @@
     - 06/09/22 (mac/aem): Add LevelSelectorOverride.
     - 06/21/22 (mac): Add nuclide_str() and qn_str().
     - 07/24/22 (mac): Provide traceback diagnostics for failed level selection in resolve_qn().
+    - 07/30/22 (mac): Provide support for observable.Observable objects in tabulation/plotting.
+    - 07/31/22 (mac): Move LevelSelector out to submodule level.
 """
 
 import collections
@@ -51,6 +53,7 @@ import re
 
 from . import (
     analysis,
+    level,
     ## observable,
     tools
 )
@@ -281,7 +284,7 @@ def nuclide_observable_descriptor(nuclide_observable):
     (observable_type,observable_operator,observable_qn_list) = unpack_observable(observable)
     qn_list_str = "-".join([
         (
-            observable_qn.descriptor_str if isinstance(observable_qn,LevelSelector)
+            observable_qn.descriptor_str if isinstance(observable_qn,level.Level)
             else qn_str(observable_qn) if type(observable_qn) is tuple
             else str(observable_qn)  # fall through (e.g., for integer)
         )
@@ -541,7 +544,7 @@ HW_AXIS_LABEL_TEXT = r"$\hbar\omega~(\mathrm{MeV})$"
 NMAX_AXIS_LABEL_TEXT = r"$N_{\mathrm{max}}$"
 
 ################################################################
-# tools for dispatching LevelSelector or traditional quantum numbers
+# tools for dispatching level.Level or traditional quantum numbers
 ################################################################
 
 def resolve_qn(results_data, level_selector, verbose=False):
@@ -551,7 +554,7 @@ def resolve_qn(results_data, level_selector, verbose=False):
 
         results_data (mfdnres.ResultsData): Results data
 
-        level_selector (tuple): (J,g,n) tuple or LevelSelector object
+        level_selector (tuple): (J,g,n) tuple or level.Level object
 
     Returns:
 
@@ -560,7 +563,7 @@ def resolve_qn(results_data, level_selector, verbose=False):
     """
     if isinstance(level_selector, tuple):
         resolved_qn = level_selector
-    elif isinstance(level_selector, LevelSelector):
+    elif isinstance(level_selector, level.Level):
         try:
             resolved_qn = level_selector.select_level(results_data)
         except Exception as err:
@@ -580,7 +583,7 @@ def resolve_qn_text(level_selector):
 
         results_data (mfdnres.ResultsData): Results data
 
-        level_selector (list): (J,g,n) or LevelSelector object
+        level_selector (list): (J,g,n) or level.Level object
 
     Returns:
 
@@ -590,7 +593,7 @@ def resolve_qn_text(level_selector):
 
     if isinstance(level_selector,tuple):
         label = qn_text(level_selector)
-    elif isinstance(level_selector,LevelSelector):
+    elif isinstance(level_selector,level.Level):
         label = level_selector.label_text
     else:
         raise(TypeError("Unexpected value for level selector"))
@@ -598,330 +601,10 @@ def resolve_qn_text(level_selector):
     return label
 
 ################################################################
-# LevelSelector interface
+# observable registry (legacy)
 ################################################################
 
-class LevelSelector(object):
-    """Select level from ResultsData spectrum.
-
-    This is an interface class, not meant to be instantiated directly.
-
-    For any daughter class, which we shall generically call LevelSelector,
-    LevelSelector(args) constructs a level selector object.  Given a ResultsData
-    object (or some daughter thereof), level_selector.select_level(results_data)
-    selects a level based on the criteria specified via args, and returns the
-    quantum number tuple (J,g,n) for the selected level (or None).
-
-    Methods:
-
-        level (ResultsData -> tuple): Retrieve level QN (or None) from given ResultsData
-
-    Properties:
-
-        descriptor_str (str): Text string describing level
-
-        label_text (str): Formatted LaTeX text representing selected level
-
-    """
-
-    def __init__(self):
-        """ Null initialize."""
-        pass
-
-    def select_level(self, results_data):
-        """ Retrieve level.
-        """
-        return None
-
-    @property
-    def descriptor_str(self):
-        """ Provide text string for use in descriptors.
-        """
-        return ""
-
-    @property
-    def label_text(self):
-        """ Provide LaTeX label.
-        """
-        return ""
-
-
-################################################################
-# level selection by quantum numbers (trivial) -- (J,g,n)
-################################################################
-
-class LevelSelectorQN(LevelSelector):
-    """Provides trivial level selector for given quantum numbers.
-
-    Simply returns the given quantum numbers, unless the level is not found, in
-    which case None is returned.
-
-    """
-
-    def __init__(self, qn):
-        """ Initialize with given parameters.
-
-        Arguments:
-
-            qn (tuple): (J, g, n)
-        """
-        super().__init__()
-        self._qn = qn
-
-    def select_level(self, results_data):
-        """ Retrieve level.
-        """
-
-        if self._qn not in results_data.levels:
-            return None
-
-        return self._qn
-
-    @property
-    def descriptor_str(self):
-        """ Provide text string for use in descriptors.
-        """
-        text = qn_str(self._qn)
-        return text
-
-    @property
-    def label_text(self):
-        """ Provide LaTeX label.
-        """
-
-        label = qn_text(self._qn)
-        return label
-
-################################################################
-# level selection within isosopin suspace -- (J,g,n,T)
-################################################################
-
-class LevelSelectorQNT(LevelSelector):
-    """Provides level selector within given isospin subspace.
-
-    Returns level of given quantum numbers within given isospin subspace.
-
-    Uses effective isospin from <T^2>, and bins by <T^2>, with the boundary
-    between T1 and T2 occurring at [T1*(T1+1)+T2*(T2+1)]/2.  For the ideal case
-    where states of isospin differing by unity undergo pure two-state mixing,
-    this ensures that the crossover in identification happens at a mixing angle
-    of 45 deg.
-
-    """
-
-    def __init__(self, qnT, debug=False):
-        """ Initialize with given parameters.
-
-        Arguments:
-            qnT (tuple): (J, g, n_for_T, T)
-        """
-        super().__init__()
-        self._qnT = qnT
-        self._debug = debug
-
-    def select_level(self, results_data):
-        """ Retrieve level.
-        """
-
-        # recover quantum numbers for sought level
-        J, g, n_for_T, T = self._qnT
-
-        # set up binning
-        T_lower = T-1
-        T_upper = T+1
-        if T_lower < 0. :
-            T_bound_lower = 0.  # assumes inclusive lower bound and positive definite result for comparison
-        else:
-            T_bound_lower = tools.effective_am((T_lower*(T_lower+1)+T*(T+1))/2)
-        T_bound_upper = tools.effective_am((T_upper*(T_upper+1)+T*(T+1))/2)
-
-        # scan for sought level
-        current_n = 0
-        current_n_for_T = 0
-        while current_n_for_T < n_for_T:
-            current_n +=1
-            current_qn = (J,g,current_n)
-            current_T = results_data.get_isospin(current_qn)
-            if self._debug:
-                print("T {} {} {}: {}".format(T,T_bound_lower,T_bound_upper,current_T))
-            if np.isnan(current_T):
-                return None  # ran out of levels
-            if T_bound_lower <= current_T < T_bound_upper:
-                current_n_for_T += 1
-        return current_qn
-
-    @property
-    def descriptor_str(self):
-        """ Provide text string for use in descriptors."""
-        text = "{:04.1f}-{:1d}-{:02d}-T{:04.1f}".format(*self._qnT)
-        return text
-
-    @property
-    def label_text(self):
-        """ Provide LaTeX label.
-        """
-
-        J, g, n_for_T, T = self._qnT
-
-        # format using J;T notation
-        ## twice_T=int(2*T)
-        ## T_str = "{}/2".format(twice_T) if twice_T % 2 else twice_T//2
-        ## label = "{};{}".format(mfdnres.data.qn_text((J, g, n_for_T)), T_str)
-
-        # format using J_{T=...} notation
-        twice_J=int(2*J)
-        J_str = "{}/2".format(twice_J) if twice_J % 2 else twice_J//2
-        P_str = "+" if g==0 else "-"
-        n_str = "{:d}".format(n_for_T)
-        twice_T=int(2*T)
-        T_str = "{}/2".format(twice_T) if twice_T % 2 else twice_T//2
-
-        label = r"{{{}}}^{{{}}}_{{{};T={}}}".format(J_str,P_str,n_str,T_str)
-        return label
-
-################################################################
-# level selection override
-################################################################
-
-class LevelSelectorOverride(LevelSelector):
-    """Provides level selector which overrides another level selector for selected mesh points.
-
-    Level descriptor and label are passed through untouched.
-
-    Example:
-
-        mfdnres.data.LevelSelectorOverride(
-            mfdnres.data.LevelSelectorQN((0.0,0,1)),
-            ("Nmax","hw"),
-            {(10,15.): (0.0,0,2)},
-            verbose = True,
-        )
-
-    """
-
-    def __init__(self, base_level_selector, key_fields, qn_by_key, verbose=False):
-        """Initialize with given parameters.
-
-        Arguments:
-
-            base_level_selector(mfdnres.data.LevelSelector): Level selector to
-            use if no override applies
-
-            key_fields (tuple of str): Names of parameters from which to construct key
-
-            qn_by_key (dict): Mapping from key to (J,g,n) for overrides
-
-        """
-        super().__init__()
-        self._base_level_selector = base_level_selector
-        self._key_fields = key_fields
-        self._qn_by_key = qn_by_key
-        self._verbose = verbose
-        print("Set verbose to {}".format(verbose))
-
-    def select_level(self, results_data):
-        """ Retrieve level.
-        """
-
-        if self._verbose:
-            print("Mesh point {}".format(results_data.params))
-
-        # recover quantum numbers for sought level
-        key = analysis.extract_key(self._key_fields, results_data)
-        if key in self._qn_by_key:
-            qn = self._qn_by_key[key]
-        else:
-            qn = self._base_level_selector.select_level(results_data)
-
-        # validate as existing level
-        if qn not in results_data.levels:
-            qn = None
-
-        if self._verbose:
-            print("key {} qn {}".format(key, qn))
-
-        return qn
-
-    @property
-    def descriptor_str(self):
-        """ Provide text string for use in descriptors."""
-        text = self._base_level_selector.descriptor_str
-        return text
-
-    @property
-    def label_text(self):
-        """ Provide LaTeX label.
-        """
-        label = self._base_level_selector.label_text
-        return label
-
-
-###############################################################
-# ObservableExtractor interface
-################################################################
-
-class ObservableExtractor(object):
-    """Object to extract observable from ResultsData.
-
-    This is an interface class.
-
-    For any daughter class, which we shall generically call ObservableExtractor,
-    ObservableExtractor(args) constructs an observable extractor object.  Given
-    a ResultsData object (or some daughter thereof),
-    observable_extractor.observable(results_data) returns the numerical
-    observable data (or np.nan).
-
-    Methods:
-
-        observable (ResultsData -> float OR np.array): Retrieve observable (or
-        np.nan) from given ResultsData
-
-    Properties:
-
-        descriptor_str (str): Text string describing observable
-
-        observable_label_text (str): Formatted LaTeX text representing
-            observable, to be interpreted in math mode
-
-        axis_label_text (str, str): Formatted LaTeX text representing axis label
-
-            observable (str): observable label string, to be interpreted in math mode
-            units (str): units string, to be interpreted in math mode, or None
-
-    """
-
-    def __init__(self):
-        """ Null initialize."""
-        pass
-
-    def observable(self, results_data):
-        """ Extract observable.
-        """
-        return np.nan
-
-    @property
-    def descriptor_str(self):
-        """ Text string describing observable.
-        """
-        return ""
-
-    @property
-    def observable_label_text(self):
-        """ Formatted LaTeX text representing observable.
-        """
-        return ""
-
-    @property
-    def axis_label_text(self):
-        """ Formatted LaTeX text representing axis label.
-        """
-        observable_str = r""
-        units_str = None
-        return observable_str, units_str
-
-################################################################
-# observable registry
-################################################################
+# Legacy observable extractors are deprecated in favor of observable.Observable.
 
 Observable = collections.namedtuple('Observable', ["extractor_generator", "observable_label_generator", "axis_label_generator"])
 
@@ -965,12 +648,10 @@ def register_observable(observable_type, observable):
     OBSERVABLE_BY_OBSERVABLE_TYPE[observable_type] = observable
 
 ################################################################
-# observable implementations
+# observable implementations (legacy)
 ################################################################
 
-# TODO 04/08/22 (mac): finish upgrading observables to handle LevelSelector in place of qn
-
-# TODO 04/17/22 (mac): deprecate in favor of ObservableExtractor
+# TODO 04/08/22 (mac): finish upgrading observables to handle level.Level in place of qn
 
 # DEBUGGING: If an extractor fails and raises an exception, this will not be
 # seen, since all exceptions are caught by ncci.analysis.make_obs_table, which
@@ -1961,7 +1642,7 @@ def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**kwarg
     # panel label
     if isinstance(nuclide_observable, tuple):
         nuclide_text = make_nuclide_text(nuclide_observable)
-        observable_text = make_observable_text(nuclide_observable),
+        observable_text = make_observable_text(nuclide_observable)
     else:
         ##if isinstance(nuclide_observable, observable.Observable):
         nuclide_text = nuclide_observable.nuclide_label_text
