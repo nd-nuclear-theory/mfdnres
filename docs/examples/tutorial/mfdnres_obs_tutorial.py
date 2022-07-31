@@ -469,16 +469,22 @@ def make_gallery(mesh_data):
 
         mfdnres.observable.Moment(
             (4,5),
+            "M1lp",
+            mfdnres.data.LevelSelectorQN((1.5,1,1))
+        ) : (0., 0.5),
+        
+        mfdnres.observable.Moment(
+            (4,5),
             "E2",
             mfdnres.data.LevelSelectorQN((1.5,1,1))
         ) : (0., 10.0),
         
         mfdnres.observable.RME(
             (4,5),
-            "E2",
+            "M1",
             mfdnres.data.LevelSelectorQN((1.5,1,1)),
             mfdnres.data.LevelSelectorQN((2.5,1,1)),
-        ) : (-20., 20.),
+        ) : (-3., 3.),
 
         mfdnres.observable.RTP(
             (4,5),
@@ -486,45 +492,52 @@ def make_gallery(mesh_data):
             mfdnres.data.LevelSelectorQN((1.5,1,1)),
             mfdnres.data.LevelSelectorQN((2.5,1,1)),
         ) : (0., 40.),
-        
+
+        mfdnres.observable.RTP(
+            (4,5),
+            "M1",
+            mfdnres.data.LevelSelectorQN((1.5,1,1)),
+            mfdnres.data.LevelSelectorQN((2.5,1,1)),
+        ) : (0., 0.7),
+
         
         # derived observables
         
-        ## mfdnres.observable.Difference(
-        ##     mfdnres.observable.Energy(
-        ##         (4,5),
-        ##         mfdnres.data.LevelSelectorQN((2.5,1,1))
-        ##     ),
-        ##     mfdnres.observable.Energy(
-        ##         (4,5),
-        ##         mfdnres.data.LevelSelectorQN((1.5,1,1))
-        ##     ),
-        ## ) : (0.0, 3.2),
-        ## 
-        ## 
-        ## mfdnres.observable.Ratio(
-        ##     mfdnres.observable.Difference(
-        ##         mfdnres.observable.Energy(
-        ##             (4,5),
-        ##             mfdnres.data.LevelSelectorQN((3.5,1,1))
-        ##         ),
-        ##         mfdnres.observable.Energy(
-        ##             (4,5),
-        ##             mfdnres.data.LevelSelectorQN((1.5,1,1))
-        ##         ),
-        ##     ),
-        ##     mfdnres.observable.Difference(
-        ##         mfdnres.observable.Energy(
-        ##             (4,5),
-        ##             mfdnres.data.LevelSelectorQN((2.5,1,1))
-        ##         ),
-        ##         mfdnres.observable.Energy(
-        ##             (4,5),
-        ##             mfdnres.data.LevelSelectorQN((1.5,1,1))
-        ##         ),
-        ##     ),
-        ##     observable_label_delimiters = (("[","]"),("[","]"))
-        ## )  : (0.0, 3.2),
+        mfdnres.observable.Difference(
+            mfdnres.observable.Energy(
+                (4,5),
+                mfdnres.data.LevelSelectorQN((2.5,1,1))
+            ),
+            mfdnres.observable.Energy(
+                (4,5),
+                mfdnres.data.LevelSelectorQN((1.5,1,1))
+            ),
+        ) : (0.0, 3.2),
+        
+        
+        mfdnres.observable.Ratio(
+            mfdnres.observable.Difference(
+                mfdnres.observable.Energy(
+                    (4,5),
+                    mfdnres.data.LevelSelectorQN((3.5,1,1))
+                ),
+                mfdnres.observable.Energy(
+                    (4,5),
+                    mfdnres.data.LevelSelectorQN((1.5,1,1))
+                ),
+            ),
+            mfdnres.observable.Difference(
+                mfdnres.observable.Energy(
+                    (4,5),
+                    mfdnres.data.LevelSelectorQN((2.5,1,1))
+                ),
+                mfdnres.observable.Energy(
+                    (4,5),
+                    mfdnres.data.LevelSelectorQN((1.5,1,1))
+                ),
+            ),
+            observable_label_delimiters = (("[","]"),("[","]"))
+        )  : (0.0, 3.2),
         
     }    
 
