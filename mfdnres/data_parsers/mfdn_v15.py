@@ -24,6 +24,8 @@
     10/12/21 (pjf): Warn if file is empty.
 """
 
+from __future__ import annotations
+
 import itertools
 
 import numpy as np
@@ -34,6 +36,10 @@ from .. import (
     tools,
     )
 
+from ..mfdn_results_data import (
+    MFDnResultsData,  # for typing
+)
+
 
 ################################################################
 # global state :(
@@ -43,7 +49,7 @@ from .. import (
 #     for negative parity); required for generating (J,g,n) quantum
 #     number labels
 
-k_parameter_g = None
+k_parameter_g:int = None
 
 ################################################################
 # parsing utility
@@ -98,7 +104,7 @@ def split_mfdn_results_line(tokenized_line):
 # section handlers
 ################################################################
 
-def parse_params(self,tokenized_lines):
+def parse_params(self:MFDnResultsData,tokenized_lines):
     """
     Parse any section containing key-value pairs to add to params dictionary.
 
@@ -186,7 +192,7 @@ def parse_params(self,tokenized_lines):
     # update to params dictionary
     self.params.update(key_value_dict)
 
-def parse_energies(self,tokenized_lines):
+def parse_energies(self:MFDnResultsData,tokenized_lines):
     """ Parse energies.
 
     Globals:
@@ -221,7 +227,7 @@ def parse_energies(self,tokenized_lines):
         self.mfdn_level_residuals[qn] = error
         self.mfdn_level_properties["T"][qn] = T
 
-def parse_decompositions_Nex(self,tokenized_lines):
+def parse_decompositions_Nex(self:MFDnResultsData,tokenized_lines):
     """Parse Nex decomposition.
 
     Unstable feature: Note only alternate Nex values are output by
@@ -238,7 +244,7 @@ def parse_decompositions_Nex(self,tokenized_lines):
         (qn,data) = split_mfdn_results_line(tokenized_line)
         self.mfdn_level_decompositions["Nex"][qn]=data
 
-def parse_generic_static_properties(self,tokenized_lines,container,property_names):
+def parse_generic_static_properties(self:MFDnResultsData,tokenized_lines,container,property_names):
     """Parse generic static properties given list of property names for the data columns.
 
     Arguments:
@@ -256,19 +262,19 @@ def parse_generic_static_properties(self,tokenized_lines,container,property_name
             property_name = property_names[property_index]
             container[property_name][qn]=data[property_index]
 
-def parse_M1_moments(self,tokenized_lines):
+def parse_M1_moments(self:MFDnResultsData,tokenized_lines):
     """Parse M1 moments.
     """
     property_names = ["M1","Dlp","Dln","Dsp","Dsn"]
     parse_generic_static_properties(self,tokenized_lines,self.mfdn_ob_moments,property_names)
 
-def parse_E2_moments(self,tokenized_lines):
+def parse_E2_moments(self:MFDnResultsData,tokenized_lines):
     """Parse E2 moments.
     """
     property_names = ["E2p","E2n"]
     parse_generic_static_properties(self,tokenized_lines,self.mfdn_ob_moments,property_names)
 
-def parse_angular_momenta(self,tokenized_lines):
+def parse_angular_momenta(self:MFDnResultsData,tokenized_lines):
     """Parse squared angular momenta.
     """
 
@@ -280,7 +286,7 @@ def parse_angular_momenta(self,tokenized_lines):
         property_names = ["L_sqr","S_sqr","Lp_sqr","Sp_sqr","Ln_sqr","Sn_sqr","J_sqr"]
     parse_generic_static_properties(self,tokenized_lines,self.mfdn_level_properties,property_names)
 
-def parse_radii(self,tokenized_lines):
+def parse_radii(self:MFDnResultsData,tokenized_lines):
     """Parse radii.
     """
     if len(tokenized_lines[0])==7:
@@ -293,13 +299,13 @@ def parse_radii(self,tokenized_lines):
         property_names = ["rp","rn","r","rpp","rnn","rpn"]
     parse_generic_static_properties(self,tokenized_lines,self.mfdn_tb_expectations,property_names)
 
-def parse_other_tbo(self,tokenized_lines):
+def parse_other_tbo(self:MFDnResultsData,tokenized_lines):
     """Parse other two-body observables.
     """
     property_names = self.params["tbo_names"][1:]
     parse_generic_static_properties(self,tokenized_lines,self.mfdn_tb_expectations,property_names)
 
-def parse_mfdn_ob_rmes(self, tokenized_lines):
+def parse_mfdn_ob_rmes(self:MFDnResultsData, tokenized_lines):
     """Parse native transition output.
     """
     transition_classes = {
@@ -346,7 +352,7 @@ def parse_postprocessor_ob_rmes_legacy(self, tokenized_lines):
             transition_dict = self.postprocessor_ob_rmes.setdefault(transition_type, dict())
             transition_dict[Jgn_pair_canonical] = canonicalization_factor*value
 
-def parse_postprocessor_generic_rmes(self,tokenized_lines,container):
+def parse_postprocessor_generic_rmes(self:MFDnResultsData,tokenized_lines,container:dict[str,results_data.RMEData]):
     """Parse generic (ob or tb) postprocessor rmes.
 
     Arguments:
@@ -368,12 +374,12 @@ def parse_postprocessor_generic_rmes(self,tokenized_lines,container):
         rme_dict[Jgn_pair_canonical] = canonicalization_factor*rme
 
 
-def parse_postprocessor_ob_rmes(self, tokenized_lines):
+def parse_postprocessor_ob_rmes(self:MFDnResultsData, tokenized_lines):
     """Parse obscalc-ob output for a one-body observable.
     """
     parse_postprocessor_generic_rmes(self, tokenized_lines, self.postprocessor_ob_rmes)
 
-def parse_postprocessor_tb_rmes(self, tokenized_lines):
+def parse_postprocessor_tb_rmes(self:MFDnResultsData, tokenized_lines):
     """Parse postprocessor output (as digested by the scripting) for a two-body observable.
     """
     parse_postprocessor_generic_rmes(self, tokenized_lines, self.postprocessor_tb_rmes)
@@ -405,7 +411,7 @@ section_handlers = {
 # parsing control code
 ################################################################
 
-def parse_mesh_point(self,sections,section_handlers):
+def parse_mesh_point(self:MFDnResultsData,sections,section_handlers):
     """ Parse single mesh point into results object.
 
     Arguments:

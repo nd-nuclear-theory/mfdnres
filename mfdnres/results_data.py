@@ -13,7 +13,19 @@
     01/04/20 (mac): Convert num_eigenvalues from static data to property.
 """
 
+from __future__ import annotations
+
+import collections
+import typing
 import numpy as np
+
+# import for type hinting
+from .tools import (
+    SubspaceType,
+    LevelQNType,
+    LevelQNPairType,
+    OperatorQNType,
+)
 
 #################################################
 # ResultsData
@@ -61,8 +73,12 @@ class ResultsData (object):
 
         [See definitions.]
 
-    
+
     """
+
+    params:dict
+    energies:dict[LevelQNType,float]
+    filename:str
 
     ########################################
     # Initializer
@@ -108,7 +124,7 @@ class ResultsData (object):
 
         """
         # tally up levels by subspace
-        num_eigenvalues_by_subspace={}
+        num_eigenvalues_by_subspace:dict[SubspaceType,int]={}
         for qn in self.energies.keys():
             (J,g,_)=qn
             num_eigenvalues_by_subspace[(J,g)]=num_eigenvalues_by_subspace.setdefault((J,g),0)+1
@@ -126,7 +142,7 @@ class ResultsData (object):
         raise DeprecationWarning("accessor get_levels() is deprecated; use property instead")
         return self.levels
 
-    def get_energy(self,qn,default=np.nan):
+    def get_energy(self,qn:LevelQNType,default=np.nan):
         """Retrieve the energy of the level with given quantum numbers.
 
         Returns a default "flag" value if the quantum numbers are not
@@ -146,7 +162,7 @@ class ResultsData (object):
     # Manipulators
     ########################################
 
-    def update(self,other):
+    def update(self,other:ResultsData):
         """Merge in data from other ResultsData object.
 
         Merges energy listing and updates eigenvalue count.  Metadata (params

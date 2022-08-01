@@ -40,6 +40,8 @@
     07/17/22 (mac): Deduce diagonal E0 RMEs from radius (or else suppress) in get_rme().
 """
 
+from __future__ import annotations
+
 import math
 
 import numpy as np
@@ -49,6 +51,12 @@ from . import (
     results_data,
     tools,
     )
+
+from .tools import (
+    SubspacePairType,
+    LevelQNType,
+    LevelQNPairType,
+)
 
 #################################################
 # helper function for merging observable dictionaries
@@ -101,7 +109,7 @@ class MFDnResultsData(results_data.ResultsData):
         num_eigenvalues (dict)
         filename (str)
 
-    Naming scheme for obserable attributes:
+    Naming scheme for observable attributes:
 
         <source=mfdn|postprocessor>_<particle-rank=level|ob|tb>_<observable-or-property-type>
 
@@ -211,6 +219,15 @@ class MFDnResultsData(results_data.ResultsData):
     # NEW
     #     => postprocessor_tb_rmes
 
+    mfdn_level_decompositions:dict[str,dict]
+    mfdn_level_residuals:dict[LevelQNType,float]
+    mfdn_level_properties:dict[str,dict[LevelQNType,float]]
+    mfdn_ob_moments:dict[str,dict[LevelQNType,float]]
+    mfdn_ob_rmes:dict[str,dict[LevelQNPairType,float]]
+    mfdn_tb_expectations:dict[str,dict[LevelQNType,float]]
+    postprocessor_ob_rmes:dict[str,dict[LevelQNPairType,float]]
+    postprocessor_tb_rmes:dict[str,dict[LevelQNPairType,float]]
+
     ########################################
     # Initializer
     ########################################
@@ -233,7 +250,7 @@ class MFDnResultsData(results_data.ResultsData):
     # Accessors
     ########################################
 
-    def get_isospin(self,qn,default=np.nan,verbose=False):
+    def get_isospin(self,qn:LevelQNType,default=np.nan,verbose=False):
         """ Retrieve effective isospin T.
 
         Arguments:
@@ -252,7 +269,7 @@ class MFDnResultsData(results_data.ResultsData):
 
         return value
 
-    def get_decomposition(self,decomposition_type,qn,verbose=False):
+    def get_decomposition(self,decomposition_type,qn:LevelQNType,verbose=False):
         """ Retrieve decomposition ("Nex") as np.array.
 
         Arguments:
@@ -278,7 +295,7 @@ class MFDnResultsData(results_data.ResultsData):
 
         return decomposition
 
-    def get_radius(self,radius_type,qn,default=np.nan):
+    def get_radius(self,radius_type,qn:LevelQNType,default=np.nan):
         """Retrieve rms radius value.
 
         We use the value from two-body "Relative radii" calculation
@@ -327,7 +344,7 @@ class MFDnResultsData(results_data.ResultsData):
         return rms_radius
 
     def get_moment(
-        self, observable, qn,
+        self, observable:str, qn:LevelQNType,
         allow_mfdn_native=True, allow_moment_from_rme=True, allow_e0_from_radius=True,
         default=np.nan, verbose=False
     ):
@@ -367,7 +384,7 @@ class MFDnResultsData(results_data.ResultsData):
 
             allow_e0_from_radius (bool, optional): whether or not to enable
                 calculation of diagonal E0 rme from radius
- 
+
             default (float,optional): default value to return for missing observable
 
         Returns
@@ -388,7 +405,7 @@ class MFDnResultsData(results_data.ResultsData):
         """
 
         # TODO 07/27/22 (mac): bundle pass-through arguments into kwargs dict
-        
+
         if verbose:
             print("get_moment {} {}".format(observable,qn))
 
@@ -519,7 +536,7 @@ class MFDnResultsData(results_data.ResultsData):
             value = default
         return value
 
-    def get_am(self,am_type,qn,default=np.nan):
+    def get_am(self,am_type,qn:LevelQNType,default=np.nan) -> float:
         """Extract effective angular momentum value.
 
         Can be converted to effective angular momentum value with
@@ -551,10 +568,10 @@ class MFDnResultsData(results_data.ResultsData):
         return value
 
     def get_rme(
-            self, observable, qn_pair, rank="ob",
+            self, observable:str, qn_pair:LevelQNPairType, rank="ob",
             allow_mfdn_native=True, allow_rme_from_moment=True, allow_e0_from_radius=True,
             default=np.nan, verbose=False
-    ):
+    ) -> float:
         """Retrieve reduced matrix element (RME).
 
         Returns RME in Edmonds convention, as common for spectroscopic data
@@ -567,11 +584,11 @@ class MFDnResultsData(results_data.ResultsData):
 
         However, for one-body operators, in an oscillator run ("hw!=0"), the fallback
         options for deducing the RME are:
-        
+
            - MFDn native transition RME (mfdn v15b00) -- if allow_mfdn_native
-        
+
            - MFDn native moment (for M1/E2 diagonal matrix element) -- if allow_rme_from_moment
-        
+
         See discussion under get_moment for the relation to moments.  Note that
         the present get_rme invokes get_moment with allow_moment_from_rme
         disabled, and get_moment invokes the present get_rme with
@@ -620,7 +637,7 @@ class MFDnResultsData(results_data.ResultsData):
         # TODO 07/12/22 (mac): It would be useful to be able to deduce generic
         # TBO rmes from mfdn native two-body observable expectation values,
         # similar to the fall-throughs done for the ob observables.
-        # 
+        #
         # TODO 07/17/22 (mac): For diagonal E0 rme in CMF calculation, could apply
         # analytic cm correction, rather than simply suppressing.  However, this
         # is at least notionally redundant to using the calculated rms radius.
@@ -637,7 +654,7 @@ class MFDnResultsData(results_data.ResultsData):
             observable = OBSERVABLE_ALIASES[observable]
             if verbose:
                 print("    observable aliased to {}".format(observable))
-            
+
         # trap deduced observables
         if (observable in {"E20","E21"}):
             # isoscalar/isovector E2
@@ -837,7 +854,7 @@ class MFDnResultsData(results_data.ResultsData):
         return rme
 
     def get_rme_matrix(
-            self, observable, subspace_pair, dim_pair, rank="ob",
+            self, observable:str, subspace_pair:SubspacePairType, dim_pair, rank="ob",
             allow_mfdn_native=True, allow_rme_from_moment=True, allow_e0_from_radius=True,
             default=np.nan, verbose=False
     ):
@@ -893,7 +910,7 @@ class MFDnResultsData(results_data.ResultsData):
         return rme_matrix
 
     def get_rtp(
-            self, observable, qn_pair, rank="ob",
+            self, observable:str, qn_pair:LevelQNPairType, rank="ob",
             allow_mfdn_native=True, allow_rme_from_moment=True, allow_e0_from_radius=True,
             default=np.nan, verbose=False
     ):
@@ -932,7 +949,7 @@ class MFDnResultsData(results_data.ResultsData):
         return rtp
 
     def get_expectation_value(
-            self, observable, qn, rank="ob",
+            self, observable:str, qn:LevelQNType, rank="ob",
             allow_mfdn_native=True, allow_rme_from_moment=True, allow_e0_from_radius=True,
             default=np.nan, verbose=False
     ):
@@ -966,12 +983,12 @@ class MFDnResultsData(results_data.ResultsData):
         expectation_value = 1/am.hat(J)*rme
 
         return expectation_value
-    
+
     ########################################
     # Updating method
     ########################################
 
-    def update(self,other):
+    def update(self,other:MFDnResultsData):
         """Merge in data from other MFDnResultsData object.
 
         Behavior for inherited attributes (e.g., energies) is as defined by ResultsData.update().

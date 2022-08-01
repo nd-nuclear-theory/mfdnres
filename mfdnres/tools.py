@@ -20,10 +20,24 @@
 
 """
 
+from __future__ import annotations
+
 import enum
 import itertools
 import math
 import re
+import typing
+
+################################################################
+# type hints
+################################################################
+
+SubspaceType = tuple[float,int]
+SubspacePairType = tuple[SubspaceType,SubspaceType]
+NuclideType = tuple[int,int]
+LevelQNType = tuple[float,int,int]
+OperatorQNType = tuple[int,int,int]
+LevelQNPairType = tuple[LevelQNType,LevelQNType]
 
 ################################################################
 # filename construction
@@ -42,7 +56,7 @@ def dash_padded(text):
     padded_text = text if (text=="") else ("-"+text)
     return padded_text
 
-def nuclide_str(nuclide):
+def nuclide_str(nuclide:NuclideType):
     """Obtain standard zero-padded string representation of nuclide (Z,N).
 
     Result is intended for use in filenames.  Format is "Z00-N00".
@@ -57,7 +71,7 @@ def nuclide_str(nuclide):
 
     return "Z{nuclide[0]:02d}-N{nuclide[1]:02d}".format(nuclide=nuclide)
 
-def qn_str(qn,qualifier=""):
+def qn_str(qn:LevelQNType,qualifier=""):
     """Obtain standard zero-padded string representation of quantum numbers (J,g,n).
 
     Result is intended for use in filenames.  Format is "00.0-0-00".
@@ -513,7 +527,7 @@ class RMEConvention(enum.Enum):
     kEdmonds = 0
     kRose = 1
 
-def canonicalization_prescription_Jg(Jg_pair,rme_convention):
+def canonicalization_prescription_Jg(Jg_pair:SubspacePairType, rme_convention:RMEConvention) -> tuple[bool,float]:
     """Provide phase/normalization factor from canonicalization, assuming
     operator has spherical-harmonic-like conjugation properties (M1,
     E2, etc.).
@@ -556,13 +570,13 @@ def canonicalization_prescription_Jg(Jg_pair,rme_convention):
         # *after* swap (i.e., need canonical m.e. on RHS of assignment)
         (J_bra,_)=Jg_ket  # note swap
         (J_ket,_)=Jg_bra  # note swap
-        canonicalization_factor = (-1)**(J_ket-J_bra)
+        canonicalization_factor:float = (-1)**(J_ket-J_bra)
         if (rme_convention==RMEConvention.kRose):
             canonicalization_factor *= math.sqrt((2*J_bra+1)/(2*J_ket+1))
 
     return (flipped,canonicalization_factor)
 
-def canonicalize_Jg_pair(Jg_pair,rme_convention):
+def canonicalize_Jg_pair(Jg_pair:SubspacePairType, rme_convention:RMEConvention) -> tuple[SubspacePairType,bool,float]:
     """Put subspace labels in canonical order, and provide
     phase/normalization factor from canonicalization, assuming
     operator has spherical-harmonic-like conjugation properties (M1,
@@ -593,7 +607,7 @@ def canonicalize_Jg_pair(Jg_pair,rme_convention):
     return (Jg_pair_canonical,flipped,canonicalization_factor)
 
 
-def canonicalize_Jgn_pair(Jgn_pair,rme_convention):
+def canonicalize_Jgn_pair(Jgn_pair:LevelQNPairType, rme_convention:RMEConvention) -> tuple[LevelQNPairType,bool,float]:
     """Put state labels in canonical order, and provide
     phase/normalization factor from canonicalization, assuming
     operator has spherical-harmonic-like conjugation properties (M1,
@@ -642,7 +656,7 @@ def canonicalize_Jgn_pair(Jgn_pair,rme_convention):
 # calculate effective angular momentum
 ################################################################
 
-def effective_am(J_sqr):
+def effective_am(J_sqr:float):
     """  Convert mean square angular momentum to effective angular momentum.
 
     Args:
