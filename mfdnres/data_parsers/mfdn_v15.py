@@ -22,6 +22,7 @@
     09/17/20 (mac): Update data attribute names.  Add two-body obervable parser.
     09/25/21 (mac): Add support for parsing extended relative radii observables.
     10/12/21 (pjf): Warn if file is empty.
+    08/01/22 (pjf): Use RMEData for RME storage, storing operator quantum numbers.
 """
 
 from __future__ import annotations
@@ -31,6 +32,7 @@ import itertools
 import numpy as np
 
 from .. import (
+    results_data,
     mfdn_results_data,
     input,
     tools,
@@ -313,6 +315,12 @@ def parse_mfdn_ob_rmes(self:MFDnResultsData, tokenized_lines):
         "M1": ["M1", "Dlp", "Dln", "Dsp", "Dsn"],
         "E2": ["E2p", "E2n"],
     }
+    transition_type_qn:dict[str,tools.OperatorQNType] = {
+        "GTi(Z+1,N-1)": (1,0,-1), "GTi(Z-1,N+1)": (1,0,+1),
+        "GTf(Z+1,N-1)": (1,0,+1), "GTf(Z-1,N+1)": (1,0,-1),
+        "M1": (1,0,0), "Dlp": (1,0,0), "Dln": (1,0,0), "Dsp": (1,0,0), "Dsn": (1,0,0),
+        "E2p": (2,0,0), "E2n": (2,0,0),
+    }
 
     for tokenized_line in tokenized_lines:
         qnf = (float(tokenized_line[1]), k_parameter_g, int(tokenized_line[2]))
@@ -321,18 +329,19 @@ def parse_mfdn_ob_rmes(self:MFDnResultsData, tokenized_lines):
         data_iterable = list(map(float, tokenized_line[7:]))
         data = np.array(data_iterable, dtype=float)
 
-        # only store canonical pair
-        (Jgn_pair_canonical, flipped, canonicalization_factor) = tools.canonicalize_Jgn_pair(
-            (qnf, qni), tools.RMEConvention.kEdmonds
-        )
-
         # break out each component as a separate transition type
         transition_types = transition_classes[transition_class]
         for (transition_type, value) in zip(transition_types, data):
-            transition_dict = self.mfdn_ob_rmes.setdefault(transition_type, dict())
-            transition_dict[Jgn_pair_canonical] = canonicalization_factor*value
+            operator_qn = transition_type_qn[transition_type]
+            transition_dict = self.mfdn_ob_rmes.setdefault(
+                transition_type,
+                results_data.RMEData(qn=operator_qn,
+                    rme_convention=tools.RMEConvention.kEdmonds
+                )
+            )
+            transition_dict[(qnf,qni)] = value
 
-def parse_postprocessor_ob_rmes_legacy(self, tokenized_lines):
+def parse_postprocessor_ob_rmes_legacy(self:MFDnResultsData, tokenized_lines):
     """Parse obscalc-ob output for transitions (legacy tabular format).
 
     LEGACY: Old obscalc-ob format with multiple RMEs per line.
@@ -343,14 +352,12 @@ def parse_postprocessor_ob_rmes_legacy(self, tokenized_lines):
         qni = (float(tokenized_line[3]), int(tokenized_line[4]), int(tokenized_line[5]))
         data_iterable = map(float, tokenized_line[6:])
 
-        # only store canonical pair
-        (Jgn_pair_canonical, flipped, canonicalization_factor) = tools.canonicalize_Jgn_pair(
-            (qnf, qni), tools.RMEConvention.kEdmonds
-        )
-
         for (transition_type, value) in zip(names, data_iterable):
-            transition_dict = self.postprocessor_ob_rmes.setdefault(transition_type, dict())
-            transition_dict[Jgn_pair_canonical] = canonicalization_factor*value
+            transition_dict = self.postprocessor_ob_rmes.setdefault(
+                transition_type,
+                results_data.RMEData(rme_convention=tools.RMEConvention.kEdmonds)
+            )
+            transition_dict[(qnf,qni)] = value
 
 def parse_postprocessor_generic_rmes(self:MFDnResultsData,tokenized_lines,container:dict[str,results_data.RMEData]):
     """Parse generic (ob or tb) postprocessor rmes.
@@ -360,18 +367,16 @@ def parse_postprocessor_generic_rmes(self:MFDnResultsData,tokenized_lines,contai
         container (dict): dictionary to which rmes should be added
     """
     (J0, g0, Tz0, name) = tokenized_lines[0]
-    rme_dict = container.setdefault(name, dict())
+    rme_dict = container.setdefault(
+        name,
+        results_data.RMEData(qn=(J0,g0,Tz0), rme_convention=tools.RMEConvention.kEdmonds)
+    )
     for tokenized_line in tokenized_lines[1:]:
         qnf = (float(tokenized_line[0]), int(tokenized_line[1]), int(tokenized_line[2]))
         qni = (float(tokenized_line[3]), int(tokenized_line[4]), int(tokenized_line[5]))
         rme = float(tokenized_line[6])
 
-        # only store canonical pair
-        (Jgn_pair_canonical, flipped, canonicalization_factor) = tools.canonicalize_Jgn_pair(
-            (qnf, qni), tools.RMEConvention.kEdmonds
-        )
-
-        rme_dict[Jgn_pair_canonical] = canonicalization_factor*rme
+        rme_dict[(qnf,qni)] = rme
 
 
 def parse_postprocessor_ob_rmes(self:MFDnResultsData, tokenized_lines):

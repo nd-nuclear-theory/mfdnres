@@ -11,6 +11,7 @@
     09/06/18 (pjf): Replace get_levels() with levels property.
     05/29/19 (mac): Add update method.
     01/04/20 (mac): Convert num_eigenvalues from static data to property.
+    08/01/22 (pjf): Add RMEData class.
 """
 
 from __future__ import annotations
@@ -18,6 +19,10 @@ from __future__ import annotations
 import collections
 import typing
 import numpy as np
+
+from . import (
+    tools,
+)
 
 # import for type hinting
 from .tools import (
@@ -174,6 +179,88 @@ class ResultsData (object):
         """
 
         self.energies.update(other.energies)
+
+
+#################################################
+# RMEData
+#################################################
+
+class RMEData(collections.UserDict[LevelQNPairType,float]):
+    """Container for storing reduced matrix element data.
+
+    This class stores RMEs, operator metadata, and handles canonicalization
+    of quantum numbers where applicable. It mostly behaves like a normal dict.
+
+    Attributes:
+        data (dict, inherited): storage of RMEs
+        qn (tuple of int): J0,g0,Tz0 for operator
+        rme_convention (tools.RMEConvention): RME conjugation convention
+
+    Properties:
+        canonicalize (bool): whether or not quantum numbers should be
+            canonicalized for storage
+    """
+    data:dict[LevelQNPairType,float]
+    qn:typing.Optional[OperatorQNType]
+    rme_convention:tools.RMEConvention
+
+    def __init__(self, initialdata=None, *, qn=None, rme_convention=tools.RMEConvention.kEdmonds):
+        if initialdata:
+            super().__init__(initialdata)
+        else:
+            super().__init__()
+        self.qn = qn
+        self.rme_convention = rme_convention
+
+    @property
+    def canonicalize(self) -> bool:
+        if self.qn:
+            (J0,g0,Tz0) = self.qn
+            return (Tz0 == 0)
+        return True
+
+    def __getitem__(self, qn_pair:LevelQNPairType):
+        if self.canonicalize:
+            (qn_pair_canonical,_,canonicalization_factor) = tools.canonicalize_Jgn_pair(
+                qn_pair, self.rme_convention
+            )
+        else:
+            (qn_pair_canonical,_,canonicalization_factor) = (qn_pair,False,1.0)
+        return self.data[qn_pair_canonical]*canonicalization_factor
+
+    def __setitem__(self, qn_pair:LevelQNPairType, value:float):
+        if self.canonicalize:
+            (qn_pair_canonical,_,canonicalization_factor) = tools.canonicalize_Jgn_pair(
+                qn_pair, self.rme_convention
+            )
+        else:
+            (qn_pair_canonical,_,canonicalization_factor) = (qn_pair,False,1.0)
+        self.data[qn_pair_canonical] = value/canonicalization_factor
+
+    def __delitem__(self, qn_pair:LevelQNPairType):
+        if self.canonicalize:
+            (qn_pair_canonical,_,_) = tools.canonicalize_Jgn_pair(
+                qn_pair, self.rme_convention
+            )
+        else:
+            (qn_pair_canonical,_,_) = (qn_pair,False,1.0)
+        del self.data[qn_pair_canonical]
+
+    def update(self,other:RMEData):
+        """Update this RMEData with key-value pairs from other RMEData."""
+        # check compatibility of quantum numbers
+        if (self.qn is None) and (len(self.data) == 0):
+            # if we're default-initialized, it's safe to assume the other's qn
+            self.qn = other.qn
+        else:
+            if self.qn != other.qn:
+                raise ValueError(
+                    "cannot update RMEData from RMEData with different qn"
+                    f" {self.qn} != {other.qn}"
+                )
+        # merge actual data
+        self.data.update(other.data)
+
 
 #################################################
 # test code

@@ -38,11 +38,13 @@
     07/12/22 (mac): Provide support for two-body observables in get_rme().
     07/13/22 (mac): Add get_expectation_value().
     07/17/22 (mac): Deduce diagonal E0 RMEs from radius (or else suppress) in get_rme().
+    08/01/22 (pjf): Use RMEData for RME storage.
 """
 
 from __future__ import annotations
 
 import math
+import typing
 
 import numpy as np
 
@@ -62,7 +64,7 @@ from .tools import (
 # helper function for merging observable dictionaries
 #################################################
 
-def update_observable_dictionary(self_dict,other_dict):
+def update_observable_dictionary(self_dict,other_dict,dict_type:typing.Type=dict):
     """Merge two observable dictionaries of type name->qn->value.
 
     Allows for possibility that an observable name may exist only in
@@ -78,7 +80,7 @@ def update_observable_dictionary(self_dict,other_dict):
     for name in observables:
         # ensure observable exists in self_dict
         if (name not in self_dict.keys()):
-            self_dict[name] = {}
+            self_dict[name] = dict_type()
         # update observable from other_dict
         if name in other_dict.keys():
             self_dict[name].update(other_dict[name])
@@ -223,10 +225,10 @@ class MFDnResultsData(results_data.ResultsData):
     mfdn_level_residuals:dict[LevelQNType,float]
     mfdn_level_properties:dict[str,dict[LevelQNType,float]]
     mfdn_ob_moments:dict[str,dict[LevelQNType,float]]
-    mfdn_ob_rmes:dict[str,dict[LevelQNPairType,float]]
+    mfdn_ob_rmes:dict[str,results_data.RMEData]
     mfdn_tb_expectations:dict[str,dict[LevelQNType,float]]
-    postprocessor_ob_rmes:dict[str,dict[LevelQNPairType,float]]
-    postprocessor_tb_rmes:dict[str,dict[LevelQNPairType,float]]
+    postprocessor_ob_rmes:dict[str,results_data.RMEData]
+    postprocessor_tb_rmes:dict[str,results_data.RMEData]
 
     ########################################
     # Initializer
@@ -770,16 +772,8 @@ class MFDnResultsData(results_data.ResultsData):
                 value = Dsp-Dsn
             return value
 
-
-        # canonicalize labels
-        (qn_pair_canonical,flipped,canonicalization_factor) = tools.canonicalize_Jgn_pair(
-            qn_pair,tools.RMEConvention.kEdmonds
-        )
-        if (verbose):
-            print("    canonicalizing: observable {}, qn_pair {} => qn_pair_canonical {}".format(observable,qn_pair,qn_pair_canonical))
-
         # extract labels
-        (qn_bra,qn_ket) = qn_pair_canonical
+        (qn_bra,qn_ket) = qn_pair
         (J_bra,g_bra,n_bra) = qn_bra
         (J_ket,g_ket,n_ket) = qn_ket
 
@@ -807,9 +801,9 @@ class MFDnResultsData(results_data.ResultsData):
         rme = np.nan
         try:
             if rank == "ob":
-                rme = self.postprocessor_ob_rmes[observable][qn_pair_canonical]
+                rme = self.postprocessor_ob_rmes[observable][qn_pair]
             elif rank == "tb":
-                rme = self.postprocessor_tb_rmes[observable][qn_pair_canonical]
+                rme = self.postprocessor_tb_rmes[observable][qn_pair]
             if verbose:
                 print("    postprocessor lookup succeeded ({})".format(rme))
         except KeyError as err:
@@ -819,7 +813,7 @@ class MFDnResultsData(results_data.ResultsData):
         # else fall back on MFDn native transition
         if allow_mfdn_native and np.isnan(rme) and (self.params.get("hw", 0) != 0):
             try:
-                rme = self.mfdn_ob_rmes[observable][qn_pair_canonical]
+                rme = self.mfdn_ob_rmes[observable][qn_pair]
                 if verbose:
                     print("    mfdn rme native lookup succeeded ({})".format(rme))
             except KeyError as err:
@@ -829,9 +823,9 @@ class MFDnResultsData(results_data.ResultsData):
         # else fall back on MFDn native moment
         if (
                 allow_rme_from_moment and np.isnan(rme) and (self.params.get("hw", 0) != 0)
-                and qn_pair[0]==qn_pair[1] and observable in ["Dlp", "Dln","Dsp", "Dsn", "E2p", "E2n"]
+                and qn_bra==qn_ket and observable in ["Dlp", "Dln","Dsp", "Dsn", "E2p", "E2n"]
         ):
-            qn, _ = qn_pair
+            qn = qn_bra
             J, _, _ = qn
             if (observable in ["Dlp", "Dln","Dsp", "Dsn"]):
                 rme_prefactor = math.sqrt(4*math.pi/3)/am.hat(J)*math.sqrt((J)/((J + 1)))
@@ -842,10 +836,7 @@ class MFDnResultsData(results_data.ResultsData):
             rme = moment / rme_prefactor
             if verbose:
                 print("    mfdn moment retrieval completed (moment {} -> rme {})".format(moment, rme))
-                    
-        # apply phase factor to decanonicalize labels
-        rme *= canonicalization_factor
-        
+
         if verbose:
             print("    rme {:e}".format(rme))
 
@@ -1000,13 +991,13 @@ class MFDnResultsData(results_data.ResultsData):
         super().update(other)
 
         # merge observable dictionaries
-        update_observable_dictionary(self.mfdn_level_decompositions,other.mfdn_level_decompositions)
-        update_observable_dictionary(self.mfdn_level_properties,other.mfdn_level_properties)
-        update_observable_dictionary(self.mfdn_ob_moments,other.mfdn_ob_moments)
-        update_observable_dictionary(self.mfdn_ob_rmes,other.mfdn_ob_rmes)
-        update_observable_dictionary(self.mfdn_tb_expectations,other.mfdn_tb_expectations)
-        update_observable_dictionary(self.postprocessor_ob_rmes,other.postprocessor_ob_rmes)
-        update_observable_dictionary(self.postprocessor_tb_rmes,other.postprocessor_tb_rmes)
+        update_observable_dictionary(self.mfdn_level_decompositions,other.mfdn_level_decompositions,dict)
+        update_observable_dictionary(self.mfdn_level_properties,other.mfdn_level_properties,dict)
+        update_observable_dictionary(self.mfdn_ob_moments,other.mfdn_ob_moments,dict)
+        update_observable_dictionary(self.mfdn_ob_rmes,other.mfdn_ob_rmes,results_data.RMEData)
+        update_observable_dictionary(self.mfdn_tb_expectations,other.mfdn_tb_expectations,dict)
+        update_observable_dictionary(self.postprocessor_ob_rmes,other.postprocessor_ob_rmes,results_data.RMEData)
+        update_observable_dictionary(self.postprocessor_tb_rmes,other.postprocessor_tb_rmes,results_data.RMEData)
 
 #################################################
 # test code
