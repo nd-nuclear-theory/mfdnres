@@ -1390,14 +1390,14 @@ def hw_scan_descriptor(interaction_coulomb, nuclide_observable, verbose=False):
 
     # trap new-style observable
     if isinstance(nuclide_observable, tuple):
-        nuclide_observable_descriptor = nuclide_observable_descriptor(nuclide_observable)
+        observable_descriptor = nuclide_observable_descriptor(nuclide_observable)
     else:
         ##if isinstance(nuclide_observable, observable.Observable):
-        nuclide_observable_descriptor = nuclide_observable.descriptor_str
+        observable_descriptor = nuclide_observable.descriptor_str
     
-    descriptor="hw-scan_{interaction_coulomb[0]:s}-{interaction_coulomb[1]:1d}_{nuclide_observable_descriptor}".format(
+    descriptor="hw-scan_{interaction_coulomb[0]:s}-{interaction_coulomb[1]:1d}_{observable_descriptor}".format(
         interaction_coulomb=interaction_coulomb,
-        nuclide_observable_descriptor=nuclide_observable_descriptor
+        observable_descriptor=observable_descriptor
     )
 
     return descriptor
