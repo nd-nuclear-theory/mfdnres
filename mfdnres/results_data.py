@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import collections
-import typing
 import numpy as np
 
 from . import (
@@ -25,6 +24,9 @@ from . import (
 )
 
 # import for type hinting
+from typing import (
+    Optional,
+)
 from .tools import (
     SubspaceType,
     LevelQNType,
@@ -185,7 +187,7 @@ class ResultsData (object):
 # RMEData
 #################################################
 
-class RMEData(collections.UserDict[LevelQNPairType,float]):
+class RMEData(collections.UserDict):
     """Container for storing reduced matrix element data.
 
     This class stores RMEs, operator metadata, and handles canonicalization
@@ -201,10 +203,10 @@ class RMEData(collections.UserDict[LevelQNPairType,float]):
             canonicalized for storage
     """
     data:dict[LevelQNPairType,float]
-    qn:typing.Optional[OperatorQNType]
+    qn:Optional[OperatorQNType]
     rme_convention:tools.RMEConvention
 
-    def __init__(self, initialdata=None, *, qn=None, rme_convention=tools.RMEConvention.kEdmonds):
+    def __init__(self, initialdata=None, *, qn:Optional[OperatorQNType]=None, rme_convention=tools.RMEConvention.kEdmonds):
         if initialdata:
             super().__init__(initialdata)
         else:
@@ -246,7 +248,7 @@ class RMEData(collections.UserDict[LevelQNPairType,float]):
             (qn_pair_canonical,_,_) = (qn_pair,False,1.0)
         del self.data[qn_pair_canonical]
 
-    def update(self,other:RMEData):
+    def update(self, other:RMEData):
         """Update this RMEData with key-value pairs from other RMEData."""
         # check compatibility of quantum numbers
         if (self.qn is None) and (len(self.data) == 0):

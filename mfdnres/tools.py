@@ -32,12 +32,13 @@ import typing
 # type hints
 ################################################################
 
-SubspaceType = tuple[float,int]
-SubspacePairType = tuple[SubspaceType,SubspaceType]
-NuclideType = tuple[int,int]
-LevelQNType = tuple[float,int,int]
-OperatorQNType = tuple[int,int,int]
-LevelQNPairType = tuple[LevelQNType,LevelQNType]
+# TODO: revert to plain tuple for Python 3.9+
+SubspaceType = typing.Tuple[float,int]
+SubspacePairType = typing.Tuple[SubspaceType,SubspaceType]
+NuclideType = typing.Tuple[int,int]
+LevelQNType = typing.Tuple[float,int,int]
+OperatorQNType = typing.Tuple[int,int,int]
+LevelQNPairType = typing.Tuple[LevelQNType,LevelQNType]
 
 ################################################################
 # filename construction
