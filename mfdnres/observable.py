@@ -434,6 +434,75 @@ class Energy(Observable):
 
     
 ################################################################
+# observable: ExcitationEnergy
+################################################################
+
+class ExcitationEnergy(Observable):
+    """Observable extractor for difference of energies in single nucleus, labeled as "excitation energy".
+
+    Note that the excitation energy may also be obtained as a Difference of two
+    Energies, but then the descriptor text and automatic labeling (as delta E) is more
+    generic, and not necessarily as desired for a simple presentation of the excitation energy.
+
+    """
+
+    def __init__(self, nuclide, level, reference_level):
+        """ Initialize with given parameters.
+
+        Arguments:
+
+            nuclide (tuple): (Z, N)
+
+            level (LevelSelector): level
+
+            reference_level (LevelSelector): reference ("ground state") level for energy difference
+
+
+        """
+        super().__init__()
+        ## super().__init__(Energy(nuclide, level), Energy(nuclide, reference_level))  # if implement as child of Difference rather than freshly calculating value()
+        self._nuclide = nuclide
+        self._level = level
+        self._reference_level = reference_level
+
+    def value(self, results_data):
+        """ Extract observable.
+        """
+        qn = self._level.select_level(results_data)
+        reference_qn = self._reference_level.select_level(results_data)
+        return results_data.get_energy(qn) - results_data.get_energy(reference_qn)
+
+    @property
+    def descriptor_str(self):
+        """ Text string describing observable.
+        """
+        return "-".join([
+            data.nuclide_str(self._nuclide),
+            "energy-ex",
+            self._level.descriptor_str,
+            self._reference_level.descriptor_str,
+        ])
+
+    @property
+    def observable_label_text(self):
+        """ Formatted LaTeX text representing observable.
+        """
+        observable_text = r"E_x"
+        level_text = self._level.label_text
+        ## reference_level_text = self._reference_level.label_text
+        label = r"{}({})".format(observable_text,level_text)
+        return label
+
+    @property
+    def axis_label_text(self):
+        """ Formatted LaTeX text representing axis label.
+        """
+        observable_text = r"E_x"
+        units_text = r"\mathrm{MeV}"
+        return observable_text, units_text
+
+
+################################################################
 # observable: Isospin
 ################################################################
 
