@@ -1,4 +1,6 @@
-"""Analysis and plotting examples, drawing on the data for Fig. 6 of "bebands":
+"""Analysis and plotting examples.
+
+These plots make use of data from the calculations for Fig. 6 of "bebands":
 
     M. A. Caprio et al., EPJA 56, 120 (2020),
     https://doi.org/10.1140/epja/s10050-020-00112-0
