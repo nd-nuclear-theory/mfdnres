@@ -690,12 +690,7 @@ def make_survey_plot(mesh_data):
                 )
 
                 # eliminate labels from interior panel edges
-                if not ax.is_last_row():
-                    ax.set_xlabel(None)
-                    ax.set_xticklabels([])
-                if not ax.is_first_col():
-                    ax.set_ylabel(None)
-                    ax.set_yticklabels([])
+                mfdnres.multipanel.suppress_interior_labels(ax)
 
                 # make panel label
                 mfdnres.data.add_observable_panel_label(
