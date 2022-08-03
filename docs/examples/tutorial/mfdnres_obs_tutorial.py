@@ -447,6 +447,12 @@ def make_gallery(mesh_data):
             mfdnres.level.LevelQN((1.5,1,1))
         ) : (-60.0, -40.0),
 
+        mfdnres.observable.ExcitationEnergy(
+            (4,5),
+            mfdnres.level.LevelQN((2.5,1,1)),
+            mfdnres.level.LevelQN((1.5,1,1)),  # reference ("ground") state
+        ) : (0.0, 3.2),
+
         mfdnres.observable.Isospin(
             (4,5),
             mfdnres.level.LevelQN((1.5,1,1))

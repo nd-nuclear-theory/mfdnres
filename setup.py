@@ -8,6 +8,7 @@ setup(
     description=("A scripting library for universal results postprocessing"),
     license="MIT",
     packages=find_packages(include='mfdnres*'),
+    python_requires='>=3.8',
     install_requires=[
         "numpy>=1.0.0",
         "more-itertools>=2.4",
