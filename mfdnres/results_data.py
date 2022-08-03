@@ -190,7 +190,7 @@ class ResultsData (object):
 class RMEData(collections.UserDict):
     """Container for storing reduced matrix element data.
 
-    This class stores RMEs, operator metadata, and handles canonicalization
+    This class stores RMEs and operator metadata, and handles canonicalization
     of quantum numbers where applicable. It mostly behaves like a normal dict.
 
     Attributes:

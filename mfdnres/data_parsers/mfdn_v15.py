@@ -335,8 +335,9 @@ def parse_mfdn_ob_rmes(self:MFDnResultsData, tokenized_lines):
             operator_qn = transition_type_qn[transition_type]
             transition_dict = self.mfdn_ob_rmes.setdefault(
                 transition_type,
-                results_data.RMEData(qn=operator_qn,
-                    rme_convention=tools.RMEConvention.kEdmonds
+                results_data.RMEData(
+                    qn=operator_qn,
+                    rme_convention=tools.RMEConvention.kEdmonds,
                 )
             )
             transition_dict[(qnf,qni)] = value
@@ -346,6 +347,11 @@ def parse_postprocessor_ob_rmes_legacy(self:MFDnResultsData, tokenized_lines):
 
     LEGACY: Old obscalc-ob format with multiple RMEs per line.
     """
+    transition_type_qn:dict[str,tools.OperatorQNType] = {
+        "Dlp": (1,0,0), "Dln": (1,0,0), "Dsp": (1,0,0), "Dsn": (1,0,0),
+        "E2p": (2,0,0), "E2n": (2,0,0),
+    }
+
     names = self.params["one_body_observable_names"]
     for tokenized_line in tokenized_lines:
         qnf = (float(tokenized_line[0]), int(tokenized_line[1]), int(tokenized_line[2]))
@@ -353,9 +359,16 @@ def parse_postprocessor_ob_rmes_legacy(self:MFDnResultsData, tokenized_lines):
         data_iterable = map(float, tokenized_line[6:])
 
         for (transition_type, value) in zip(names, data_iterable):
+            try:
+                operator_qn = transition_type_qn[transition_type]
+            except KeyError:
+                raise ValueError("unsupported observable {} in legacy postprocessor file".format(transition_type))
             transition_dict = self.postprocessor_ob_rmes.setdefault(
                 transition_type,
-                results_data.RMEData(rme_convention=tools.RMEConvention.kEdmonds)
+                results_data.RMEData(
+                    qn=operator_qn,
+                    rme_convention=tools.RMEConvention.kEdmonds,
+                )
             )
             transition_dict[(qnf,qni)] = value
 
@@ -366,7 +379,8 @@ def parse_postprocessor_generic_rmes(self:MFDnResultsData,tokenized_lines,contai
         ...
         container (dict): dictionary to which rmes should be added
     """
-    (J0, g0, Tz0, name) = tokenized_lines[0]
+    tokenized_line = tokenized_lines[0]
+    (J0, g0, Tz0, name) = (int(tokenized_line[0]), int(tokenized_line[1]), int(tokenized_line[2]), tokenized_line[3])
     rme_dict = container.setdefault(
         name,
         results_data.RMEData(qn=(J0,g0,Tz0), rme_convention=tools.RMEConvention.kEdmonds)
