@@ -854,7 +854,7 @@ class RME(Observable):
         """
         if self._operator in {"M1", "M1lp","M1ln","M1sp","M1sn","M1l0","M1l1","M1s0","M1s1"}:
             ## observable_text = r"M1_{{{}}}".format(self._operator[-2:])
-            observable_text = r"M_{{1{}}}".format(self._operator[2:])
+            observable_text = r"M1_{{{}}}".format(self._operator[2:])
         elif self._operator in {"E2p","E2n","E20","E21","E2"}:
             ## observable_text = r"Q_{{2{}}}".format(self._operator[2:])
             observable_text = r"E2_{{{}}}".format(self._operator[2:])
@@ -899,7 +899,9 @@ class RTP(Observable):
             operator (str): identifier for electromagnetic operator, as accepted
             by MFDnResultsData.get_rme()
 
-            level (LevelSelector): level
+            levelf (LevelSelector): final level
+
+            leveli (LevelSelector): final initial level
 
         """
         super().__init__()
