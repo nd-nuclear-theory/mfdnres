@@ -871,7 +871,7 @@ def moment_sqr_observable_label(nuclide,observable_operator,observable_qn_list):
     elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
         observable_str = r"eQ_{{{}}}".format(observable_operator[2:])
     qn_str = resolve_qn_text(observable_qn_list[0])
-    label = r"[{}({})^2]".format(observable_str,qn_str)
+    label = r"[{}({})]^2".format(observable_str,qn_str)
     return label
 
 def moment_sqr_axis_label(nuclide,observable_operator,observable_qn_list):
@@ -1187,7 +1187,7 @@ def Nmax_label_text(Nmax_highlight,Nmax_max=None):
 # Nmax line styling
 ################################################################
 
-def Nmax_dashing(Nmax_relative,base_length=8,exponent_scale=8):
+def Nmax_dashing_emratio(Nmax_relative,base_length=8,exponent_scale=8):
     """Provide dashing pattern based on relative Nmax.
 
     Inspired by Zhou's dashing:
@@ -1197,6 +1197,8 @@ def Nmax_dashing(Nmax_relative,base_length=8,exponent_scale=8):
 
     But here we use logarithmic scale to maximum Nmax need not be specified, and
     line for Nmax0 would not vanish.
+
+    Used in, e.g., emratio [Phys. Rev. C 104, 034319 (2021)].
 
     Arguments:
 
@@ -1209,16 +1211,17 @@ def Nmax_dashing(Nmax_relative,base_length=8,exponent_scale=8):
     """
     if Nmax_relative >= 0:
         return (None,None)
-    elif Nmax_relative < 0:
+    else:  # Nmax_relative < 0
         r = 2**(Nmax_relative/exponent_scale)
         return (base_length*r,base_length*(1-r))
 
     raise ValueError("invalid Nmax_relative {}".format(Nmax_relative))
 
 def Nmax_dashing_scidraw(Nmax_relative):
-    """ Provide dashing pattern based on relative Nmax.
+    """Provide dashing pattern based on relative Nmax.
 
-    Follows RotationPlots.m "NmaxDashing" dashing convention.
+    Follows RotationPlots.m "NmaxDashing" dashing convention, based on
+    Mathematica code for plots for, e.g., [Eur. Phys. J. A 56, 120 (2020)].
 
     Arguments:
 
@@ -1227,17 +1230,60 @@ def Nmax_dashing_scidraw(Nmax_relative):
     Returns:
 
         (tuple): dashing directive
+
     """
-    if Nmax_relative == 0:
+
+    length_by_Nmax_relative = {
+        -2: 6,
+        -4: 2,
+    }
+
+    if Nmax_relative >= 0:
         return (None,None)
-    elif Nmax_relative == -2:
-        return (6,6)
-    elif Nmax_relative == -4:
-        return (2,2)
-    elif Nmax_relative < -4:
+    elif Nmax_relative in length_by_Nmax_relative:
+        r = length_by_Nmax_relative[Nmax_relative]
+        return (r,r)
+    else:  # Nmax_relative < -4:
         return (1,2)
 
     raise ValueError("invalid Nmax_relative {}".format(Nmax_relative))
+
+
+def Nmax_dashing_natorb(Nmax_relative):
+    """Provide dashing pattern based on relative Nmax.
+
+    Inspired by RotationPlots.m "NmaxDashing" dashing convention, as adapted by
+    pjf for plots for natorb [Phys. Rev. C 105, 054301 (2022)].
+
+    Arguments:
+
+        Nmax_relative (int): Nmax-Nmax_max
+
+    Returns:
+
+        (tuple): dashing directive
+
+    """
+    
+    length_by_Nmax_relative = {
+        -2: 10,
+        -4: 8,
+        -6: 6,
+        -8: 4,
+        -10: 3,
+        -12: 2,
+    }
+
+    if Nmax_relative >= 0:
+        return (None,None)
+    elif Nmax_relative in length_by_Nmax_relative:
+        r = length_by_Nmax_relative[Nmax_relative]
+        return (r,r)
+    else:  # Nmax_relative < -12:
+        return (1,1)
+
+    raise ValueError("invalid Nmax_relative {}".format(Nmax_relative))
+
 
 def Nmax_color(Nmax_relative):
     """Provide color based on relative Nmax.
@@ -1304,7 +1350,7 @@ def Nmax_plot_style(
         marker_size=6,
         Nmax_symbol_scale=Nmax_symbol_scale,
         Nmax_marker_face_color=None,
-        Nmax_dashing=Nmax_dashing,
+        Nmax_dashing=Nmax_dashing_emratio,
         Nmax_color=Nmax_color
 ):
     """Provide plot styling kwargs based on relative Nmax.
