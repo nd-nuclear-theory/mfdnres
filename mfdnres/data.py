@@ -386,16 +386,20 @@ def element_str(Z, lower = False):
         element_symbol = element_symbol.lower()
     return element_symbol
 
-def isotope(nuclide, format=None, as_tuple=False):
+def isotope(nuclide, format = None, as_tuple = False):
     """Generate text label component for nuclide.
+    
+    Name inspired by eponymous commend from LaTeX isotope package.
 
     Arguments:
 
         nuclide (tuple): (Z,N)
 
-        format (str, optional): format code for label ("AS", "AZSN", "tuple")
+        format (str, optional): format code for label ("AS"=A+Symbol,
+        "AZSN"=A+Z+Symbol+N, "tuple"=(Z,N))
 
-        as_tuple (bool, optional, deprecated): return (Z,N) label rather than standard nuclide symbol
+        as_tuple (bool, optional, deprecated): return (Z,N) label rather than
+        standard nuclide symbol (deprecated in favore of using format option)
 
     Returns:
 
@@ -417,16 +421,39 @@ def isotope(nuclide, format=None, as_tuple=False):
         label = r"^{{{}}}_{{{}}}\mathrm{{{}}}^{{}}_{{{}}}".format(A,Z,element_symbol,N)  # dummy superscript is for subscript alignment
     elif format == "tuple":
         label = r"({nuclide[0]:d},{nuclide[1]:d})".format(nuclide=nuclide)
+    else:
+        raise ValueError("unrecognized format option".format(format))
+    
     return label
 
-def isotope_str(nuclide, lower = False):
+
+def nuclide_str(nuclide):
+    """Generate simple string for nuclide code, for use in filenames, e.g., "Z03-N03".
+
+    Arguments:
+
+        nuclide (tuple): (Z,N)
+
+    Returns:
+
+        (str): simple string representation of nuclide
+
+    """
+    (Z,N) = nuclide
+    label = "Z{nuclide[0]:02d}-N{nuclide[1]:02d}".format(nuclide=nuclide)
+    return label
+
+def isotope_str(nuclide, format = None, lower = False):
     """Generate simple string for isotope symbol, for use in filenames, e.g., "156Dy".
 
     Arguments:
 
         nuclide (tuple): (Z,N)
 
-        lower (bool, optional): force lowercase
+        format (str, optional): format code for label ("AS"=A+Symbol, "As"=A+symbol, "ZN"=Zxx-Nxx)
+
+        lower (bool, optional, deprecated): force lowercase (redundant to format
+        option value "As")
 
     Returns:
 
@@ -434,11 +461,16 @@ def isotope_str(nuclide, lower = False):
 
     """
     (Z,N) = nuclide
-    element_symbol = ELEMENT_SYMBOLS[Z] if Z<len(ELEMENT_SYMBOLS) else str(Z)
-    if lower:
-        element_symbol = element_symbol.lower()
-    A = sum(nuclide)
-    label = "{}{}".format(A, element_symbol)
+    if (format == None) or (format == "AS") or (format == "As"):
+        element_symbol = ELEMENT_SYMBOLS[Z] if Z<len(ELEMENT_SYMBOLS) else str(Z)
+        if (format == "As") or lower:
+            element_symbol = element_symbol.lower()
+        A = sum(nuclide)
+        label = "{}{}".format(A, element_symbol)
+    elif format == "ZN":
+        label = nuclide_str(nuclide)
+    else:
+        raise ValueError("unrecognized format option".format(format))
     return label
 
 ISOTOPE_STR_PATTERN = re.compile(r"^(?P<A>\d+)(?P<sym>[A-Za-z]+)$")
@@ -474,22 +506,6 @@ def parse_isotope_str(label):
 
     nuclide = (Z,A-Z)
     return nuclide
-
-def nuclide_str(nuclide):
-    """Generate simple string for nuclide code, for use in filenames, e.g., "Z03-N03".
-
-    Arguments:
-
-        nuclide (tuple): (Z,N)
-
-    Returns:
-
-        (str): simple string representation of nuclide
-
-    """
-    (Z,N) = nuclide
-    label = "Z{nuclide[0]:02d}-N{nuclide[1]:02d}".format(nuclide=nuclide)
-    return label
 
 def qn_text(qn,show_parity=True,show_index=True):
     """ Generate text label component for quantum numbers.
