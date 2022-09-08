@@ -594,9 +594,10 @@ def make_survey_plot(mesh_data):
     os.makedirs(plot_directory, exist_ok=True)
 
     # figure layout parameters
-    num_rows = 3
-    num_cols = len(INTERACTION_COULOMB_LIST)
-    figsize = np.array((3,2))*np.array((num_cols,num_rows))
+    num_rows = 3  # rows permitted per page
+    num_cols = len(INTERACTION_COULOMB_LIST)  # allow column for each interaction
+    dimensions = (num_rows, num_cols)
+    panel_size=(3.0,2.0)
 
     # figure contents
     nuclide = (4,5)
@@ -625,10 +626,14 @@ def make_survey_plot(mesh_data):
     # for each page of observables
     for qn_sublist in mfdnres.data.partitions(qn_list,num_rows):
 
-        # initialize figure for page
-        fig = plt.figure(figsize=figsize)
-        gs = fig.add_gridspec(nrows=num_rows, ncols=num_cols, hspace=0., wspace=0.)
-
+        # initialize figure
+        fig, gs = mfdnres.multipanel.multipanel_fig_gs(
+            dimensions=dimensions,
+            panel_size=panel_size,
+            x_panel_gaps=0.0,
+            y_panel_gaps=0.0,
+        )
+        
         # for each row
         for row, qn in enumerate(qn_sublist):
         
