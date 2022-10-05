@@ -293,12 +293,16 @@ def parse_radii(self:MFDnResultsData,tokenized_lines):
     """
     if len(tokenized_lines[0])==7:
         property_names = ["rp","rn","r"]
-    elif len(tokenized_lines[0])==10:
+    elif len(tokenized_lines[0]) in [10,11]:
         # extended set of observables introduced with some version of MFDn
         # v15beta01 (<= v15b01-39-g18c712b)
         #
         # See cshalo [PRC 90, 034305 (2014)] (A5) for definitions.
+        #
+        # Then an extra, untitled 11th column (populated with numerical zeros) appears to have been added sometime <=v15b01-37-gb46e061.
         property_names = ["rp","rn","r","rpp","rnn","rpn"]
+    else:
+        raise ValueError("unrecognized number of columns in radii section")
     parse_generic_static_properties(self,tokenized_lines,self.mfdn_tb_expectations,property_names)
 
 def parse_other_tbo(self:MFDnResultsData,tokenized_lines):
