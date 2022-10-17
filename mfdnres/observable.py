@@ -4,6 +4,7 @@
     University of Notre Dame
 
     - 07/26/22 (mac): Created, from stub code in data.py.
+    - 10/16/22 (mac): Provide Pow and E2 dimensionless ratio observables.
 """
 
 
@@ -111,6 +112,22 @@ class Observable(object):
             return ""
 
     @property
+    def nuclide_set(self):
+        """Set of nuclides entering calculation of observable.
+
+        This information may be used by calling code in determining, e.g., what
+        Nmax values to use in plotting.
+
+        To be overridden by child object if object does not identify with a
+        single _nuclide.
+
+        """
+        try:
+            return {self._nuclide}
+        except AttributeError:
+            return ""
+        
+    @property
     def observable_label_text(self):
         """ Formatted LaTeX text representing observable.
         """
@@ -168,6 +185,10 @@ class Difference(Observable):
 
             observable1, observable2 (Observable): first and second terms
 
+            observable_label_delimiters (tuple, optional): left/right delimiter
+            pairs to put around the labels for the first/second observable
+            appearing in the ratio, e.g., (("[","]"),("[","]"))
+
         """
         super().__init__()
         self._arguments = observable1, observable2
@@ -209,6 +230,12 @@ class Difference(Observable):
         return label
 
     @property
+    def nuclide_set(self):
+        """Set of nuclides entering calculation of observable.
+        """
+        return self._arguments[0].nuclide_set | self._arguments[1].nuclide_set
+    
+    @property
     def observable_label_text(self):
         """ Formatted LaTeX text representing observable.
         """
@@ -232,9 +259,10 @@ class Difference(Observable):
         """ Formatted LaTeX text representing axis label.
         """
         axis_label_texts = self._arguments[0].axis_label_text, self._arguments[1].axis_label_text
-        same_axis = axis_label_texts[0] == axis_label_texts[1]
-        if same_axis:
-            return r"\Delta {}".format(axis_label_texts[0][0]), axis_label_texts[0][1]
+        axis_label_texts_same = axis_label_texts[0] == axis_label_texts[1]
+        if not axis_label_texts_same:
+            raise ValueError("Expect observables with identical axis labels in Difference (found {} and {})".format(axis_label_texts[0], axis_label_texts[1]))
+        return r"\Delta {}".format(axis_label_texts[0][0]), axis_label_texts[0][1]
 
 
 ################################################################
@@ -247,11 +275,15 @@ class Ratio(Observable):
     """
 
     def __init__(self, observable1, observable2, observable_label_delimiters=None):
-        """ Initialize with given parameters.
+        """Initialize with given parameters.
 
         Arguments:
 
             observable1, observable2 (Observable): first and second terms
+
+            observable_label_delimiters (tuple, optional): left/right delimiter
+            pairs to put around the labels for the first/second observable
+            appearing in the ratio, e.g., (("[","]"),("[","]"))
 
         """
         super().__init__()
@@ -294,6 +326,12 @@ class Ratio(Observable):
         return label
 
     @property
+    def nuclide_set(self):
+        """Set of nuclides entering calculation of observable.
+        """
+        return self._arguments[0].nuclide_set | self._arguments[1].nuclide_set
+
+    @property
     def observable_label_text(self):
         """ Formatted LaTeX text representing observable.
         """
@@ -317,9 +355,192 @@ class Ratio(Observable):
         """ Formatted LaTeX text representing axis label.
         """
         axis_label_texts = self._arguments[0].axis_label_text, self._arguments[1].axis_label_text
-        same_axis = axis_label_texts[0] == axis_label_texts[1]
-        if same_axis:
-            return r"\mathrm{Ratio}", None
+        axis_label_texts_same = axis_label_texts[0] == axis_label_texts[1]
+        if not axis_label_texts_same:
+            raise ValueError("Expect observables with identical axis labels in Ratio (found {} and {})".format(axis_label_texts[0], axis_label_texts[1]))
+        return r"\mathrm{Ratio}", None
+
+################################################################
+# deduced observable: Power
+################################################################
+
+class Power(Observable):
+    """ Observable extractor for power of observable.
+
+    TODO: In observable label, provide some sort of pass-through mechanism to
+    obtain r^4() instead of r()^4.
+
+    """
+
+    def __init__(self, observable1, power, observable_label_delimiters=None):
+        """ Initialize with given parameters.
+
+        Arguments:
+
+            observable1 (Observable): first and second terms
+
+            power (int): power to which to raise observable
+
+            observable_label_delimiters (tuple, optional): left/right delimiter
+            pairs to put around the labels for the observable
+            appearing in the power, e.g., ("[","]")
+
+        """
+        super().__init__()
+        self._argument = observable1
+        self._power = power
+        self._observable_label_delimiters = observable_label_delimiters
+
+    def data(self, mesh_data, key_descriptor, verbose=False):
+        """ Extract data frame of observable values over mesh.
+        """
+        data_mesh = self._argument.data(mesh_data, key_descriptor, verbose=verbose)
+        return data_mesh**self._power
+
+    @property
+    def descriptor_str(self):
+        """ Text string describing observable.
+        """
+        arithmetic_operation = "pow"
+        return r"{}_{:d}_{}".format(
+            arithmetic_operation,
+            self._power,
+            self._argument.descriptor_str,
+        )
+
+    @property
+    def nuclide_label_text(self):
+        """Formatted LaTeX text representing nuclide.
+        """
+        return self._argument.nuclide_label_text
+
+    @property
+    def nuclide_set(self):
+        """Set of nuclides entering calculation of observable.
+        """
+        return self._argument.nuclide_set
+    
+    @property
+    def observable_label_text(self):
+        """ Formatted LaTeX text representing observable.
+        """
+        try:
+            # use "nice" power label if provided by observable, e.g., "r^4(...)"
+            # rather than generic "r(...)^4"
+            observable_label_text = self._argument.observable_power_label_text(self._power)
+            return observable_label_text
+        except AttributeError:
+            # fall back on generic power notation
+            observable_label_text = self._argument.observable_label_text
+            observable_label_delimiters = self._observable_label_delimiters
+            if observable_label_delimiters is None:
+                observable_label_delimiters = ("","")
+            return r"{}{}{}^{:d}".format(
+                observable_label_delimiters[0],
+                observable_label_text,
+                observable_label_delimiters[1],
+                self._power,
+            )
+
+    @property
+    def axis_label_text(self):
+        """ Formatted LaTeX text representing axis label.
+        """
+        axis_label_text = self._argument.axis_label_text
+        return "{}^{:d}".format(axis_label_text[0], self._power), "{}^{:d}".format(axis_label_text[1], self._power)
+    
+################################################################
+# deduced observables: dimensionless E2 ratios
+################################################################
+
+class RatioBE2r4(Ratio):
+    """Observable extractor for dimensionless ratio B(E2)/(e^2r^4).
+
+    """
+
+    def __init__(self, observable1, observable2, observable_label_delimiters=(("",""),("[e^2","]"))):
+        """Initialize with given parameters.
+
+        Arguments:
+
+            observable1, observable2 (Observable): first and second terms
+
+            observable_label_delimiters (tuple, optional): left/right delimiter
+            pairs to put around the labels for the first/second observable
+            appearing in the ratio, e.g., (("[","]"),("[","]"))
+
+        """
+        if not (isinstance(observable1, RTP) and isinstance(observable2, Radius)):
+            raise ValueError("Unexpected observable types in RatioBE2r4 (found {} and {})".format(observable1, observable2))
+        super().__init__(observable1, Power(observable2, 4), observable_label_delimiters)
+
+    @property
+    def axis_label_text(self):
+        """ Formatted LaTeX text representing axis label.
+        """
+        ## axis_label_texts = self._arguments[0].axis_label_text, self._arguments[1].axis_label_text
+        # e.g., ('B(E2)', 'e^2\\,\\mathrm{fm}^{4}') and ('r^4', '\\mathrm{fm}^4'))
+        
+        # Would need more info than available from observable objects to
+        # specialize as, e.g., "$B(E2)/(e^2r_p^4)$".
+        
+        return r"B(E2)/(e^2r^4)", None
+
+class RatioQr2(Ratio):
+    """ Observable extractor for dimensionless ratio Q/(er^2).
+
+    """
+
+    def __init__(self, observable1, observable2, observable_label_delimiters=None):
+        """Initialize with given parameters.
+
+        Arguments:
+
+            observable1, observable2 (Observable): first and second terms
+
+            observable_label_delimiters (tuple, optional): left/right delimiter
+            pairs to put around the labels for the first/second observable
+            appearing in the ratio, e.g., (("[","]"),("[","]"))
+
+        """
+        if not (isinstance(observable1, Moment) and isinstance(observable2, Radius)):
+            raise ValueError("Unexpected observable types in RatioQr2 (found {} and {})".format(observable1, observable2))
+        super().__init__(observable1, Power(observable2, 2), observable_label_delimiters)
+
+    @property
+    def axis_label_text(self):
+        """ Formatted LaTeX text representing axis label.
+        """
+       
+        return r"Q/r^2", None
+
+class RatioBE2Q2(Ratio):
+    """Observable extractor for dimensionless ratio B(E2)/(e^2Q^2).
+
+    """
+
+    def __init__(self, observable1, observable2, observable_label_delimiters=(("",""),("[e^2","]"))):
+        """Initialize with given parameters.
+
+        Arguments:
+
+            observable1, observable2 (Observable): first and second terms
+
+            observable_label_delimiters (tuple, optional): left/right delimiter
+            pairs to put around the labels for the first/second observable
+            appearing in the ratio, e.g., (("[","]"),("[","]"))
+
+        """
+        if not (isinstance(observable1, RTP) and isinstance(observable2, Moment)):
+            raise ValueError("Unexpected observable types in RatioBE2Q2 (found {} and {})".format(observable1, observable2))
+        super().__init__(observable1, Power(observable2, 2), observable_label_delimiters)
+
+    @property
+    def axis_label_text(self):
+        """ Formatted LaTeX text representing axis label.
+        """
+        ##return r"B(E2)/(e^2Q^2)", None
+        return r"B(E2)/(eQ)^2", None
 
 ################################################################
 # deduced observable: FixSignTo
@@ -331,11 +552,14 @@ class FixSignTo(Observable):
     """
 
     def __init__(self, observable1, observable2, observable_label_delimiters=None):
-        """ Initialize with given parameters.
+        """Initialize with given parameters.
 
         Arguments:
 
             observable1, observable2 (Observable): first and second terms
+
+            observable_label_delimiters (tuple, optional): presently ignored but
+            provided for consistency with Difference, Ratio, etc.
 
         """
         super().__init__()
@@ -363,6 +587,12 @@ class FixSignTo(Observable):
         """
         return self._arguments[0].nuclide_label_text
 
+    @property
+    def nuclide_set(self):
+        """Set of nuclides entering calculation of observable.
+        """
+        return self._arguments[0].nuclide_set | self._arguments[1].nuclide_set
+    
     @property
     def observable_label_text(self):
         """ Formatted LaTeX text representing observable.
@@ -446,7 +676,7 @@ class ExcitationEnergy(Observable):
 
     """
 
-    def __init__(self, nuclide, level, reference_level):
+    def __init__(self, nuclide, level, reference_level, show_reference_level=False):
         """ Initialize with given parameters.
 
         Arguments:
@@ -457,6 +687,7 @@ class ExcitationEnergy(Observable):
 
             reference_level (LevelSelector): reference ("ground state") level for energy difference
 
+            show_reference_level (bool, optional): whether or not to show reference level in observable label
 
         """
         super().__init__()
@@ -464,6 +695,7 @@ class ExcitationEnergy(Observable):
         self._nuclide = nuclide
         self._level = level
         self._reference_level = reference_level
+        self._show_reference_level = show_reference_level
 
     def value(self, results_data):
         """ Extract observable.
@@ -489,8 +721,11 @@ class ExcitationEnergy(Observable):
         """
         observable_text = r"E_x"
         level_text = self._level.label_text
-        ## reference_level_text = self._reference_level.label_text
-        label = r"{}({})".format(observable_text,level_text)
+        reference_level_text = self._reference_level.label_text
+        if self._show_reference_level:
+            label = r"{}({}-{})".format(observable_text,level_text,reference_level_text)
+        else:
+            label = r"{}({})".format(observable_text,level_text)
         return label
 
     @property
@@ -679,6 +914,18 @@ class Radius(Observable):
         label = r"{}({})".format(observable_text,level_text)
         return label
 
+    def observable_power_label_text(self, power):
+        """ Formatted LaTeX text representing observable raised to power.
+
+        Arguments:
+
+            power (int): exponent
+        """
+        observable_text = RADIUS_STR_BY_OPERATOR[self._operator]
+        level_text = self._level.label_text
+        label = r"{}^{:d}({})".format(observable_text,power,level_text)
+        return label
+    
     @property
     def axis_label_text(self):
         """ Formatted LaTeX text representing axis label.
@@ -689,27 +936,73 @@ class Radius(Observable):
 
     
 ################################################################
-# observable: RadiusSqr
+# observable: RadiusPower -- OMIT in favor of deduced Power
 ################################################################
 
-# TODO
-
-# or replace with special ratio observables
-
-
-################################################################
-# observable: RadiusQuart
-################################################################
-
-# TODO
-
-# or replace with special ratio observables
+## class RadiusPower(Observable):
+##     """ Observable extractor for power of r.m.s. radius.
+## 
+##     """
+## 
+##     def __init__(self, nuclide, operator, level, power):
+##         """Initialize with given parameters.
+## 
+##         Arguments:
+## 
+##             nuclide (tuple): (Z, N)
+## 
+##             operator (str): identifier for radius operator, as accepted by
+##             MFDnResultsData.get_radius()
+## 
+##             level (LevelSelector): level
+## 
+##             power (int): power to which to raise radius
+## 
+##         """
+##         super().__init__()
+##         self._nuclide = nuclide
+##         self._operator = operator
+##         self._level = level
+##         self._power = power
+## 
+##     def value(self, results_data):
+##         """ Extract observable.
+##         """
+##         qn = self._level.select_level(results_data)
+##         return results_data.get_radius(self._operator, qn)**self._power
+## 
+##     @property
+##     def descriptor_str(self):
+##         """ Text string describing observable.
+##         """
+##         return "-".join([
+##             data.nuclide_str(self._nuclide),
+##             "radius-pow{:d}".format(self._power),
+##             self._operator,
+##             self._level.descriptor_str,
+##         ])
+## 
+##     @property
+##     def observable_label_text(self):
+##         """ Formatted LaTeX text representing observable.
+##         """
+##         observable_text = RADIUS_STR_BY_OPERATOR[self._operator]
+##         level_text = self._level.label_text
+##         label = r"{}^{:d}({})".format(observable_text,self._power,level_text)
+##         return label
+## 
+##     @property
+##     def axis_label_text(self):
+##         """ Formatted LaTeX text representing axis label.
+##         """
+##         observable_text = r"r^{:d}".format(self._power)
+##         units_text = r"\mathrm{{fm}}^{:d}".format(self._power)
+##         return observable_text, units_text
 
 
 ################################################################
 # observable: Moment
 ################################################################
-
 
 DIPOLE_ALIASES = {
     # sensible names for M1 components (a.k.a. "dipole terms")
@@ -775,6 +1068,21 @@ class Moment(Observable):
         label = r"{}({})".format(observable_text,level_text)
         return label
 
+    def observable_power_label_text(self, power):
+        """ Formatted LaTeX text representing observable raised to power.
+
+        Arguments:
+
+            power (int): exponent
+        """
+        if self._operator in {"M1", "M1lp","M1ln","M1sp","M1sn","M1l0","M1l1","M1s0","M1s1"}:
+            observable_text = r"\mu_{{{}}}".format(self._operator[2:])
+        elif self._operator in {"E2p","E2n","E20","E21","E2"}:
+            observable_text = r"Q_{{{}}}".format(self._operator[2:])
+        level_text = self._level.label_text
+        label = r"{}^{:d}({})".format(observable_text,power,level_text)
+        return label
+    
     @property
     def axis_label_text(self):
         """ Formatted LaTeX text representing axis label.
@@ -786,15 +1094,6 @@ class Moment(Observable):
             observable_text = r"Q"  ## r"eQ"
             units_text = r"\mathrm{fm}^{2}"  ## r"e\,\mathrm{fm}^{2}"
         return observable_text, units_text
-
-    
-################################################################
-# observable: MomentSqr
-################################################################
-
-# TODO
-
-# or replace with special ratio observables
 
 
 ################################################################
