@@ -45,6 +45,8 @@ class Observable(object):
 
         descriptor_str (str): Text string describing observable
 
+        nuclide_set (set): Set of nuclides entering calculation of observable
+
         observable_label_text (str): Formatted LaTeX text representing
             observable, to be interpreted in math mode
 
@@ -64,6 +66,11 @@ class Observable(object):
 
         To be overridden by child object if object does not identify with a
         single _nuclide and provide a value extractor.
+
+        The verbose argument provides for debugging of missing observable values
+        on mesh.  This argument can be passed through, e.g.,
+        mfdnres.data.make_hw_scan_data.
+
 
         Arguments:
 
@@ -193,6 +200,8 @@ class Difference(Observable):
         super().__init__()
         self._arguments = observable1, observable2
         self._observable_label_delimiters = observable_label_delimiters
+        if len(self.nuclide_set) == 1:
+            self._nuclide = self.nuclide_set.pop()
 
     def data(self, mesh_data, key_descriptor, verbose=False):
         """ Extract data frame of observable values over mesh.
@@ -208,6 +217,11 @@ class Difference(Observable):
         """ Text string describing observable.
         """
         arithmetic_operation = "diff"
+        # for single-nuclide observable, include nuclide at start of descriptor
+        try:
+            arithmetic_operation = "-".join([data.nuclide_str(self._nuclide), arithmetic_operation])
+        except AttributeError:
+            pass
         return r"{}_{}_{}".format(
             arithmetic_operation,
             self._arguments[0].descriptor_str,
@@ -289,6 +303,8 @@ class Ratio(Observable):
         super().__init__()
         self._arguments = observable1, observable2
         self._observable_label_delimiters = observable_label_delimiters
+        if len(self.nuclide_set) == 1:
+            self._nuclide = self.nuclide_set.pop()
 
     def data(self, mesh_data, key_descriptor, verbose=False):
         """ Extract data frame of observable values over mesh.
@@ -304,6 +320,13 @@ class Ratio(Observable):
         """ Text string describing observable.
         """
         arithmetic_operation = "ratio"
+
+        # for single-nuclide observable, include nuclide at start of descriptor
+        try:
+            arithmetic_operation = "-".join([data.nuclide_str(self._nuclide), arithmetic_operation])
+        except AttributeError:
+            pass
+
         return r"{}_{}_{}".format(
             arithmetic_operation,
             self._arguments[0].descriptor_str,
@@ -390,6 +413,8 @@ class Power(Observable):
         self._argument = observable1
         self._power = power
         self._observable_label_delimiters = observable_label_delimiters
+        if len(self.nuclide_set) == 1:
+            self._nuclide = self.nuclide_set.pop()
 
     def data(self, mesh_data, key_descriptor, verbose=False):
         """ Extract data frame of observable values over mesh.
@@ -402,6 +427,13 @@ class Power(Observable):
         """ Text string describing observable.
         """
         arithmetic_operation = "pow"
+
+        # for single-nuclide observable, include nuclide at start of descriptor
+        try:
+            arithmetic_operation = "-".join([data.nuclide_str(self._nuclide), arithmetic_operation])
+        except AttributeError:
+            pass
+
         return r"{}_{:d}_{}".format(
             arithmetic_operation,
             self._power,
@@ -676,7 +708,7 @@ class ExcitationEnergy(Observable):
 
     """
 
-    def __init__(self, nuclide, level, reference_level, show_reference_level=False):
+    def __init__(self, nuclide, level, reference_level, label_as_difference=False):
         """ Initialize with given parameters.
 
         Arguments:
@@ -687,7 +719,7 @@ class ExcitationEnergy(Observable):
 
             reference_level (LevelSelector): reference ("ground state") level for energy difference
 
-            show_reference_level (bool, optional): whether or not to show reference level in observable label
+            label_as_difference (bool, optional): whether or not to show reference level in observable label
 
         """
         super().__init__()
@@ -695,7 +727,7 @@ class ExcitationEnergy(Observable):
         self._nuclide = nuclide
         self._level = level
         self._reference_level = reference_level
-        self._show_reference_level = show_reference_level
+        self._label_as_difference = label_as_difference
 
     def value(self, results_data):
         """ Extract observable.
@@ -719,12 +751,13 @@ class ExcitationEnergy(Observable):
     def observable_label_text(self):
         """ Formatted LaTeX text representing observable.
         """
-        observable_text = r"E_x"
         level_text = self._level.label_text
         reference_level_text = self._reference_level.label_text
-        if self._show_reference_level:
-            label = r"{}({}-{})".format(observable_text,level_text,reference_level_text)
+        if self._label_as_difference:
+            observable_text = r"E"
+            label = r"{}({})-{}({})".format(observable_text,level_text,observable_text,reference_level_text)
         else:
+            observable_text = r"E_x"
             label = r"{}({})".format(observable_text,level_text)
         return label
 
@@ -732,7 +765,10 @@ class ExcitationEnergy(Observable):
     def axis_label_text(self):
         """ Formatted LaTeX text representing axis label.
         """
-        observable_text = r"E_x"
+        if self._label_as_difference:
+            observable_text = r"\Delta E"
+        else:
+            observable_text = r"E_x"
         units_text = r"\mathrm{MeV}"
         return observable_text, units_text
 
