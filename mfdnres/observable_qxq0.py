@@ -70,10 +70,15 @@ def get_QxQ_0_intr_rme(results_data, observable_operator, qn_pair, default=np.na
     if observable_operator == "E20":
         QxQ_0_intr_obs = QxQ_0 - delta_f_i * QxQ_0_cm
     elif observable_operator in ["E2p", "E2n"]:
-        alpha = +1 if observable_operator=="E2p" else -1
+        if observable_operator == "E2p":
+            first_term = QpxQp_0
+            alpha = +1
+        elif observable_operator == "E2n":
+            first_term = QnxQn_0
+            alpha = -1
         middle_term = 2*np.sqrt(5)*xxx0_cm*(DivxDiv_0 + delta_f_i*4*Tz**2*xxx0_cm)
         final_term = -1/4*(1-4*alpha*Tz-4*Tz**2)*delta_f_i*QxQ_0_cm
-        QxQ_0_intr_obs = QpxQp_0 + middle_term + final_term
+        QxQ_0_intr_obs = first_term + middle_term + final_term
 
     ## print(QxQ_0_intr_obs)
     return QxQ_0_intr_obs
