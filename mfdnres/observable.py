@@ -278,6 +278,108 @@ class Difference(Observable):
             raise ValueError("Expect observables with identical axis labels in Difference (found {} and {})".format(axis_label_texts[0], axis_label_texts[1]))
         return r"\Delta {}".format(axis_label_texts[0][0]), axis_label_texts[0][1]
 
+################################################################
+# deduced observable: Sum
+################################################################
+
+class Sum(Observable):
+    """ Observable extractor for sum of observables.
+
+    """
+
+    def __init__(self, observable1, observable2, observable_label_delimiters=None):
+        """ Initialize with given parameters.
+
+        Arguments:
+
+            observable1, observable2 (Observable): first and second terms
+
+            observable_label_delimiters (tuple, optional): left/right delimiter
+            pairs to put around the labels for the first/second observable
+            appearing in the ratio, e.g., (("[","]"),("[","]"))
+
+        """
+        super().__init__()
+        self._arguments = observable1, observable2
+        self._observable_label_delimiters = observable_label_delimiters
+        if len(self.nuclide_set) == 1:
+            self._nuclide = self.nuclide_set.pop()
+
+    def data(self, mesh_data, key_descriptor, verbose=False):
+        """ Extract data frame of observable values over mesh.
+        """
+        data_meshes = (
+            self._arguments[0].data(mesh_data, key_descriptor, verbose=verbose),
+            self._arguments[1].data(mesh_data, key_descriptor, verbose=verbose),
+            )
+        return data_meshes[0] + data_meshes[1]
+
+    @property
+    def descriptor_str(self):
+        """ Text string describing observable.
+        """
+        arithmetic_operation = "sum"
+        # for single-nuclide observable, include nuclide at start of descriptor
+        try:
+            arithmetic_operation = "-".join([data.nuclide_str(self._nuclide), arithmetic_operation])
+        except AttributeError:
+            pass
+        return r"{}_{}_{}".format(
+            arithmetic_operation,
+            self._arguments[0].descriptor_str,
+            self._arguments[1].descriptor_str,
+        )
+
+    @property
+    def nuclide_label_text(self):
+        """Formatted LaTeX text representing nuclide.
+        """
+        nuclide_label_texts = self._arguments[0].nuclide_label_text, self._arguments[1].nuclide_label_text
+        same_nuclide = nuclide_label_texts[0] == nuclide_label_texts[1]
+        if same_nuclide:
+            label = nuclide_label_texts[0]
+        else:
+            label = r"{}/{}".format(
+                nuclide_label_texts[0],
+                nuclide_label_texts[1],
+            )
+        return label
+
+    @property
+    def nuclide_set(self):
+        """Set of nuclides entering calculation of observable.
+        """
+        return self._arguments[0].nuclide_set | self._arguments[1].nuclide_set
+    
+    @property
+    def observable_label_text(self):
+        """ Formatted LaTeX text representing observable.
+        """
+        observable_label_texts = self._arguments[0].observable_label_text, self._arguments[1].observable_label_text
+        arithmetic_operation_sign = "+"
+        observable_label_delimiters = self._observable_label_delimiters
+        if observable_label_delimiters is None:
+            observable_label_delimiters = (("",""),("",""))
+        return r"{}{}{}{}{}{}{}".format(
+            observable_label_delimiters[0][0],
+            observable_label_texts[0],
+            observable_label_delimiters[0][1],
+            arithmetic_operation_sign,
+            observable_label_delimiters[1][0],
+            observable_label_texts[1],
+            observable_label_delimiters[1][1],
+        )
+
+    @property
+    def axis_label_text(self):
+        """ Formatted LaTeX text representing axis label.
+        """
+        axis_label_texts = self._arguments[0].axis_label_text, self._arguments[1].axis_label_text
+        axis_label_texts_same = axis_label_texts[0] == axis_label_texts[1]
+        if not axis_label_texts_same:
+            raise ValueError("Expect observables with identical axis labels in Difference (found {} and {})".format(axis_label_texts[0], axis_label_texts[1]))
+        return r"\Sigma {}".format(axis_label_texts[0][0]), axis_label_texts[0][1]
+    
 
 ################################################################
 # deduced observable: Ratio
