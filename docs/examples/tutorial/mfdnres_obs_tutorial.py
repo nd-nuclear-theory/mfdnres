@@ -438,102 +438,115 @@ def make_gallery(mesh_data):
     Nmax_max = NMAX_MAX_BY_NUCLIDE[nuclide]
 
     # define observables
-    observable_range_list = {
+    #
+    # list of (observable, observable_range)
+    observable_range_list = [
 
         # elementary observables
         
-        mfdnres.observable.Energy(
-            (4,5),
-            mfdnres.level.LevelQN((1.5,1,1))
-        ) : (-60.0, -40.0),
-
-        mfdnres.observable.ExcitationEnergy(
-            (4,5),
-            mfdnres.level.LevelQN((2.5,1,1)),
-            mfdnres.level.LevelQN((1.5,1,1)),  # reference ("ground") state
-        ) : (0.0, 3.2),
-
-        mfdnres.observable.Isospin(
-            (4,5),
-            mfdnres.level.LevelQN((1.5,1,1))
-        ) : (0., 1.0),
-        
-        mfdnres.observable.LevelIndex(
-            (4,5),
-            mfdnres.level.LevelQN((1.5,1,1))
-        ) : (0., 1.5),
-
-        mfdnres.observable.Radius(
-            (4,5),
-            "rp",
-            mfdnres.level.LevelQN((1.5,1,1))
-        ) : (0., 3.5),
-        
-        mfdnres.observable.Moment(
-            (4,5),
-            "M1",
-            mfdnres.level.LevelQN((1.5,1,1))
-        ) : (-1.5, 0.),
-
-        mfdnres.observable.Moment(
-            (4,5),
-            "M1lp",
-            mfdnres.level.LevelQN((1.5,1,1))
-        ) : (0., 0.5),
-        
-        mfdnres.observable.Moment(
-            (4,5),
-            "E2",
-            mfdnres.level.LevelQN((1.5,1,1))
-        ) : (0., 10.0),
-        
-        mfdnres.observable.RME(
-            (4,5),
-            "M1",
-            mfdnres.level.LevelQN((1.5,1,1)),
-            mfdnres.level.LevelQN((2.5,1,1)),
-        ) : (-3., 3.),
-
-        mfdnres.observable.RTP(
-            (4,5),
-            "E2",
-            mfdnres.level.LevelQN((1.5,1,1)),
-            mfdnres.level.LevelQN((2.5,1,1)),
-        ) : (0., 40.),
-
-        mfdnres.observable.RTP(
-            (4,5),
-            "M1",
-            mfdnres.level.LevelQN((1.5,1,1)),
-            mfdnres.level.LevelQN((2.5,1,1)),
-        ) : (0., 0.7),
-
-        
-        # derived observables
-        
-        mfdnres.observable.Difference(
-            mfdnres.observable.Energy(
-                (4,5),
-                mfdnres.level.LevelQN((2.5,1,1))
-            ),
+        (
             mfdnres.observable.Energy(
                 (4,5),
                 mfdnres.level.LevelQN((1.5,1,1))
             ),
-        ) : (0.0, 3.2),
-        
-        
-        mfdnres.observable.Ratio(
-            mfdnres.observable.Difference(
-                mfdnres.observable.Energy(
-                    (4,5),
-                    mfdnres.level.LevelQN((3.5,1,1))
-                ),
-                mfdnres.observable.Energy(
-                    (4,5),
-                    mfdnres.level.LevelQN((1.5,1,1))
-                ),
+            (-60.0, -40.0),
+        ),
+
+        (
+            mfdnres.observable.ExcitationEnergy(
+                (4,5),
+                mfdnres.level.LevelQN((2.5,1,1)),
+                mfdnres.level.LevelQN((1.5,1,1)),  # reference ("ground") state
             ),
+            (0.0, 3.2),
+        ),
+
+        (
+            mfdnres.observable.Isospin(
+                (4,5),
+                mfdnres.level.LevelQN((1.5,1,1))
+            ),
+            (0., 1.0),
+        ),
+        
+        (
+            mfdnres.observable.LevelIndex(
+                (4,5),
+                mfdnres.level.LevelQN((1.5,1,1))
+            ),
+            (0., 1.5),
+        ),
+
+        (
+            mfdnres.observable.Radius(
+                (4,5),
+                "rp",
+                mfdnres.level.LevelQN((1.5,1,1))
+            ),
+            (0., 3.5),
+        ),
+        
+        (
+            mfdnres.observable.Moment(
+                (4,5),
+                "M1",
+                mfdnres.level.LevelQN((1.5,1,1))
+            ),
+            (-1.5, 0.),
+        ),
+
+        (
+            mfdnres.observable.Moment(
+                (4,5),
+                "M1lp",
+                mfdnres.level.LevelQN((1.5,1,1))
+            ),
+            (0., 0.5),
+        ),
+        
+        (
+            mfdnres.observable.Moment(
+                (4,5),
+                "E2",
+                mfdnres.level.LevelQN((1.5,1,1))
+            ),
+            (0., 10.0),
+        ),
+        
+        (
+            mfdnres.observable.RME(
+                (4,5),
+                "M1",
+                mfdnres.level.LevelQN((1.5,1,1)),
+                mfdnres.level.LevelQN((2.5,1,1)),
+            ),
+            (-3., 3.),
+        ),
+
+        (
+            mfdnres.observable.RTP(
+                (4,5),
+                "E2",
+                mfdnres.level.LevelQN((1.5,1,1)),
+                mfdnres.level.LevelQN((2.5,1,1)),
+            ),
+            (0., 40.),
+        ),
+
+        (
+            mfdnres.observable.RTP(
+                (4,5),
+                "M1",
+                mfdnres.level.LevelQN((1.5,1,1)),
+                mfdnres.level.LevelQN((2.5,1,1)),
+            ),
+            (0., 0.7),
+        ),
+
+        
+        # derived observables
+        
+        (
             mfdnres.observable.Difference(
                 mfdnres.observable.Energy(
                     (4,5),
@@ -544,12 +557,40 @@ def make_gallery(mesh_data):
                     mfdnres.level.LevelQN((1.5,1,1))
                 ),
             ),
-            observable_label_delimiters = (("[","]"),("[","]"))
-        )  : (0.0, 3.2),
+            (0.0, 3.2),
+        ),
         
-    }    
+        
+        (
+            mfdnres.observable.Ratio(
+                mfdnres.observable.Difference(
+                    mfdnres.observable.Energy(
+                        (4,5),
+                        mfdnres.level.LevelQN((3.5,1,1))
+                    ),
+                    mfdnres.observable.Energy(
+                        (4,5),
+                        mfdnres.level.LevelQN((1.5,1,1))
+                    ),
+                ),
+                mfdnres.observable.Difference(
+                    mfdnres.observable.Energy(
+                        (4,5),
+                        mfdnres.level.LevelQN((2.5,1,1))
+                    ),
+                    mfdnres.observable.Energy(
+                        (4,5),
+                        mfdnres.level.LevelQN((1.5,1,1))
+                    ),
+                ),
+                observable_label_delimiters = (("[","]"),("[","]"))
+            ),
+            (0.0, 3.2),
+        ),
+        
+    ]
 
-    for observable, observable_range in observable_range_list.items():
+    for observable, observable_range in observable_range_list:
         descriptor = mfdnres.data.hw_scan_descriptor(interaction_coulomb,observable)
         interaction, coulomb = interaction_coulomb
         observable_data = mfdnres.data.make_hw_scan_data(
