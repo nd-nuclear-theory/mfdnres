@@ -39,6 +39,7 @@
     - 07/24/22 (mac): Provide traceback diagnostics for failed level selection in resolve_qn().
     - 07/30/22 (mac): Provide support for observable.Observable objects in tabulation/plotting.
     - 07/31/22 (mac): Move LevelSelector out to submodule level.
+    - 11/19/22 (mac): Overhaul handling of styling keyword arguments in plotting functions
 """
 
 import collections
@@ -1371,6 +1372,8 @@ def Nmax_plot_style(
 ):
     """Provide plot styling kwargs based on relative Nmax.
 
+    Styling is meant for curve of fixed Nmax in hw scan plot.
+
     The various optional arguments control how styling details are determined.
 
     Arguments:
@@ -1398,13 +1401,15 @@ def Nmax_plot_style(
 
 def hw_plot_style(
         hw,
-        marker_size=6,
+        ## marker_size=6,
         ## Nmax_symbol_scale=Nmax_symbol_scale,
         ## Nmax_marker_face_color=None,
         ## Nmax_dashing=Nmax_dashing,
         ## Nmax_color=Nmax_color
 ):
     """Provide plot styling kwargs based on hw.  (WIP)
+
+    Styling is meant for curve of fixed hw in Nmax scan plot.
 
     The various optional arguments control how styling details are determined.
 
@@ -1424,7 +1429,7 @@ def hw_plot_style(
     """
 
     return dict(
-        markersize=marker_size,
+        ##markersize=marker_size,
         ##markersize=marker_size*Nmax_symbol_scale(Nmax_relative),
         ##markerfacecolor=(None if Nmax_marker_face_color is None else Nmax_marker_face_color(Nmax_relative)),
         ## linewidth=1,
@@ -1482,7 +1487,11 @@ def make_hw_scan_data(
         mesh_data,nuclide_observable,
         selector=None,Nmax_range=None,hw_range=None,
         verbose=False):
-    """Tabulate generic observable for hw scan.
+    """Tabulate generic observable vs. (Nmax,hw), for scan plots.
+
+    Despite the name, this data tabulation function serves to generate data for
+    either hw scans (curves representing fixed Nmax) or Nmax scans (curves
+    representing fixed hw).
 
     Simple observables generically have the form
     (<type>,[<operator>],<qn1>,[<qn2>]):
@@ -1688,8 +1697,10 @@ def set_up_Nmax_scan_axes(
     if (observable_range is not None) and np.isfinite(observable_range[0]).all():
         ax.set_ylim(*extend_interval_relative(observable_range,observable_range_extension))
 
-def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**kwargs):
+def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,xy=(0.95,0.05),**kwargs):
     """ Add observable panel label to plot.
+
+    Standardized label provides: nuclide, observable, interaction
 
     Arguments:
 
@@ -1698,6 +1709,8 @@ def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**kwarg
         interaction_coulomb (tuple): interaction/coulomb specifier
 
         nuclide_observable (tuple): standard nuclide/observable pair or compound
+
+        xy: pass-through argument to ax.annotate
 
         **kwargs: pass-through keyword arguments to ax.annotate
 
@@ -1716,7 +1729,7 @@ def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**kwarg
         
     ax.annotate(
         "${}$ ${}$\n$^{}$".format(nuclide_text,observable_text,interaction_text),
-        xy=(0.95,0.05),xycoords="axes fraction",
+        xy=xy,xycoords="axes fraction",
         multialignment="left",
         horizontalalignment="right",
         verticalalignment="bottom",
@@ -1726,9 +1739,9 @@ def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**kwarg
 
 def add_hw_scan_plot(
         ax,observable_data,Nmax_max,
-        marker=".",
+        Nmax_plot_style=Nmax_plot_style,
         Nmax_plot_style_kw={},
-        Nmax_plot_style=Nmax_plot_style
+        **kwargs,
 ):
     """Add hw scan plot to axes.
 
@@ -1740,33 +1753,46 @@ def add_hw_scan_plot(
 
         Nmax_max (int): highest Nmax for styling purposes
 
-        marker (str): matplotlib marker specifier
-
-        Nmax_plot_style_kw (dict, optional): styling options to pass through to
-        plot styling function
-
         Nmax_plot_style (callable, optional): function to provide styling kwargs
             as function of Nmax_relative (rarely needed, since normally instead
             can simply use Nmax_plot_style_kw with the default styling function
             Nmax_plot_style)
 
+        Nmax_plot_style_kw (dict, optional): styling options to pass through to
+        plot styling function defined in Nmax_plot_style argument
+
+        kwargs (Line2D properties, optional): kwargs are used to specify line
+        properties not otherwise fixed by the prior arguments
+
     """
 
+    kw_defaults = {
+        "markersize": 6,
+        "marker": ".",
+    }
+    
     for Nmax, group in observable_data.reset_index().groupby("Nmax"):
+
+        # combine styling options (last takes precedence)
+        kw_full = {
+            **kw_defaults,
+            **Nmax_plot_style(Nmax-Nmax_max,**Nmax_plot_style_kw),
+            **kwargs,
+        }
+        
         ax.plot(
             group["hw"],group["value"],
-            marker=marker,
-            **Nmax_plot_style(Nmax-Nmax_max,**Nmax_plot_style_kw)
+            **kw_full,
         )
 
 def add_Nmax_scan_plot(
         ax,observable_data,
-        marker=".",
-        hw_plot_style_kw={},
         hw_plot_style=hw_plot_style,
-        verbose=False
+        hw_plot_style_kw={},
+        verbose=False,
+        **kwargs,
 ):
-    """Add hw scan plot to axes.
+    """Add Nmax scan plot to axes.
 
     Arguments:
 
@@ -1774,23 +1800,37 @@ def add_Nmax_scan_plot(
 
         observable_data (pd.DataFrame): data multi-indexed by (Nmax,hw)
 
-        marker (str): matplotlib marker specifier
-
-        hw_plot_style_kw (dict, optional): styling options to pass through to
-        plot styling function
-
         hw_plot_style (callable, optional): function to provide styling kwargs
             as function of hw
 
+        hw_plot_style_kw (dict, optional): styling options to pass through to
+        plot styling function defined in hw_plot_style argument
+
+        kwargs (Line2D properties, optional): kwargs are used to specify plot
+        properties (e.g., marker, markersize) not otherwise fixed by the prior arguments
+
     """
 
+    kw_defaults = {
+        "markersize": 6,
+        "marker": ".",
+    }
+    
     for hw, group in observable_data.reset_index().groupby("hw"):
         if verbose:
             print("hw {}\n {}".format(hw,group))
+
+        # combine styling options (last takes precedence)
+        kw_full = {
+            **kw_defaults,
+            **hw_plot_style(hw,**hw_plot_style_kw),
+            **kwargs,
+        }
+        ## print(kw_defaults,hw_plot_style(hw,**hw_plot_style_kw),kwargs,kw_full)
+        
         ax.plot(
             group["Nmax"],group["value"],
-            marker=marker,
-            **hw_plot_style(hw,**hw_plot_style_kw)
+            **kw_full,
         )
 
 def write_hw_scan_plot(
