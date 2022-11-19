@@ -39,6 +39,7 @@
     07/13/22 (mac): Add get_expectation_value().
     07/17/22 (mac): Deduce diagonal E0 RMEs from radius (or else suppress) in get_rme().
     08/01/22 (pjf): Use RMEData for RME storage.
+    11/19/22 (mac): Deduce two-body RME from MFDn two-body expectation value in get_rme().
 """
 
 from __future__ import annotations
@@ -571,7 +572,8 @@ class MFDnResultsData(results_data.ResultsData):
 
     def get_rme(
             self, observable:str, qn_pair:LevelQNPairType, rank="ob",
-            allow_mfdn_native=True, allow_rme_from_moment=True, allow_e0_from_radius=True,
+            allow_mfdn_native=True, allow_rme_from_moment=True,
+            allow_rme_from_expectation_value=True, allow_e0_from_radius=True,
             default=np.nan, verbose=False
     ) -> float:
         """Retrieve reduced matrix element (RME).
@@ -590,6 +592,13 @@ class MFDnResultsData(results_data.ResultsData):
            - MFDn native transition RME (mfdn v15b00) -- if allow_mfdn_native
 
            - MFDn native moment (for M1/E2 diagonal matrix element) -- if allow_rme_from_moment
+
+        For two-body operators, the fallback options for deducing the RME are:
+
+           - MFDn two-body expectation value
+
+        Note that MFDn two-body operator expectation values are computed based
+        on input TBMEs, and thus do not assume an oscillator basis.
 
         See discussion under get_moment for the relation to moments.  Note that
         the present get_rme invokes get_moment with allow_moment_from_rme
@@ -625,6 +634,10 @@ class MFDnResultsData(results_data.ResultsData):
                 fallback to mfdn native calculated moment as means of deducing
                 M1 or E2 ob rme, if not available from postprocessor
 
+            allow_rme_from_expectation_value (bool, optional): whether or not to
+                permit fallback to mfdn native calculated expectation value as
+                means of deducing tb rme, if not available from postprocessor
+
             allow_e0_from_radius (bool, optional): whether or not to enable
                 calculation of diagonal E0 rme from radius
 
@@ -636,10 +649,6 @@ class MFDnResultsData(results_data.ResultsData):
 
         """
 
-        # TODO 07/12/22 (mac): It would be useful to be able to deduce generic
-        # TBO rmes from mfdn native two-body observable expectation values,
-        # similar to the fall-throughs done for the ob observables.
-        #
         # TODO 07/17/22 (mac): For diagonal E0 rme in CMF calculation, could apply
         # analytic cm correction, rather than simply suppressing.  However, this
         # is at least notionally redundant to using the calculated rms radius.
@@ -810,6 +819,24 @@ class MFDnResultsData(results_data.ResultsData):
             if verbose:
                 print("    postprocessor lookup failed ({})".format(err))
 
+                
+        # else fall back on MFDn two-body expectation
+        if (
+                allow_rme_from_expectation_value and np.isnan(rme) and (rank == "tb")
+                and qn_bra==qn_ket
+        ):
+            try:
+                qn = qn_bra
+                J, _, _ = qn
+                expectation_value = self.mfdn_tb_expectations[observable][qn]
+                rme = am.hat(J)*expectation_value
+                if verbose:
+                    print(self.mfdn_tb_expectations[observable])
+                    print("    mfdn tb expectation lookup succeeded ({})".format(rme))
+            except KeyError as err:
+                if verbose:
+                    print("    mfdn tb expectation lookup failed ({})".format(err))
+                
         # else fall back on MFDn native transition
         if allow_mfdn_native and np.isnan(rme) and (self.params.get("hw", 0) != 0):
             try:
@@ -846,7 +873,8 @@ class MFDnResultsData(results_data.ResultsData):
 
     def get_rme_matrix(
             self, observable:str, subspace_pair:SubspacePairType, dim_pair, rank="ob",
-            allow_mfdn_native=True, allow_rme_from_moment=True, allow_e0_from_radius=True,
+            allow_mfdn_native=True, allow_rme_from_moment=True,
+            allow_rme_from_expectation_value=True, allow_e0_from_radius=True,
             default=np.nan, verbose=False
     ):
         """Construct matrix of reduced matrix elements (RMEs).
@@ -902,7 +930,8 @@ class MFDnResultsData(results_data.ResultsData):
 
     def get_rtp(
             self, observable:str, qn_pair:LevelQNPairType, rank="ob",
-            allow_mfdn_native=True, allow_rme_from_moment=True, allow_e0_from_radius=True,
+            allow_mfdn_native=True, allow_rme_from_moment=True,
+            allow_rme_from_expectation_value=True, allow_e0_from_radius=True,
             default=np.nan, verbose=False
     ):
         """ Retrieve reduced transition probability (RTP).
@@ -941,7 +970,8 @@ class MFDnResultsData(results_data.ResultsData):
 
     def get_expectation_value(
             self, observable:str, qn:LevelQNType, rank="ob",
-            allow_mfdn_native=True, allow_rme_from_moment=True, allow_e0_from_radius=True,
+            allow_mfdn_native=True, allow_rme_from_moment=True,
+            allow_rme_from_expectation_value=True, allow_e0_from_radius=True,
             default=np.nan, verbose=False
     ):
         """ Retrieve expectation value (deduced from RME).
