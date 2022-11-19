@@ -71,7 +71,6 @@ class Observable(object):
         on mesh.  This argument can be passed through, e.g.,
         mfdnres.data.make_hw_scan_data.
 
-
         Arguments:
 
             key_descriptor (tuple of tuple, optional): dtype descriptor for key,
@@ -85,8 +84,8 @@ class Observable(object):
         # generate hw table
         #
         # e.g., key_descriptor = (("Nmax",int),("hw",float))
-        extractor = lambda results_data : self.value(results_data)  # is there a better way to return an instance method as a callable?
-        table = analysis.make_obs_table(mesh_data_selected, key_descriptor, extractor, verbose=verbose)
+        # TODO: Replace use of analysis.make_obs_table with stripped-down tabulation code. 
+        table = analysis.make_obs_table(mesh_data_selected, key_descriptor, self.value, verbose=verbose)
 
         # structure table into DataFrame with compound index
         keys = [key for key, _ in key_descriptor]

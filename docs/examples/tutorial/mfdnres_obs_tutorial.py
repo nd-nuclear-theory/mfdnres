@@ -869,7 +869,8 @@ def make_multipanel_plot(mesh_data):
         x_panel_gaps=0.25,
         y_panel_gaps=0.02,
     )
-    
+
+    # generate panels
     for panel_indices in mfdnres.multipanel.grid_iterator(dimensions):
 
         observable_list = observable_list_by_panel[panel_indices]

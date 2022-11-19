@@ -189,11 +189,11 @@ class LevelQNT(Level):
         twice_J=int(2*J)
         J_str = "{}/2".format(twice_J) if twice_J % 2 else twice_J//2
         P_str = "+" if g==0 else "-"
-        n_str = "{:d}".format(n_for_T)
+        n_for_T_str = "{:d}".format(n_for_T)
         twice_T=int(2*T)
         T_str = "{}/2".format(twice_T) if twice_T % 2 else twice_T//2
 
-        label = r"{{{}}}^{{{}}}_{{{};T={}}}".format(J_str,P_str,n_str,T_str)
+        label = r"{{{}}}^{{{}}}_{{{};T={}}}".format(J_str,P_str,n_for_T_str,T_str)
         return label
 
 ################################################################

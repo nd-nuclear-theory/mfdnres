@@ -593,9 +593,11 @@ def make_obs_table(mesh_data,key_descriptor,obs_extractor,key_list=None,prune=Fa
         results_data = results_dict[key]
         try:
             value = obs_extractor(results_data)
+            if verbose:
+                print("observable extractor returned {} for key={}".format(value,key))
         except Exception as err:
             if verbose:
-                print("observable extractor failed with exception at {}".format(key))
+                print("observable extractor failed with exception for key={}".format(key))
                 traceback.print_exception(etype=type(err), value=err, tb=err.__traceback__)
             value = np.nan
         if (prune and np.isnan(value)):

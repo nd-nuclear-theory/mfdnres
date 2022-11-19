@@ -21,7 +21,7 @@ import ncci.utils
 # Q-invariant c.m. correction
 ################################################################
 
-def get_QxQ_0_intr_rme(results_data, observable_operator, qn_pair, default=np.nan):
+def get_QxQ_0_intr_rme(results_data, observable_operator, qn_pair, default=np.nan, verbose=False):
     """ Extract QxQ_0-type two-body observable expectation value with analytic c.m. correction.
 
     See "Q-invariant rederivation" pencilwork page 11.
@@ -44,10 +44,10 @@ def get_QxQ_0_intr_rme(results_data, observable_operator, qn_pair, default=np.na
     # retrieve rmes
     #
     # These are computed with the "E2" normalization for the quadrupole operator.
-    QxQ_0_e2 = results_data.get_rme("QxQ_0",qn_pair,rank="tb")
-    QpxQp_0_e2 = results_data.get_rme("QpxQp_0",qn_pair,rank="tb")
-    QnxQn_0_e2 = results_data.get_rme("QnxQn_0",qn_pair,rank="tb")
-    DivxDiv_0 = results_data.get_rme("DivxDiv_0",qn_pair,rank="tb")
+    QxQ_0_e2 = results_data.get_rme("QxQ_0",qn_pair,rank="tb",verbose=verbose)
+    QpxQp_0_e2 = results_data.get_rme("QpxQp_0",qn_pair,rank="tb",verbose=verbose)
+    QnxQn_0_e2 = results_data.get_rme("QnxQn_0",qn_pair,rank="tb",verbose=verbose)
+    DivxDiv_0 = results_data.get_rme("DivxDiv_0",qn_pair,rank="tb",verbose=verbose)
 
     # convert to moment normalization for quadrupole operator
     moment_prefactor = 16*np.pi/5
