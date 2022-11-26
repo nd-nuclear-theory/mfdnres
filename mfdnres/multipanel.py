@@ -210,6 +210,10 @@ def suppress_interior_labels(
     #
     # AttributeError: 'SubplotSpec' object has no attribute 'is_last_row'
 
+    # TODO: Rather than annihilating the ticks and labels, simply control their
+    # visibility, using ax.tick_params(right|left|...=bool,
+    # labelright|labelleft|...=bool).
+    
     if (axis in {"x","both"}) and (not ax.get_subplotspec().is_last_row()):
         if not show_axis_label:
             ax.set_xlabel(None)
