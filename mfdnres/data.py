@@ -1896,6 +1896,17 @@ def write_hw_scan_plot(
     # make panel label
     add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**panel_label_kwargs)
 
+    # make Nmax label
+    ax.annotate(
+        "$N_{{\mathrm{{max}}}}={}$".format(Nmax_max),
+        xy=(0.95,0.97),
+        xycoords="axes fraction",
+        multialignment="left",
+        horizontalalignment="right",
+        verticalalignment="top",
+        fontsize="x-small",
+    )
+    
     # generate plot
     add_hw_scan_plot(ax,observable_data,Nmax_max)
 
