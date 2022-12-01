@@ -15,13 +15,30 @@
     09/18/18 (mac): Redefine RMEConvention enum to use Edmonds vs. Rose terminology.
     04/02/19 (mac): Add filename construction utility dash_padded.
     04/02/19 (mac): Move effective_am in from analysis.
+    01/04/20 (mac): Fix canonicalize_Jgn_pair.
+    11/19/20 (mac): Add nuclide_str and qn_str.
 
 """
+
+from __future__ import annotations
 
 import enum
 import itertools
 import math
 import re
+import typing
+
+################################################################
+# type hints
+################################################################
+
+# TODO: revert to plain tuple for Python 3.9+
+SubspaceType = typing.Tuple[float,int]
+SubspacePairType = typing.Tuple[SubspaceType,SubspaceType]
+NuclideType = typing.Tuple[int,int]
+LevelQNType = typing.Tuple[float,int,int]
+OperatorQNType = typing.Tuple[int,int,int]
+LevelQNPairType = typing.Tuple[LevelQNType,LevelQNType]
 
 ################################################################
 # filename construction
@@ -39,6 +56,38 @@ def dash_padded(text):
 
     padded_text = text if (text=="") else ("-"+text)
     return padded_text
+
+def nuclide_str(nuclide:NuclideType):
+    """Obtain standard zero-padded string representation of nuclide (Z,N).
+
+    Result is intended for use in filenames.  Format is "Z00-N00".
+
+    Arguments:
+        nuclide (tuple): (Z,N)
+
+    Returns:
+        (str): string representation of nuclide
+
+    """
+
+    return "Z{nuclide[0]:02d}-N{nuclide[1]:02d}".format(nuclide=nuclide)
+
+def qn_str(qn:LevelQNType,qualifier=""):
+    """Obtain standard zero-padded string representation of quantum numbers (J,g,n).
+
+    Result is intended for use in filenames.  Format is "00.0-0-00".
+
+    Arguments:
+        qn (tuple): (J,g,n)
+        qualifier (str, optional): "subscript" for quantum number labels
+
+    Returns:
+        (str): string representation of qn
+
+    """
+
+    (J,g,n) = qn
+    return "J{qualifier}{J:04.1f}-g{qualifier}{g:1d}-n{qualifier}{n:02d}".format(J=J,g=g,n=n,qualifier=qualifier)
 
 ################################################################
 # line parser for free-form res files
@@ -227,7 +276,6 @@ def bool_from_str(s):
     """
 
     return bool(int(s))
-
 
 def singleton_of(conversion):
 
@@ -480,18 +528,27 @@ class RMEConvention(enum.Enum):
     kEdmonds = 0
     kRose = 1
 
-def canonicalization_prescription_Jg(Jg_pair,rme_convention):
+def canonicalization_prescription_Jg(Jg_pair:SubspacePairType, rme_convention:RMEConvention) -> tuple[bool,float]:
     """Provide phase/normalization factor from canonicalization, assuming
     operator has spherical-harmonic-like conjugation properties (M1,
     E2, etc.).
 
-    Under angular momentum convention, conjugation yields:
+    Under Edmonds convention, conjugation yields:
 
         <J||A_{J0}||J'> = (-)^(J'-J)*Hat(J')/Hat(J)*<J'||A_{J0}||J>
 
-    Under group theory convention, conjugation yields:
+    Under Rose convention, conjugation yields:
 
         <J||A_{J0}||J'> = (-)^(J'-J)*<J'||A_{J0}||J>
+
+    The canonicalization factor returned here, in the event of a flip is
+
+        <||||>_noncanonical(=given) / <||||>_canonical
+
+    That is, it is the "retrieval" factor by which a stored canonical RME has to
+    be multiplied to yield the RME indicated by Jg_pair.  (Thus, beware that the
+    "storage" factor, by which a calculated noncanonical RME would have to be
+    multiplied so as to store a canonical RME is the reciprocal.)
 
     Arguments:
        Jg_pair (tuple): ((J_bra,g_bra),(J_ket,g_ket))
@@ -499,32 +556,28 @@ def canonicalization_prescription_Jg(Jg_pair,rme_convention):
 
     Returns:
         flipped (bool): whether or not flip necessary to canonicalize
-        canonicalization_factor (float): canonicalization phase
+        canonicalization_factor (float): canonicalization phase and normalization factor
 
     """
 
     (Jg_bra,Jg_ket) = Jg_pair
 
-    if (Jg_bra <= Jg_ket):
-        # canonical
-        flipped = False
-        canonicalization_factor = 1.
-    else:
+    flipped = not (Jg_bra <= Jg_ket)
+    canonicalization_factor = 1.
+    if (flipped):
         # non-canonical
         #
         # expression for canonicalization factor is based on sector labels
         # *after* swap (i.e., need canonical m.e. on RHS of assignment)
         (J_bra,_)=Jg_ket  # note swap
         (J_ket,_)=Jg_bra  # note swap
-        flipped = True
-        canonicalization_factor = (-1)**(J_ket-J_bra)
+        canonicalization_factor:float = (-1)**(J_ket-J_bra)
         if (rme_convention==RMEConvention.kRose):
             canonicalization_factor *= math.sqrt((2*J_bra+1)/(2*J_ket+1))
 
     return (flipped,canonicalization_factor)
 
-
-def canonicalize_Jg_pair(Jg_pair,rme_convention):
+def canonicalize_Jg_pair(Jg_pair:SubspacePairType, rme_convention:RMEConvention) -> tuple[SubspacePairType,bool,float]:
     """Put subspace labels in canonical order, and provide
     phase/normalization factor from canonicalization, assuming
     operator has spherical-harmonic-like conjugation properties (M1,
@@ -540,8 +593,6 @@ def canonicalize_Jg_pair(Jg_pair,rme_convention):
         (Jg_bra',Jg_ket') (tuple): canonicalized (J,g) pair
         flipped (bool): whether or not flip necessary to canonicalize
         canonicalization_factor (float): canonicalization phase
-
-
     """
 
     (Jg_bra,Jg_ket) = Jg_pair
@@ -557,7 +608,7 @@ def canonicalize_Jg_pair(Jg_pair,rme_convention):
     return (Jg_pair_canonical,flipped,canonicalization_factor)
 
 
-def canonicalize_Jgn_pair(Jgn_pair,rme_convention):
+def canonicalize_Jgn_pair(Jgn_pair:LevelQNPairType, rme_convention:RMEConvention) -> tuple[LevelQNPairType,bool,float]:
     """Put state labels in canonical order, and provide
     phase/normalization factor from canonicalization, assuming
     operator has spherical-harmonic-like conjugation properties (M1,
@@ -570,21 +621,29 @@ def canonicalize_Jgn_pair(Jgn_pair,rme_convention):
        rme_convention (RMEPhaseConvention): phase and normalization convention on RMEs
 
     Returns:
-        phase (float): canonicalization phase
         (Jgn_bra',Jgn_ket') (tuple): canonicalized (J,g,n) pair
-
+        flipped (bool): whether or not flip necessary to canonicalize
+        canonicalization_factor (float): canonicalization phase
     """
 
     (Jgn_bra, Jgn_ket) = Jgn_pair
-    (J_bra, g_bra, _) = Jgn_bra
-    (J_ket, g_ket, _) = Jgn_ket
+    (J_bra, g_bra, n_bra) = Jgn_bra
+    (J_ket, g_ket, n_ket) = Jgn_ket
     Jg_bra = (J_bra, g_bra)
     Jg_ket = (J_ket, g_ket)
 
-    (flipped, canonicalization_factor) = canonicalization_prescription_Jg(
-        (Jg_bra, Jg_ket), rme_convention
-        )
+    # determine canonicalization
+    if (Jg_bra==Jg_ket):
+        # canonicalize within subspace
+       flipped = not (n_bra <= n_ket)
+       canonicalization_factor = 1.
+    else:
+        # canonicalize subspaces
+        (flipped, canonicalization_factor) = canonicalization_prescription_Jg(
+            (Jg_bra, Jg_ket), rme_convention
+            )
 
+    # canonicalize Jgn pair
     if (flipped):
         # non-canonical
         Jgn_pair_canonical = tuple(reversed(Jgn_pair))
@@ -598,7 +657,7 @@ def canonicalize_Jgn_pair(Jgn_pair,rme_convention):
 # calculate effective angular momentum
 ################################################################
 
-def effective_am(J_sqr):
+def effective_am(J_sqr:float):
     """  Convert mean square angular momentum to effective angular momentum.
 
     Args:
