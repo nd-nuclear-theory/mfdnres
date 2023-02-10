@@ -80,6 +80,7 @@ Setup
     - 11/01/21 (mac,zz): Update examples to use newer mfdnres.ticks and mfdnres.multipanel tools.
     - 05/18/22 (mac): Add tick styling to multipanel example.
     - 07/30/22 (mac): Update to new Observable object interface.
+    - 02/09/23 (mac): Modify multipanel example to group parameters for each panel into dict.
 
 """
 
@@ -153,6 +154,12 @@ NMAX_MIN = 4
 NMAX_MAX_BY_NUCLIDE = {
     (4,5): 10
 }
+
+# marker style for experimental data
+MARKER_STYLE_EXPT = dict(
+    marker="s",markersize=4,
+    color="black",
+)
 
 ################################################################
 # data input
@@ -779,71 +786,53 @@ def make_multipanel_plot(mesh_data):
     interaction_coulomb = INTERACTION_COULOMB_LIST[0]
     nuclide = (4,5)
     Nmax_max = NMAX_MAX_BY_NUCLIDE[nuclide]
-    panel_label_text_by_panel = {
-        (0,0): "$E$",
-        (1,0): "$\Delta E$",
-        (0,1): "$B(E2)$",
-        (1,1): "$B(E2)$ ratio",
-        }
-    observable_range_by_panel = {
-        (0,0): (-60.,-43.),
-        (1,0): (0.,5.),
-        (0,1): (0.,25.),
-        (1,1): (0.,5.),
-        }
-    observable_tick_specifier_by_panel = {
-        (0,0): (-70,-30,5,5),
-        (1,0): (-1,6,1,5),
-        (0,1): (-1,30,5,5),
-        (1,1): (-1,6,1,5),
-    }
-    observable_list_by_panel = {
 
-        (0,0): [
-            # energies
-            mfdnres.observable.Energy(
-                (4,5),
-                mfdnres.level.LevelQN((1.5,1,1)),
-            ),
-            mfdnres.observable.Energy(
-                (4,5),
-                mfdnres.level.LevelQN((2.5,1,1)),
-            ),
-        ],
-
-        (1,0): [
-            # excitation energy
-            mfdnres.observable.Difference(
-                mfdnres.observable.Energy(
-                    (4,5),
-                    mfdnres.level.LevelQN((2.5,1,1)),
-                ),
+    # collected specifications needed to plot each panel
+    panel_info_by_panel_indices = {
+        
+        # energies
+        (0,0): dict(
+            panel_label_text=r"$E$",
+            observable_range=(-60.,-43.),
+            observable_tick_specifier=(-70,-30,5,5),
+            observable_list=[
                 mfdnres.observable.Energy(
                     (4,5),
                     mfdnres.level.LevelQN((1.5,1,1)),
                 ),
-            ),
-        ],
+                mfdnres.observable.Energy(
+                    (4,5),
+                    mfdnres.level.LevelQN((2.5,1,1)),
+                ),
+            ],
+        ),
 
-        (0,1): [
-            # B(E2)s
-            mfdnres.observable.RTP(
-                (4,5),
-                "E2p",
-                mfdnres.level.LevelQN((1.5,1,1)),
-                mfdnres.level.LevelQN((2.5,1,1)),
-            ),
-            mfdnres.observable.RTP(
-                (4,5),
-                "E2p",
-                mfdnres.level.LevelQN((1.5,1,1)),
-                mfdnres.level.LevelQN((3.5,1,1)),
-            ),
-        ],
-
-        (1,1): [
-            # B(E2) ratio
-            mfdnres.observable.Ratio(
+        # excitation energy
+        (1,0): dict(
+            panel_label_text=r"$\Delta E$",
+            observable_range=(0.,5.),
+            observable_tick_specifier=(-1,6,1,5),
+            observable_list=[
+                mfdnres.observable.Difference(
+                    mfdnres.observable.Energy(
+                        (4,5),
+                        mfdnres.level.LevelQN((2.5,1,1)),
+                    ),
+                    mfdnres.observable.Energy(
+                        (4,5),
+                        mfdnres.level.LevelQN((1.5,1,1)),
+                    ),
+                ),
+            ],
+            expt_data=(2.43,None),  # NPA 2004
+        ),
+        
+        # B(E2)s
+        (0,1): dict(
+            panel_label_text=r"$B(E2)$",
+            observable_range=(0.,25.),
+            observable_tick_specifier=(-1,30,5,5),
+            observable_list=[
                 mfdnres.observable.RTP(
                     (4,5),
                     "E2p",
@@ -856,10 +845,34 @@ def make_multipanel_plot(mesh_data):
                     mfdnres.level.LevelQN((1.5,1,1)),
                     mfdnres.level.LevelQN((3.5,1,1)),
                 ),
-            ),
-        ],
-    }
+            ],
+        ),
 
+        # B(E2) ratio
+        (1,1): dict(
+            panel_label_text=r"$B(E2)$ ratio",
+            observable_range=(0.,5.),
+            observable_tick_specifier=(-1,6,1,5),
+            observable_list=[
+                mfdnres.observable.Ratio(
+                    mfdnres.observable.RTP(
+                        (4,5),
+                        "E2p",
+                        mfdnres.level.LevelQN((1.5,1,1)),
+                        mfdnres.level.LevelQN((2.5,1,1)),
+                    ),
+                    mfdnres.observable.RTP(
+                        (4,5),
+                        "E2p",
+                        mfdnres.level.LevelQN((1.5,1,1)),
+                        mfdnres.level.LevelQN((3.5,1,1)),
+                    ),
+                ),
+            ],
+        ),
+        
+    }
+        
     # initialize figure
     dimensions=(2,2)
     panel_size=(2.2,2.0)
@@ -873,11 +886,8 @@ def make_multipanel_plot(mesh_data):
     # generate panels
     for panel_indices in mfdnres.multipanel.grid_iterator(dimensions):
 
-        observable_list = observable_list_by_panel[panel_indices]
+        panel_info = panel_info_by_panel_indices[panel_indices]
 
-        # find range parameters
-        hw_range = HW_RANGE_BY_INTERACTION_COULOMB[interaction_coulomb]
-        observable_range = observable_range_by_panel[panel_indices]
 
         # construct axes
         ax = fig.add_subplot(gs[panel_indices[0], panel_indices[1]])
@@ -896,7 +906,7 @@ def make_multipanel_plot(mesh_data):
         if True:
             x_ticks = mfdnres.ticks.linear_ticks(0,50,5,2)
             mfdnres.ticks.set_ticks(ax,"x",x_ticks)
-            y_ticks = mfdnres.ticks.linear_ticks(*observable_tick_specifier_by_panel[panel_indices])
+            y_ticks = mfdnres.ticks.linear_ticks(*panel_info["observable_tick_specifier"])
             mfdnres.ticks.set_ticks(ax,"y",y_ticks)
 
         # draw axes
@@ -912,11 +922,13 @@ def make_multipanel_plot(mesh_data):
         #
         # to set bigger (5% or 10%) margins on the specified x and y axis ranges.
 
+        # find range parameters
+        hw_range = HW_RANGE_BY_INTERACTION_COULOMB[interaction_coulomb]
         mfdnres.data.set_up_hw_scan_axes(
             ax,
-            observable_list[0],
+            panel_info["observable_list"][0],
             hw_range,
-            observable_range,
+            panel_info["observable_range"],
             hw_range_extension=(0.15,0.15),
             observable_range_extension=(0.05,0.05),
         )
@@ -930,7 +942,8 @@ def make_multipanel_plot(mesh_data):
         # panel letter
         ax.annotate(
             mfdnres.multipanel.panel_letter(dimensions,panel_indices,direction="vertical"),
-            xy=(0.05,0.95),xycoords="axes fraction",
+            xy=(0.05,0.95),
+            xycoords="axes fraction",
             horizontalalignment="left",
             verticalalignment="top",
             fontsize="small",
@@ -938,8 +951,9 @@ def make_multipanel_plot(mesh_data):
 
         # panel label
         ax.annotate(
-            panel_label_text_by_panel[panel_indices],
-            xy=(0.90,0.90),xycoords="axes fraction",
+            panel_info["panel_label_text"],
+            xy=(0.90,0.90),
+            xycoords="axes fraction",
             multialignment="left",
             horizontalalignment="right",
             verticalalignment="top",
@@ -958,23 +972,28 @@ def make_multipanel_plot(mesh_data):
                 fontsize="x-small",
             )
 
+        # plot experiment
+        hw_expt = 3
+        expt_data = panel_info.get("expt_data")  # use get() in case "expt_data" not specified for this panel
+        mfdnres.data.add_data_marker(ax, hw_expt, expt_data, MARKER_STYLE_EXPT)
+        
         # tabulate and plot each observable
-        for plot_index, observable in enumerate(observable_list):
+        for plot_index, observable in enumerate(panel_info["observable_list"]):
 
             # generate descriptor
-            descriptor=mfdnres.data.hw_scan_descriptor(interaction_coulomb,observable)
+            descriptor = mfdnres.data.hw_scan_descriptor(interaction_coulomb, observable)
 
             # tabulate
-            (interaction,coulomb) = interaction_coulomb
+            interaction, coulomb = interaction_coulomb
             observable_data = mfdnres.data.make_hw_scan_data(
-                mesh_data,observable,
+                mesh_data, observable,
                 selector =  {"interaction": interaction, "coulomb": coulomb},
                 Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range,
             )
         
             # write data
             mfdnres.data.write_hw_scan_data(
-                descriptor,observable_data,
+                descriptor, observable_data,
                 directory=plot_directory,
             )
 
@@ -988,15 +1007,17 @@ def make_multipanel_plot(mesh_data):
             # longer reflects Nmax, but rather is used to distinguish plots of
             # different observables.
             
+            Nmax_plot_style_kw = dict(marker_size=5)
             if plot_index==0:
                 dashing = (None,None)
             else:
                 dashing = (1,1)
+            Nmax_plot_style_kw.update(dict(Nmax_dashing=(lambda Nmax_relative : dashing)))
             mfdnres.data.add_hw_scan_plot(
                 ax,
                 observable_data,
                 Nmax_max=Nmax_max,
-                Nmax_plot_style_kw = dict(marker_size=4, Nmax_dashing=(lambda Nmax_relative : dashing)),
+                Nmax_plot_style_kw = Nmax_plot_style_kw,
             )
             
     # finalize plot
