@@ -40,6 +40,7 @@
     - 07/30/22 (mac): Provide support for observable.Observable objects in tabulation/plotting.
     - 07/31/22 (mac): Move LevelSelector out to submodule level.
     - 11/19/22 (mac): Overhaul handling of styling keyword arguments in plotting functions
+    - 02/09/23 (mac): Provide observable_labelpad pass-through option to set_up_hw_scan_axes().
 """
 
 import collections
@@ -1644,8 +1645,9 @@ def write_hw_scan_data(descriptor,observable_data,directory="data",format_str_ob
         out_file.write(output_str)
 
 def set_up_hw_scan_axes(
-        ax,nuclide_observable,hw_range,observable_range,
-        hw_range_extension=(0.05,0.05),observable_range_extension=(0.05,0.05)
+        ax, nuclide_observable, hw_range, observable_range,
+        hw_range_extension=(0.05,0.05), observable_range_extension=(0.05,0.05),
+        observable_labelpad=None,
 ):
     """ Set up axes.
 
@@ -1663,10 +1665,12 @@ def set_up_hw_scan_axes(
 
         observable_range_extension (tuple of float, optional): y range relative extension
 
+        observable_labelpad (scalar, optional): pass-though labelpad option for ylabel
+
     """
     ax.set_xlabel(HW_AXIS_LABEL_TEXT)
     ax.set_xlim(*extend_interval_relative(hw_range,hw_range_extension))
-    ax.set_ylabel(r"${}$".format(make_observable_axis_label_text(nuclide_observable)))
+    ax.set_ylabel(r"${}$".format(make_observable_axis_label_text(nuclide_observable)), labelpad=observable_labelpad)
     if (observable_range is not None) and np.isfinite(observable_range[0]).all():
         ax.set_ylim(*extend_interval_relative(observable_range,observable_range_extension))
 
