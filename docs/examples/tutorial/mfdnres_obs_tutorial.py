@@ -776,7 +776,7 @@ def make_multipanel_plot(mesh_data):
     plot_directory="plots/multipanel"
     os.makedirs(plot_directory, exist_ok=True)
 
-    # plot contents
+    # data set parameters
     #
     # TUTORIAL: The basic idea here is that we will loop over all panel indices
     # below, to create the panels.  The code inside the loop is "generic".  It
@@ -787,7 +787,13 @@ def make_multipanel_plot(mesh_data):
     nuclide = (4,5)
     Nmax_max = NMAX_MAX_BY_NUCLIDE[nuclide]
 
-    # collected specifications needed to plot each panel
+    # plot formatting parameters
+    hw_range_extension=(0.15,0.15),
+    observable_range_extension=(0.05,0.05),
+    
+    # specifications needed to plot each panel
+    #
+    # (row, col) -> dict
     panel_info_by_panel_indices = {
         
         # energies
@@ -872,7 +878,7 @@ def make_multipanel_plot(mesh_data):
         ),
         
     }
-        
+
     # initialize figure
     dimensions=(2,2)
     panel_size=(2.2,2.0)
@@ -925,12 +931,10 @@ def make_multipanel_plot(mesh_data):
         # find range parameters
         hw_range = HW_RANGE_BY_INTERACTION_COULOMB[interaction_coulomb]
         mfdnres.data.set_up_hw_scan_axes(
-            ax,
-            panel_info["observable_list"][0],
-            hw_range,
-            panel_info["observable_range"],
-            hw_range_extension=(0.15,0.15),
-            observable_range_extension=(0.05,0.05),
+            ax, panel_info["observable_list"][0], hw_range, panel_info["observable_range"],
+            hw_range_extension=hw_range_extension,
+            observable_range_extension=observable_range_extension,
+            hw_labelpad=1, observable_labelpad=1,
         )
         
         # eliminate labels from interior panel edges
