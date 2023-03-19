@@ -42,6 +42,7 @@
     - 11/19/22 (mac): Overhaul handling of styling keyword arguments in plotting functions
     - 02/09/23 (mac): Provide observable_labelpad pass-through option to set_up_hw_scan_axes().
     - 02/27/23 (mac): Provide hw_labelpad pass-through option to set_up_hw_scan_axes().
+    - 03/19/23 (mac): Add add_hw_scan_plot_Nmax_labels().
 """
 
 import collections
@@ -1772,14 +1773,20 @@ def add_hw_scan_plot(
         kwargs (Line2D properties, optional): kwargs are used to specify line
         properties not otherwise fixed by the prior arguments
 
+    Returns:
+
+       Nmax_groups (pd.DataFrameGroupBy): curve data grouped by Nmax (for
+           possible use in subsequent calls to labeling functions)
+
     """
 
     kw_defaults = {
         "markersize": 6,
         "marker": ".",
     }
-    
-    for Nmax, group in observable_data.reset_index().groupby("Nmax"):
+
+    Nmax_groups = observable_data.reset_index().groupby("Nmax")
+    for Nmax, group in Nmax_groups:
 
         # combine styling options (last takes precedence)
         kw_full = {
@@ -1793,6 +1800,66 @@ def add_hw_scan_plot(
             **kw_full,
         )
 
+    return Nmax_groups
+
+def add_hw_scan_plot_Nmax_labels(
+        ax, Nmax_groups, Nmax_label_list,
+        Nmax_label_tagged_index=-1, data_point_index=-1,
+        text_displacement=(+12,+0),
+):
+    """Add Nmax curve labels to previously drawn hw scan plot.
+
+    Arguments:
+
+        ax (mpl.axes.Axes): axes object
+
+        Nmax_groups (pd.DataFrameGroupBy): curve data grouped by Nmax (as
+            returned by add_hw_scan_plot())
+
+        Nmax_label_list (list of int): list of Nmax values for labels
+
+        Nmax_label_tagged_index (int, optional): index within Nmax_label_list for Nmax
+        label to which to attach the legend "Nmax"
+
+        data_point_index (int, optional): index of data point within curve for
+        labeling (0 for "left" end of curve, -1 for "right" end of curve)
+
+        text_displacement (tuple): xy displacement in points of text relative to curve point
+
+    """
+
+    # TODO (mac, 03/19/23): add in generalizations for call-out lines, proper
+    # formatting of left-hand labels, placing the Nmax legend text *above* the
+    # Nmax labels, etc.
+    
+    for Nmax, group in Nmax_groups:
+
+        # extract curve endpoint
+        curve_points = group[["hw", "value"]].to_numpy()
+        endpoint = curve_points[data_point_index]
+        
+        # generate Nmax label
+        if Nmax in Nmax_label_list:
+            Nmax_label = ax.annotate(
+                r"${}$".format(Nmax),
+                xy=endpoint, xycoords="data",
+                xytext=text_displacement, textcoords="offset points",
+                fontsize="x-small",
+                horizontalalignment="right", verticalalignment="center",
+                ##arrowprops=dict(arrowstyle="-", linewidth=0.5, shrinkA=1, shrinkB=3),
+                ##bbox=dict(boxstyle="square", visible=False, pad=0.),  # to clip call-out line under text
+            )
+            
+        # add "Nmax" legend label
+        if Nmax == Nmax_label_list[Nmax_label_tagged_index]:
+            ax.annotate(
+                r"$N_{\mathrm{max}}$",
+                xy=(1,0), xycoords=Nmax_label,
+                fontsize="x-small",
+                horizontalalignment="right", verticalalignment="top",
+            )
+
+            
 def add_Nmax_scan_plot(
         ax,observable_data,
         hw_plot_style=hw_plot_style,
