@@ -42,7 +42,10 @@
     - 11/19/22 (mac): Overhaul handling of styling keyword arguments in plotting functions
     - 02/09/23 (mac): Provide observable_labelpad pass-through option to set_up_hw_scan_axes().
     - 02/27/23 (mac): Provide hw_labelpad pass-through option to set_up_hw_scan_axes().
-    - 03/19/23 (mac): Add add_hw_scan_plot_Nmax_labels().
+    - 03/19/23 (mac):
+      + Add add_hw_scan_plot_Nmax_labels().
+      + Add tick specification support to set_up_hw_scan_axes().
+      + Improve pass-through option handling in add_observable_panel_label().         
 """
 
 import collections
@@ -59,6 +62,7 @@ from . import (
     analysis,
     level,
     ## observable,
+    ticks,
     tools
 )
 
@@ -1651,8 +1655,11 @@ def set_up_hw_scan_axes(
         hw_range_extension=(0.05,0.05), observable_range_extension=(0.05,0.05),
         hw_labelpad=None,
         observable_labelpad=None,
+        observable_axis_label_text=None,
+        hw_tick_specifier=None,
+        observable_tick_specifier=None,
 ):
-    """ Set up axes.
+    """ Set up axis ranges, labels, and ticks for hw scan plot.
 
     Arguments:
 
@@ -1672,12 +1679,38 @@ def set_up_hw_scan_axes(
 
         observable_labelpad (scalar, optional): pass-though labelpad option for ylabel
 
+        observable_axis_label_text (str, optional): override for observable axis label text
+
+        hw_tick_specifier (tuple, optional): tick specification (min,max,step,num_subdivision) for hw ticks
+
+        observable_tick_specifier (tuple, optional): tick specification (min,max,step,num_subdivision) for observable ticks
+
     """
-    ax.set_xlabel(HW_AXIS_LABEL_TEXT, labelpad=hw_labelpad)
+
+    # set ticks
+    #
+    # Note that the tick specification must come *before* setting range limits,
+    # since the range limits automatically readjust when you set the ticks.
+    if hw_tick_specifier is not None:
+        x_ticks = ticks.linear_ticks(*hw_tick_specifier)
+        ticks.set_ticks(ax,"x",x_ticks)
+    if observable_tick_specifier is not None:
+        y_ticks = ticks.linear_ticks(*observable_tick_specifier)
+        ticks.set_ticks(ax,"y",y_ticks)
+
+    # set limits
     ax.set_xlim(*extend_interval_relative(hw_range,hw_range_extension))
-    ax.set_ylabel(r"${}$".format(make_observable_axis_label_text(nuclide_observable)), labelpad=observable_labelpad)
     if (observable_range is not None) and np.isfinite(observable_range[0]).all():
         ax.set_ylim(*extend_interval_relative(observable_range,observable_range_extension))
+
+    # set axis labels
+    ax.set_xlabel(HW_AXIS_LABEL_TEXT, labelpad=hw_labelpad)
+    if observable_axis_label_text is None:
+        observable_axis_label_text = make_observable_axis_label_text(nuclide_observable)
+    ax.set_ylabel(
+        r"${}$".format(observable_axis_label_text),
+        labelpad=observable_labelpad,
+    )
 
 def set_up_Nmax_scan_axes(
         ax,nuclide_observable,Nmax_range,observable_range,
@@ -1700,13 +1733,16 @@ def set_up_Nmax_scan_axes(
         observable_range_extension (tuple of float, optional): y range relative extension
 
     """
+
+    # TODO 03/19/23 (mac): Add tick specifier arguments.
+    
     ax.set_xlabel(NMAX_AXIS_LABEL_TEXT)
     ax.set_xlim(*extend_interval_relative(Nmax_range,Nmax_range_extension))
     ax.set_ylabel(r"${}$".format(make_observable_axis_label_text(nuclide_observable)))
     if (observable_range is not None) and np.isfinite(observable_range[0]).all():
         ax.set_ylim(*extend_interval_relative(observable_range,observable_range_extension))
 
-def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,xy=(0.95,0.05),**kwargs):
+def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**kwargs):
     """ Add observable panel label to plot.
 
     Standardized label provides: nuclide, observable, interaction
@@ -1718,8 +1754,6 @@ def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,xy=(0.9
         interaction_coulomb (tuple): interaction/coulomb specifier
 
         nuclide_observable (tuple): standard nuclide/observable pair or compound
-
-        xy: pass-through argument to ax.annotate
 
         **kwargs: pass-through keyword arguments to ax.annotate
 
@@ -1735,15 +1769,25 @@ def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,xy=(0.9
         observable_text = nuclide_observable.observable_label_text
 
     interaction_text = make_interaction_text(interaction_coulomb)
-        
-    ax.annotate(
-        "${}$ ${}$\n$^{}$".format(nuclide_text,observable_text,interaction_text),
-        xy=xy,xycoords="axes fraction",
+
+    # combine styling options (last takes precedence)
+    kw_defaults=dict(
+        xy=(0.95,0.05),
+        xycoords="axes fraction",
         multialignment="left",
         horizontalalignment="right",
         verticalalignment="bottom",
         bbox=dict(boxstyle="round",facecolor="white"),
-        **kwargs
+    )
+    
+    kw_full = {
+        **kw_defaults,
+        **kwargs,
+    }
+    
+    ax.annotate(
+        "${}$ ${}$\n$^{}$".format(nuclide_text,observable_text,interaction_text),
+        **kw_full
     )
 
 def add_hw_scan_plot(
