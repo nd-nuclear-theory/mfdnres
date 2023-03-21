@@ -46,6 +46,7 @@
       + Add add_hw_scan_plot_Nmax_labels().
       + Add tick specification support to set_up_hw_scan_axes().
       + Improve pass-through option handling in add_observable_panel_label().         
+    - 03/21/23 (mac): Add set_up_hw_scan_secondary_axis().
 """
 
 import collections
@@ -1712,6 +1713,71 @@ def set_up_hw_scan_axes(
         labelpad=observable_labelpad,
     )
 
+
+def set_up_hw_scan_secondary_axis(
+        ax, observable, 
+        observable_norm_scale,
+        observable_norm_labelpad=None,
+        observable_norm_axis_label_text=None,
+        observable_norm_tick_specifier=None,
+):
+    """Set up axis ranges, labels, and ticks for hw scan plot.
+
+    Arguments:
+
+        ax (mpl.axes.Axes): axes object
+
+        observable (observable.Observable): observable object (must provide
+            secondary_axis_label_text property)
+
+        observable_norm_scale (float): normalization scale (i.e., denominator of
+            ration, such as r^2 or r^4)
+
+        observable_norm_labelpad (scalar, optional): pass-though labelpad option for ylabel
+
+        observable_norm_axis_label_text (str, optional): override for observable axis label text
+
+        observable_norm_tick_specifier (tuple, optional): tick specification (min,max,step,num_subdivision) for observable ticks
+
+    """
+
+    def scale_functions(secondary_scale):
+        """Generate scaling functions for secondary scale.
+
+        DEBUGGING: If secondary_scale is a loop variable, such a wrapping
+        function as this one (which rebinds the current value to the local
+        argument variable) is needed.  Direct use of lambdas in
+
+            functions=((lambda x: x*secondary_scale), (lambda x: x/secondary_scale))
+
+        leaves variable secondary_scale inside lambda bound to the variable
+        secondary_scale outside the lambda, and thus mutable.  All secondary
+        scales then are determined by the single final value of the loop
+        variable secondary_scale, which is the value in effect when the axes are
+        rendered.
+        """
+        return ((lambda x: x*secondary_scale), (lambda x: x/secondary_scale))
+
+    # create secondary axis
+    ax_secondary_y = ax.secondary_yaxis(
+        'right',
+        functions=scale_functions(observable_norm_scale)
+    )
+    
+    # set ticks
+    if observable_norm_tick_specifier is not None:
+        y_ticks = ticks.linear_ticks(*observable_norm_tick_specifier)
+        ticks.set_ticks(ax_secondary_y,"y",y_ticks)
+
+    # set axis label
+    if observable_norm_axis_label_text is None:
+        observable_norm_axis_label_text = observable.secondary_axis_label_text
+    ax_secondary_y.set_ylabel(
+        r"${}$".format(observable_norm_axis_label_text),
+        labelpad=observable_norm_labelpad,
+    )
+
+    
 def set_up_Nmax_scan_axes(
         ax,nuclide_observable,Nmax_range,observable_range,
         Nmax_range_extension=(0.05,0.05),observable_range_extension=(0.05,0.05)
