@@ -5,6 +5,7 @@
 
     - 07/26/22 (mac): Created, from stub code in data.py.
     - 10/16/22 (mac): Provide Pow and E2 dimensionless ratio observables.
+    - 03/21/23 (mac): Provide secondary axis labels for E2 dimensionless ratio observables.
 """
 
 
@@ -478,12 +479,15 @@ class Ratio(Observable):
     def axis_label_text(self):
         """ Formatted LaTeX text representing axis label.
         """
-        axis_label_texts = self._arguments[0].axis_label_text, self._arguments[1].axis_label_text
-        axis_label_texts_same = axis_label_texts[0] == axis_label_texts[1]
-        if not axis_label_texts_same:
-            raise ValueError("Expect observables with identical axis labels in Ratio (found {} and {})".format(axis_label_texts[0], axis_label_texts[1]))
+        enforce_axis_label_match = False
+        if (enforce_axis_label_match):
+            axis_label_texts = self._arguments[0].axis_label_text, self._arguments[1].axis_label_text
+            axis_label_texts_same = axis_label_texts[0] == axis_label_texts[1]
+            if not axis_label_texts_same:
+                raise ValueError("Expect observables with identical axis labels in Ratio (found {} and {})".format(axis_label_texts[0], axis_label_texts[1]))
         return r"\mathrm{Ratio}", None
 
+    
 ################################################################
 # deduced observable: Power
 ################################################################
@@ -581,6 +585,7 @@ class Power(Observable):
         """
         axis_label_text = self._argument.axis_label_text
         return "{}^{:d}".format(axis_label_text[0], self._power), "{}^{:d}".format(axis_label_text[1], self._power)
+
     
 ################################################################
 # deduced observables: dimensionless E2 ratios
@@ -619,6 +624,14 @@ class RatioBE2r4(Ratio):
         
         return r"B(E2)/(e^2r^4)", None
 
+    @property
+    def secondary_axis_label_text(self):
+        """ Formatted LaTeX text representing axis label for secondary "calibrated" axis.
+        """
+
+        return r"{}~({})~~[\mathrm{{via}}~{}]".format(*self._arguments[0].axis_label_text,*self._arguments[1].axis_label_text)
+    
+   
 class RatioQr2(Ratio):
     """ Observable extractor for dimensionless ratio Q/(er^2).
 
@@ -647,6 +660,15 @@ class RatioQr2(Ratio):
        
         return r"Q/r^2", None
 
+
+    @property
+    def secondary_axis_label_text(self):
+        """ Formatted LaTeX text representing axis label for secondary "calibrated" axis.
+        """
+
+        return r"{}~({})~~[\mathrm{{via}}~{}]".format(*self._arguments[0].axis_label_text,*self._arguments[1].axis_label_text)
+
+    
 class RatioBE2Q2(Ratio):
     """Observable extractor for dimensionless ratio B(E2)/(e^2Q^2).
 
@@ -675,6 +697,14 @@ class RatioBE2Q2(Ratio):
         ##return r"B(E2)/(e^2Q^2)", None
         return r"B(E2)/(eQ)^2", None
 
+    @property
+    def secondary_axis_label_text(self):
+        """ Formatted LaTeX text representing axis label for secondary "calibrated" axis.
+        """
+
+        return r"{}~({})~~[\mathrm{{via}}~{}]".format(*self._arguments[0].axis_label_text,*self._arguments[1].axis_label_text)
+
+    
 ################################################################
 # deduced observable: FixSignTo
 ################################################################
@@ -1206,7 +1236,7 @@ class Moment(Observable):
         return label
 
     def observable_power_label_text(self, power):
-        """ Formatted LaTeX text representing observable raised to power.
+        """ Formatted LaTeX text representing observable raised to given power.
 
         Arguments:
 
