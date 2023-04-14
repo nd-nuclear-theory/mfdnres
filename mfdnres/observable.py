@@ -1272,7 +1272,7 @@ class RME(Observable):
 
     """
 
-    # TODO restore E0 and E1 functionality
+    # TODO restore E1 functionality; consider combining E0/E1/E2 implementation
     
     def __init__(self, nuclide, operator, levelf, leveli):
         """Initialize with given parameters.
@@ -1324,6 +1324,9 @@ class RME(Observable):
         elif self._operator in {"E2p","E2n","E20","E21","E2"}:
             ## observable_text = r"Q_{{2{}}}".format(self._operator[2:])
             observable_text = r"E2_{{{}}}".format(self._operator[2:])
+        elif self._operator in {"E0p","E0n","E00","E01","E0"}:
+            ## observable_text = r"Q_{{2{}}}".format(self._operator[2:])
+            observable_text = r"E0_{{{}}}".format(self._operator[2:])
         level_pair_text = self._level_pair[0].label_text, self._level_pair[1].label_text
         label = r"\langle {} \Vert \mathcal{{M}}({}) \Vert {} \rangle".format(level_pair_text[0],observable_text,level_pair_text[1])  # <f|O|i> = i->f
         return label
@@ -1340,6 +1343,10 @@ class RME(Observable):
             ## observable_text = r"\langle Q_2 \rangle"
             observable_text = r"\langle \mathcal{{M}}(E2) \rangle"
             units_text = r"e\,\mathrm{fm}^{2}"
+        elif self._operator in {"E0p","E0n","E00","E01","E0"}:
+            ## observable_text = r"\langle Q_2 \rangle"
+            observable_text = r"\langle \mathcal{{M}}(E0) \rangle"
+            units_text = r"e\,\mathrm{fm}^{2}"
         return observable_text, units_text
 
     
@@ -1353,7 +1360,7 @@ class RTP(Observable):
 
     """
 
-    # TODO restore E0 and E1 functionality
+    # TODO restore E1 functionality; consider combining E0/E1/E2 implementation
     
     def __init__(self, nuclide, operator, levelf, leveli):
         """Initialize with given parameters.
@@ -1405,6 +1412,8 @@ class RTP(Observable):
             observable_text = r"M1_{{{}}}".format(self._operator[2:])
         elif self._operator in {"E2p","E2n","E20","E21","E2"}:
             observable_text = r"E2_{{{}}}".format(self._operator[2:])
+        elif self._operator in {"E0p","E0n","E00","E01","E0"}:
+            observable_text = r"E0_{{{}}}".format(self._operator[2:])
         level_pair_text = self._level_pair[0].label_text, self._level_pair[1].label_text
         label = r"B({};{}\rightarrow{})".format(observable_text,level_pair_text[1],level_pair_text[0])  # <f|O|i> = i->f
         return label
@@ -1418,6 +1427,9 @@ class RTP(Observable):
             units_text = r"\mu_N^2"
         elif self._operator in {"E2p","E2n","E20","E21","E2"}:
             observable_text = r"B(E2)"
+            units_text = r"e^2\,\mathrm{fm}^{4}"
+        elif self._operator in {"E0p","E0n","E00","E01","E0"}:
+            observable_text = r"B(E0)"
             units_text = r"e^2\,\mathrm{fm}^{4}"
         return observable_text, units_text
 
