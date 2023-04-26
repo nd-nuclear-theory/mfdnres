@@ -6,6 +6,7 @@
     - 07/26/22 (mac): Created, from stub code in data.py.
     - 10/16/22 (mac): Provide Pow and E2 dimensionless ratio observables.
     - 03/21/23 (mac): Provide secondary axis labels for E2 dimensionless ratio observables.
+    - 04/25/23 (mac): Provide ME observable for scalar operators.
 """
 
 
@@ -13,6 +14,7 @@ import numpy as np
 import pandas as pd
 
 from . import (
+    am,
     analysis,
     data,
 )
@@ -591,6 +593,8 @@ class Power(Observable):
 # deduced observables: dimensionless E2 ratios
 ################################################################
 
+# TODO enable analogous E0 ratio support
+
 class RatioBE2r4(Ratio):
     """Observable extractor for dimensionless ratio B(E2)/(e^2r^4).
 
@@ -714,18 +718,25 @@ class FixSignTo(Observable):
 
     """
 
-    def __init__(self, observable1, observable2, observable_label_delimiters=None):
+    def __init__(self, observable1, observable2=None, observable_label_delimiters=None):
         """Initialize with given parameters.
 
         Arguments:
 
-            observable1, observable2 (Observable): first and second terms
+            observable1 (Observable): observable providing value
 
-            observable_label_delimiters (tuple, optional): presently ignored but
-            provided for consistency with Difference, Ratio, etc.
+            observable2 (Observable, optional): observable providing sign; if
+                omitted, observable1 is used, which amounts to taking
+                abs(observble1)
+
+            observable_label_delimiters (tuple, optional): left/right delimiter
+                pair to put around the label for the observable,
+                e.g., (r"\vert",r"\vert")
 
         """
         super().__init__()
+        if observable2 is None:
+            observable2 = observable1
         self._arguments = observable1, observable2
         self._observable_label_delimiters = observable_label_delimiters
 
@@ -760,7 +771,14 @@ class FixSignTo(Observable):
     def observable_label_text(self):
         """ Formatted LaTeX text representing observable.
         """
-        return self._arguments[0].observable_label_text
+        observable_label_delimiters = self._observable_label_delimiters
+        if observable_label_delimiters is None:
+            observable_label_delimiters = ("","")
+        return r"{}{}{}".format(
+            observable_label_delimiters[0],
+            self._arguments[0].observable_label_text,
+            observable_label_delimiters[1],
+        )
 
     @property
     def axis_label_text(self):
@@ -1348,9 +1366,80 @@ class RME(Observable):
             observable_text = r"\langle \mathcal{{M}}(E0) \rangle"
             units_text = r"e\,\mathrm{fm}^{2}"
         return observable_text, units_text
-
     
 
+################################################################
+# observable: ME -- scalar observable only
+################################################################
+
+class ME(Observable):
+    """ Observable extractor for electromagnetic non-reduced matrix element.
+
+    Applies only to scalar (E0) observable.
+
+    """
+
+    def __init__(self, nuclide, operator, levelf, leveli):
+        """Initialize with given parameters.
+
+        Arguments:
+
+            nuclide (tuple): (Z, N)
+
+            operator (str): identifier for electromagnetic operator, as accepted
+            by MFDnResultsData.get_rme()
+
+            level (LevelSelector): level
+
+        """
+        super().__init__()
+        self._nuclide = nuclide
+        self._operator = operator
+        self._level_pair = levelf, leveli
+                              
+    def value(self, results_data):
+        """ Extract observable.
+        """
+        qn_pair = self._level_pair[0].select_level(results_data), self._level_pair[1].select_level(results_data)
+        assert(self._operator in {"E0p","E0n","E00","E01","E0"})
+        Jf, _, _ = qn_pair[0]
+        Ji, _, _ = qn_pair[1]
+        assert(Jf==Ji)
+        return 1/am.hat(Jf)*results_data.get_rme(self._operator, qn_pair)
+
+    @property
+    def descriptor_str(self):
+        """ Text string describing observable.
+        """
+        return "-".join([
+            data.nuclide_str(self._nuclide),
+            "me",
+            self._operator,
+            self._level_pair[0].descriptor_str,
+            self._level_pair[1].descriptor_str,
+        ])
+
+    @property
+    def observable_label_text(self):
+        """ Formatted LaTeX text representing observable.
+        """
+        if self._operator in {"E0p","E0n","E00","E01","E0"}:
+            ## observable_text = r"Q_{{2{}}}".format(self._operator[2:])
+            observable_text = r"E0_{{{}}}".format(self._operator[2:])
+        level_pair_text = self._level_pair[0].label_text, self._level_pair[1].label_text
+        label = r"\langle {} \vert \mathcal{{M}}({}) \vert {} \rangle".format(level_pair_text[0],observable_text,level_pair_text[1])  # <f|O|i> = i->f
+        return label
+
+    @property
+    def axis_label_text(self):
+        """ Formatted LaTeX text representing axis label.
+        """
+        if self._operator in {"E0p","E0n","E00","E01","E0"}:
+            ## observable_text = r"\langle Q_2 \rangle"
+            observable_text = r"\langle \mathcal{{M}}(E0) \rangle"
+            units_text = r"e\,\mathrm{fm}^{2}"
+        return observable_text, units_text
+    
 ################################################################
 # observable: RTP
 ################################################################
