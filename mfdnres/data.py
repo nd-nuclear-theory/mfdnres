@@ -1731,7 +1731,7 @@ def set_up_hw_scan_secondary_axis(
             secondary_axis_label_text property)
 
         observable_norm_scale (float): normalization scale (i.e., denominator of
-            ration, such as r^2 or r^4)
+            ration, such as r^2 or r^4), or None to suppress axis
 
         observable_norm_labelpad (scalar, optional): pass-though labelpad option for ylabel
 
@@ -1741,6 +1741,10 @@ def set_up_hw_scan_secondary_axis(
 
     """
 
+    if observable_norm_scale is None:
+        return
+    
+    # create secondary axis
     def scale_functions(secondary_scale):
         """Generate scaling functions for secondary scale.
 
@@ -1757,8 +1761,6 @@ def set_up_hw_scan_secondary_axis(
         rendered.
         """
         return ((lambda x: x*secondary_scale), (lambda x: x/secondary_scale))
-
-    # create secondary axis
     ax_secondary_y = ax.secondary_yaxis(
         'right',
         functions=scale_functions(observable_norm_scale)
