@@ -47,6 +47,8 @@
       + Add tick specification support to set_up_hw_scan_axes().
       + Improve pass-through option handling in add_observable_panel_label().         
     - 03/21/23 (mac): Add set_up_hw_scan_secondary_axis().
+    - 04/26/23 (mac): Support log axis in set_up_hw_scan_axes().
+
 """
 
 import collections
@@ -1654,6 +1656,7 @@ def write_hw_scan_data(descriptor,observable_data,directory="data",format_str_ob
 def set_up_hw_scan_axes(
         ax, nuclide_observable, hw_range, observable_range,
         hw_range_extension=(0.05,0.05), observable_range_extension=(0.05,0.05),
+        observable_scale=None,
         hw_labelpad=None,
         observable_labelpad=None,
         observable_axis_label_text=None,
@@ -1671,6 +1674,8 @@ def set_up_hw_scan_axes(
         hw_range (tuple of float): x range, before extension
 
         observable_range (tuple of float): y range, or None for matplotlib auto
+
+        observable_scale (str): y scale ("linear" or "log")
 
         hw_range_extension (tuple of float, optional): x range relative extension
 
@@ -1701,9 +1706,13 @@ def set_up_hw_scan_axes(
 
     # set limits
     ax.set_xlim(*extend_interval_relative(hw_range,hw_range_extension))
+    if observable_scale=="log":
+        # Note: Override any range extension for log scale
+        observable_range_extension=(0.,0.)
+        ax.set_yscale("log")
     if (observable_range is not None) and np.isfinite(observable_range[0]).all():
         ax.set_ylim(*extend_interval_relative(observable_range,observable_range_extension))
-
+        
     # set axis labels
     ax.set_xlabel(HW_AXIS_LABEL_TEXT, labelpad=hw_labelpad)
     if observable_axis_label_text is None:
