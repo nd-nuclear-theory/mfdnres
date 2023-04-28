@@ -234,7 +234,6 @@ class LevelOverride(Level):
         self._key_fields = key_fields
         self._qn_by_key = qn_by_key
         self._verbose = verbose
-        print("Set verbose to {}".format(verbose))
 
     def select_level(self, results_data):
         """ Retrieve level.
