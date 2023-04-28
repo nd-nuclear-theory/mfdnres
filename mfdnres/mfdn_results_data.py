@@ -40,6 +40,7 @@
     07/17/22 (mac): Deduce diagonal E0 RMEs from radius (or else suppress) in get_rme().
     08/01/22 (pjf): Use RMEData for RME storage.
     11/19/22 (mac): Deduce two-body RME from MFDn two-body expectation value in get_rme().
+    04/27/23 (mac): Provide get_me() accessor for use with scalar observables.
 """
 
 from __future__ import annotations
@@ -927,6 +928,50 @@ class MFDnResultsData(results_data.ResultsData):
             print(rme_matrix)
 
         return rme_matrix
+
+    def get_me(
+            self, observable:str, qn_pair:LevelQNPairType, rank="ob",
+            allow_mfdn_native=True, allow_rme_from_moment=True,
+            allow_rme_from_expectation_value=True, allow_e0_from_radius=True,
+            default=np.nan, verbose=False
+    ):
+        """Retrieve matrix element (for scalar observable).
+
+        This accessor should only be used on scalar observbles.  It undoes the J
+        "hat" factor in the RME, which we have under Edmonds's Wigner-Eckart
+        convention.
+
+        Arguments:
+
+            observable (str): operator type ("E0p", ...) accepted by get_rme
+
+            qn_pair (tuple): quantum numbers for states (qn_bra,qn_ket)
+
+            See get_rme for optional pass-through arguments.
+
+        Returns:
+
+            (float): observable value (or default if missing)
+
+        """
+
+        # extract labels
+        (qn_bra,qn_ket) = qn_pair
+        (J_bra,g_bra,n_bra) = qn_bra
+        (J_ket,g_ket,n_ket) = qn_ket
+
+        # retrieve underlying rme
+        rme = self.get_rme(
+            observable, qn_pair, rank=rank,
+            allow_mfdn_native=allow_mfdn_native, allow_rme_from_moment=allow_rme_from_moment, allow_e0_from_radius=allow_e0_from_radius,
+            default=default, verbose=verbose,
+        )
+
+        # derive final value from rme
+        assert(np.isnan(rme) or J_bra==J_ket)
+        me = 1/am.hat(2*J_ket+1)*rme
+
+        return me
 
     def get_rtp(
             self, observable:str, qn_pair:LevelQNPairType, rank="ob",

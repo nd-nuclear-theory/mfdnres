@@ -1402,10 +1402,7 @@ class ME(Observable):
         """
         qn_pair = self._level_pair[0].select_level(results_data), self._level_pair[1].select_level(results_data)
         assert(self._operator in {"E0p","E0n","E00","E01","E0"})
-        Jf, _, _ = qn_pair[0]
-        Ji, _, _ = qn_pair[1]
-        assert(Jf==Ji)
-        return 1/am.hat(Jf)*results_data.get_rme(self._operator, qn_pair)
+        return results_data.get_me(self._operator, qn_pair)
 
     @property
     def descriptor_str(self):
