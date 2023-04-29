@@ -932,11 +932,11 @@ def make_multipanel_plot(mesh_data):
             observable_tick_specifier=(-70,-30,5,5),
             observable_list=[
                 mfdnres.observable.Energy(
-                    (4,5),
+                    nuclide,
                     mfdnres.level.LevelQN((1.5,1,1)),
                 ),
                 mfdnres.observable.Energy(
-                    (4,5),
+                    nuclide,
                     mfdnres.level.LevelQN((2.5,1,1)),
                 ),
             ],
@@ -950,11 +950,11 @@ def make_multipanel_plot(mesh_data):
             observable_list=[
                 mfdnres.observable.Difference(
                     mfdnres.observable.Energy(
-                        (4,5),
+                        nuclide,
                         mfdnres.level.LevelQN((2.5,1,1)),
                     ),
                     mfdnres.observable.Energy(
-                        (4,5),
+                        nuclide,
                         mfdnres.level.LevelQN((1.5,1,1)),
                     ),
                 ),
@@ -969,13 +969,13 @@ def make_multipanel_plot(mesh_data):
             observable_tick_specifier=(-1,30,5,5),
             observable_list=[
                 mfdnres.observable.RTP(
-                    (4,5),
+                    nuclide,
                     "E2p",
                     mfdnres.level.LevelQN((1.5,1,1)),
                     mfdnres.level.LevelQN((2.5,1,1)),
                 ),
                 mfdnres.observable.RTP(
-                    (4,5),
+                    nuclide,
                     "E2p",
                     mfdnres.level.LevelQN((1.5,1,1)),
                     mfdnres.level.LevelQN((3.5,1,1)),
@@ -991,13 +991,13 @@ def make_multipanel_plot(mesh_data):
             observable_list=[
                 mfdnres.observable.Ratio(
                     mfdnres.observable.RTP(
-                        (4,5),
+                        nuclide,
                         "E2p",
                         mfdnres.level.LevelQN((1.5,1,1)),
                         mfdnres.level.LevelQN((2.5,1,1)),
                     ),
                     mfdnres.observable.RTP(
-                        (4,5),
+                        nuclide,
                         "E2p",
                         mfdnres.level.LevelQN((1.5,1,1)),
                         mfdnres.level.LevelQN((3.5,1,1)),
