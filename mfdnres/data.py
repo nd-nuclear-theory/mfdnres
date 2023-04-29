@@ -441,6 +441,8 @@ def isotope(nuclide, format = None, as_tuple = False):
 def nuclide_str(nuclide):
     """Generate simple string for nuclide code, for use in filenames, e.g., "Z03-N03".
 
+    Special case of isotope_str.
+
     Arguments:
 
         nuclide (tuple): (Z,N)
@@ -1972,7 +1974,7 @@ def add_hw_scan_plot_Nmax_labels(
             )
             
         # add "Nmax" legend label
-        if Nmax == Nmax_label_list[Nmax_label_tagged_index]:
+        if len(Nmax_label_list)>0 and Nmax == Nmax_label_list[Nmax_label_tagged_index]:
             ax.annotate(
                 r"$N_{\mathrm{max}}$",
                 xy=(1,0), xycoords=Nmax_label,
