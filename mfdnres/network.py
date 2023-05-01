@@ -7,6 +7,7 @@
 
 
     - 04/27/23 (mac): Created, incorporating code extracted from 12be-shape testbed.
+    - 05/01/23 (mac): Add level selection, transition initial level selection, and valence marker line.
 
 """
 
@@ -22,6 +23,54 @@ from . import (
 )
 
 ################################################################
+# level tabulation selector functions
+################################################################
+
+def level_test_0hw(results_data, qn, verbose=False):
+    """Test if level is 0hw.
+
+    Arguments:
+
+        results_data (mfdnres.ResultsData): Results data
+
+        qn (tuple): (J,g,n) quantum nubmers
+
+    Returns:
+
+        (bool): Result of test
+
+    """
+
+    Nex_decomposition = results_data.get_decomposition("Nex", qn)
+    # Note: Provide short-circuit test in Nmax=0 space, where all states are
+    # deemed 0hw, to avoid out-of-range index on Nex_decomposition.
+    selected = (len(Nex_decomposition)==1) or (Nex_decomposition[0]>=Nex_decomposition[1])
+    return selected
+
+def level_test_T_excited(results_data,verbose=False):
+    """Test if level has excited isospin, i.e., a deduced T > Tz.
+
+    The threshold on deduced T is Tz+0.5.
+
+    Arguments:
+
+        results_data (mfdnres.ResultsData): Results data
+
+        qn (tuple): (J,g,n) quantum nubmers
+
+    Returns:
+
+        (bool): Result of test
+
+    """
+
+    nuclide = results_data.params["nuclide"]
+    Tz=1/2*(nuclide[0]-nuclide[1])
+    T = results_data.get_isospin(qn)
+    selected = (T-abs(Tz))>0.5
+    return selected
+
+################################################################
 # network plotting
 ################################################################
 
@@ -33,6 +82,7 @@ def set_up_network_axes(
         ax, J_max, E_range,
         J_range_extension=(0.05,0.05), E_range_extension=(0.05,0.05),
         E_tick_specifier=None,
+        show_frame=True,
 ):
     """Set up axis ranges, labels, and ticks for network plot.
 
@@ -53,33 +103,41 @@ def set_up_network_axes(
         E_tick_specifier (tuple, optional): tick specification
         (min,max,step,num_subdivision) for vertical ticks
 
+        show_frame (bool, optional): whether or not to draw frame
+
     """
 
-    # set ticks
-    #
-    # Note that the tick specification must come *before* setting range limits,
-    # since the range limits automatically readjust when you set the ticks.
-    # 
-    # TODO (mac): implement tick_post_transformation and tick_label_function in
-    # linear_ticks
-    x_ticks = [J for J in range(0,int(J_max)+1,1)]
-    x_tick_values = [x*(x+1) for x in x_ticks]
-    ax.xaxis.set_major_formatter(ticks.HalfIntFormatter())
-    ## x_tick_labels=[mfdnres.ticks.half_int_str(x) for x in x_ticks]
-    ax.set_xticks(x_tick_values, x_ticks)
-    if E_tick_specifier is not None:
-        y_ticks = ticks.linear_ticks(*E_tick_specifier)
-        ticks.set_ticks(ax,"y",y_ticks)
-    
+    if show_frame:
+        # set ticks
+        #
+        # Note that the tick specification must come *before* setting range limits,
+        # since the range limits automatically readjust when you set the ticks.
+        # 
+        # TODO (mac): implement tick_post_transformation and tick_label_function in
+        # linear_ticks
+        x_ticks = [J for J in range(0,int(J_max)+1,1)]
+        x_tick_values = [x*(x+1) for x in x_ticks]
+        ax.xaxis.set_major_formatter(ticks.HalfIntFormatter())
+        ## x_tick_labels=[mfdnres.ticks.half_int_str(x) for x in x_ticks]
+        ax.set_xticks(x_tick_values, x_ticks)
+        if E_tick_specifier is not None:
+            y_ticks = ticks.linear_ticks(*E_tick_specifier)
+            ticks.set_ticks(ax,"y",y_ticks)
+        
+        # set axis labels
+        #
+        # TODO (mac): support alternative labels
+        ax.set_xlabel(r"$J$")
+        ax.set_ylabel("$E_x~(\mathrm{MeV})$")
+    else:
+        # disable frame and ticks
+        ax.set_xticks([], [])
+        ax.set_yticks([], [])
+        ax.set_frame_on(False)
+
     # set limits
     ax.set_xlim(*data.extend_interval_relative((0, jj1(J_max)), J_range_extension))
     ax.set_ylim(*data.extend_interval_relative(E_range, E_range_extension))
-
-    # set axis labels
-    #
-    # TODO (mac): support alternative labels
-    ax.set_xlabel(r"$J$")
-    ax.set_ylabel("$E_x~(\mathrm{MeV})$")
 
     
 def select_network_levels(
@@ -108,7 +166,7 @@ def select_network_levels(
 
     Returns:
 
-        network_levels (dict): Plotting data for levels, stored as qn->(J*(J+1), E)
+        network_levels (dict): Plotting data for levels, stored as qn->E
     """
 
     # find reference energy
@@ -141,19 +199,74 @@ def select_network_levels(
             n_max = n_max_for_J.get(J)
             if n_max is not None and n>n_max:
                 continue
-
+            
         # save level
-        network_levels[qn] = (jj1(J), E)
+        network_levels[qn] = E
     
     if verbose:
         print("Network levels: {}".format(network_levels))
     return network_levels
 
 
+def filter_network_levels(
+        results_data,
+        network_levels,
+        test,
+        verbose=False,
+):
+    """Filter levels for network plot (with plotting data).
+
+    Arguments:
+
+        results_data (mfdnres.ResultsData): Results data
+
+        network_levels (dict): Plotting data for levels, stored as qn->E
+
+        test (callable): Test function with signature test(results_data,qn)->bool
+
+    Returns:
+
+        filtered_network_levels (dict): Plotting data for levels, stored as qn->E
+    """
+
+    filtered_network_levels = dict()
+    for qn, E in network_levels.items():
+        if test(results_data, qn):
+            filtered_network_levels[qn] = E
+    return filtered_network_levels
+
+def draw_network_valence_marker(
+        ax,Jv,
+        plot_kw={},
+):
+    """ Draw vertical marker line for maximal valence angular momentum.
+
+    Arguments:
+
+        ax (mpl.axes.Axes): axes object
+
+        Jv (float): maximal valence angular momentum
+
+        plot_kw (dict, optional): Line2D properties properties overriding
+        the default line style
+    """
+    # draw levels
+    plot_kw_defaults = dict(
+        color="dimgray",
+        linestyle="dashed",
+        linewidth=0.5,
+        marker=None,
+    )
+    plot_kw_full = {
+        **plot_kw_defaults,
+        **plot_kw,
+    }
+    ax.axvline(jj1(Jv), **plot_kw_full)
+    
 def draw_network_levels(
         ax,
         network_levels,
-        plot_style_kw={},
+        plot_kw={},
         verbose=False,
 ):
     """Draw levels for network plot.
@@ -162,9 +275,9 @@ def draw_network_levels(
 
         ax (mpl.axes.Axes): axes object
 
-        network_levels (dict): Plotting data for levels, stored as qn->(J*(J+1), E)
+        network_levels (dict): Plotting data for levels, stored as qn->E
 
-        plot_style_kw (dict, optional): Line2D properties properties overriding
+        plot_kw (dict, optional): Line2D properties properties overriding
         the default marker style (e.g., marker="s", markerfacecolor = "white",
         markeredgecolor="black", markersize=7)
 
@@ -173,28 +286,45 @@ def draw_network_levels(
     # extract coordinates for plotting
     #
     # Levels are ordered by (J, E) for plotting.
-    level_coordinates = np.array(sorted(list(network_levels.values())))
+    JJ1_values = [
+        jj1(J)
+        for J, _, _ in network_levels.keys()
+    ]
+    E_values = [
+        E
+        for E in network_levels.values()
+    ]
 
+    # marker face coloring
+    ## if marker_face_coloring is not None:
+    ##     print(marker_face_coloring)
+    ##     test, true_color, false_color = marker_face_coloring
+    ##     color_values = [
+    ##         true_color if test(results_data, qn) else false_color
+    ##         for qn in network_levels.keys()
+    ##     ]
+    ##     print("color_values: {}".format(color_values))
+        
     # draw levels
-    plot_style_kw_defaults = dict(
+    plot_kw_defaults = dict(
         linestyle="None",
         marker="s",
         markerfacecolor = "white",
         markeredgecolor="black",
-        markersize=7,
+        markersize=4,
     )
-    plot_style_kw_full = {
-        **plot_style_kw_defaults,
-        **plot_style_kw,
+    plot_kw_full = {
+        **plot_kw_defaults,
+        **plot_kw,
     }
     
-    ax.plot(level_coordinates[:,0], level_coordinates[:,1], **plot_style_kw_full)
+    ax.plot(JJ1_values, E_values, **plot_kw_full)
 
 
 def draw_expt_levels(
         ax,
         expt_energies,
-        plot_style_kw={},
+        plot_kw={},
         verbose=False,
 ):
     """Draw levels for network plot.
@@ -205,7 +335,7 @@ def draw_expt_levels(
 
         expt_energies (list): Plotting data for levels, stored as [J, E]
 
-        plot_style_kw (dict, optional): Line2D properties properties overriding
+        plot_kw (dict, optional): Line2D properties properties overriding
         the default marker style
 
     """
@@ -222,22 +352,22 @@ def draw_expt_levels(
     level_coordinates[:,0] = level_coordinates[:,0]*(level_coordinates[:,0]+1)
 
     # draw levels
-    plot_style_kw_defaults = dict(
+    plot_kw_defaults = dict(
         linestyle="None",
         marker="_",
         color="darkgreen",
         ##markerfacecolor = "darkgreen",
         ##markeredgecolor="darkgreen",
-        markersize=17,
+        markersize=7,
         markeredgewidth=2,
     )
-    plot_style_kw_full = {
-        **plot_style_kw_defaults,
-        **plot_style_kw,
+    plot_kw_full = {
+        **plot_kw_defaults,
+        **plot_kw,
     }
 
     
-    ax.plot(level_coordinates[:,0], level_coordinates[:,1], **plot_style_kw_full)
+    ax.plot(level_coordinates[:,0], level_coordinates[:,1], **plot_kw_full)
     
 
 def band_fit(
@@ -258,7 +388,7 @@ def band_fit(
 
         results_data (mfdnres.ResultsData): Results data
 
-        network_levels (dict): Plotting data for levels, stored as qn->(J*(J+1), E)
+        network_levels (dict): Plotting data for levels, stored as qn->E
 
         band_members (list of level.Level): Band members (may include some
         beyond those used in fit)
@@ -289,7 +419,7 @@ def band_fit(
         for qn in selected_levels
     ]
     E_list = [
-        network_levels[qn][1]
+        network_levels[qn]
         for qn in selected_levels
     ]
     if (verbose):
@@ -334,7 +464,7 @@ def draw_band_fit(
         J_values_for_fit=None,
         with_coriolis=False,
         J_range=None,
-        plot_style_kw={},
+        plot_kw={},
         verbose=False
 ):
     """Obtain band rotational energy parameters, by fitting band energies.
@@ -347,7 +477,7 @@ def draw_band_fit(
 
         results_data (mfdnres.ResultsData): Results data
 
-        network_levels (dict): Plotting data for levels, stored as qn->(J*(J+1), E)
+        network_levels (dict): Plotting data for levels, stored as qn->E
 
         band_members (list of level.Level): Band members (may include some
         beyond those used in fit)
@@ -361,7 +491,7 @@ def draw_band_fit(
         must be specified but might someday default to J range for specified
         band members
 
-        plot_style_kw (dict, optional): Line2D properties properties overriding
+        plot_kw (dict, optional): Line2D properties properties overriding
         the default line
 
     """
@@ -388,25 +518,26 @@ def draw_band_fit(
         print("Plot points: {}".format(plot_points))
 
     # plot curve
-    plot_style_kw_defaults = dict(
+    plot_kw_defaults = dict(
         linestyle="-",
         marker=None,
     )
-    plot_style_kw_full = {
-        **plot_style_kw_defaults,
-        **plot_style_kw,
+    plot_kw_full = {
+        **plot_kw_defaults,
+        **plot_kw,
     }
-    ax.plot(plot_points[:,0], plot_points[:,1], **plot_style_kw_full)
+    ax.plot(plot_points[:,0], plot_points[:,1], **plot_kw_full)
 
 
 def select_network_transitions(
         results_data,
         network_levels,
         operator,
+        initial_levels=None,
         reference_strength=None,
         reference_results_data=None,
         strength_threshold=None,
-        strength_mode="rme",
+        strength_mode="rtp",
         verbose=False,
 ):
     """Select transitions for network plot (with plotting data).
@@ -416,6 +547,9 @@ def select_network_transitions(
         results_data (mfdnres.ResultsData): Results data
 
         network_levels (dict): Plotting data for levels, stored as qn->(J*(J+1), Ex)
+
+        initial_levels (list): Levels to take for initial state of (canonical)
+        transition, as qn tuples
 
         reference_strength (float or tuple of level.Level, optional):
         Transition strength, or level providing self-transition strength, or
@@ -428,6 +562,9 @@ def select_network_transitions(
        
         strength_threshold (float, optional): Threshold for transition strength
         (after scaling to reference strength)
+
+        strength_mode (str, optional): Mode ("rtp", "rme", "me") specifying which accessor
+        to use for the transition strength
 
     Returns:
 
@@ -478,6 +615,7 @@ def select_network_transitions(
         (qn_pair, strength/s0)
         for qn_pair, strength in transition_strengths
         if strength_threshold is None or strength/s0 >= strength_threshold
+        if initial_levels is None or qn_pair[1] in initial_levels
     ]
         
     if verbose:
@@ -491,7 +629,7 @@ def draw_network_transitions(
         width_scale=1,
         color_scale=1,
         colormap=mpl.cm.get_cmap(name="Greys"),
-        plot_style_kw={},
+        plot_kw={},
         verbose=False,
 ):
     """Draw transitions for network plot.
@@ -512,7 +650,7 @@ def draw_network_transitions(
         colormap (matplotlib.colors.Colormap, optional): Colormap for color as
         function of scaled transition strength
 
-        plot_style_kw (dict, optional): Line2D properties properties overriding
+        plot_kw (dict, optional): Line2D properties properties overriding
         the default line style (but not linewidth or color)
 
     """
@@ -520,23 +658,25 @@ def draw_network_transitions(
     # sort transitions so weakest is rendered backmost
     sorted_network_transitions = sorted(network_transitions, key = lambda x: x[1])
 
-    plot_style_kw_defaults = dict(
+    plot_kw_defaults = dict(
         solid_capstyle="butt", marker=None,
     )
-    plot_style_kw_full = {
-        **plot_style_kw_defaults,
-        **plot_style_kw,
+    plot_kw_full = {
+        **plot_kw_defaults,
+        **plot_kw,
     }
     
     # draw transitions
     for qn_pair, strength in sorted_network_transitions:
         qnf, qni = qn_pair
-        xf, Ef = network_levels[qnf]
-        xi, Ei = network_levels[qni]
+        Jf, _, _ = qnf
+        Ji, _, _ = qni
+        Ef = network_levels[qnf]
+        Ei = network_levels[qni]
         ax.plot(
-            [xi,xf], [Ei,Ef],
+            [jj1(Ji),jj1(Jf)], [Ei,Ef],
             linewidth=width_scale*strength,
             color=colormap(color_scale*strength),
-            **plot_style_kw_full
+            **plot_kw_full
         )
     
