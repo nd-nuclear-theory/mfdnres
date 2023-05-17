@@ -126,9 +126,9 @@ def set_up_network_axes(
         
         # set axis labels
         #
-        # TODO (mac): support alternative labels
-        ax.set_xlabel(r"$J$")
-        ax.set_ylabel("$E_x~(\mathrm{MeV})$")
+        # TODO (mac): support alternative labels, e.g., absolute "E"
+        ax.set_xlabel(r"$J$",labelpad=1)
+        ax.set_ylabel("$E_x~(\mathrm{MeV})$",labelpad=1)
     else:
         # disable frame and ticks
         ax.set_xticks([], [])
