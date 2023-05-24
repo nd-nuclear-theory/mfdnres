@@ -48,6 +48,7 @@
       + Improve pass-through option handling in add_observable_panel_label().         
     - 03/21/23 (mac): Add set_up_hw_scan_secondary_axis().
     - 04/26/23 (mac): Support log axis in set_up_hw_scan_axes().
+    - 05/24/23 (mac): Add side option to add_hw_scan_plot_Nmax_labels().
 
 """
 
@@ -1927,8 +1928,10 @@ def add_hw_scan_plot(
 
 def add_hw_scan_plot_Nmax_labels(
         ax, Nmax_groups, Nmax_label_list,
-        Nmax_label_tagged_index=-1, data_point_index=-1,
-        text_displacement=(+12,+0),
+        Nmax_label_tagged_index=-1,
+        side="right",
+        data_point_index=None,
+        text_displacement=None,
 ):
     """Add Nmax curve labels to previously drawn hw scan plot.
 
@@ -1944,17 +1947,31 @@ def add_hw_scan_plot_Nmax_labels(
         Nmax_label_tagged_index (int, optional): index within Nmax_label_list for Nmax
         label to which to attach the legend "Nmax"
 
-        data_point_index (int, optional): index of data point within curve for
-        labeling (0 for "left" end of curve, -1 for "right" end of curve)
+        side (str, optional): side of curve for label "left" or "right"
 
-        text_displacement (tuple): xy displacement in points of text relative to curve point
+        data_point_index (int, optional): index of data point within curve for
+        labeling (0 for "left" end of curve, -1 for "right" end of curve); or
+        None for default based on side
+
+        text_displacement (tuple): xy displacement in points of text relative to curve point; or
+        None for default based on side
 
     """
 
-    # TODO (mac, 03/19/23): add in generalizations for call-out lines, proper
-    # formatting of left-hand labels, placing the Nmax legend text *above* the
-    # Nmax labels, etc.
-    
+    # TODO (mac, 03/19/23): add in generalizations for call-out lines, placing
+    # the Nmax legend text *above* the Nmax labels, etc.
+
+    if side=="right":
+        if data_point_index is None:
+            data_point_index=-1
+        if text_displacement is None:
+            text_displacement=(+12,+0)
+    elif side=="left":
+        if data_point_index is None:
+            data_point_index=0
+        if text_displacement is None:
+            text_displacement=(-2,+0)
+        
     for Nmax, group in Nmax_groups:
 
         # extract curve endpoint
