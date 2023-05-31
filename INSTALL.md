@@ -49,6 +49,8 @@ Department of Physics, University of Notre Dame
   % git pull
   ~~~~~~~~~~~~~~~~
 
+  And repeat the `pip install` procedure noted above.
+
 # 2. Environment variables
 
   For most purposes, you do not need to set any environment variables.  However,
