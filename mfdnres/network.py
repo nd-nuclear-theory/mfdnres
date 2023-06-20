@@ -115,7 +115,7 @@ def set_up_network_axes(
         # 
         # TODO (mac): implement tick_post_transformation and tick_label_function in
         # linear_ticks
-        x_ticks = [J for J in range(0,int(J_max)+1,1)]
+        x_ticks = [J for J in range(0,int(J_max)+1,1)]  # TODO (mac): currently only provides integer ticks
         x_tick_values = [x*(x+1) for x in x_ticks]
         ax.xaxis.set_major_formatter(ticks.HalfIntFormatter())
         ## x_tick_labels=[mfdnres.ticks.half_int_str(x) for x in x_ticks]
@@ -143,6 +143,7 @@ def set_up_network_axes(
 def select_network_levels(
         results_data,
         reference_energy=None,
+        reference_results_data=None,
         J_max=None,
         E_max=None,
         n_max_for_J=None,
@@ -157,6 +158,10 @@ def select_network_levels(
         reference_energy (float or level.Level, optional): energy, or level providing zero
         point for energy, or None to use raw energies
 
+        reference_results_data (mfdnres.ResultsData, optional): Results data for
+        use in extracting reference energy (e.g., may contain spectrum of
+        different parity or of isobar)
+
         J_max (float, optional): cap on J
 
         E_max (float, optional): cap on E 
@@ -167,13 +172,16 @@ def select_network_levels(
     Returns:
 
         network_levels (dict): Plotting data for levels, stored as qn->E
+
     """
 
     # find reference energy
+    if reference_results_data is None:
+        reference_results_data = results_data
     if reference_energy is None:
         E0 = 0
     elif isinstance(reference_energy, level.Level):
-        E0 = results_data.get_energy(reference_energy.select_level(results_data))
+        E0 = reference_results_data.get_energy(reference_energy.select_level(reference_results_data))
     else:
         E0 = reference_energy
     if verbose:
@@ -294,7 +302,9 @@ def draw_network_levels(
         E
         for E in network_levels.values()
     ]
-
+    if verbose:
+        print("JJ1 {} E {}".format(JJ1_values,E_values))
+    
     # marker face coloring
     ## if marker_face_coloring is not None:
     ##     print(marker_face_coloring)
