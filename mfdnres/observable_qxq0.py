@@ -13,9 +13,8 @@ import numpy as np
 import mfdnres
 import mfdnres.am
 import mfdnres.data
+import mfdnres.ncci
 import mfdnres.observable
-
-import ncci.utils
 
 ################################################################
 # Q-invariant c.m. correction
@@ -57,7 +56,7 @@ def get_QxQ_0_intr_rme(results_data, observable_operator, qn_pair, default=np.na
 
     # calculate oscillator length
     hw = results_data.params["hw"]
-    b = ncci.utils.oscillator_length(hw)
+    b = mfdnres.ncci.oscillator_length(hw)
     b_cm = 1/np.sqrt(A)*b
 
     # carry out cm correction
