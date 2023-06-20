@@ -12,22 +12,26 @@ Department of Physics, University of Notre Dame
 
   Change to the directory where you want the repository to be installed,
   e.g.,
+
   ~~~~~~~~~~~~~~~~
   % cd ~/code
   ~~~~~~~~~~~~~~~~
 
   Clone the `mfdnres` repository.
+
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   % git clone https://github.com/nd-nuclear-theory/mfdnres.git
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   Change your working directory to the repository for the following steps:
+  
   ~~~~~~~~~~~~~~~~
   % cd mfdnres
   ~~~~~~~~~~~~~~~~
 
   If you want the bleeding-edge, potentially broken version, check out the
   `develop` branch:
+  
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   % git checkout -t origin/develop
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -38,16 +42,28 @@ Department of Physics, University of Notre Dame
   % python3 -m pip install --user --editable .
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  If you want to use the analysis tools, install the additional requirements:
+  Note that the `.` here means to install the Python package defined by the code
+  in the current directory.
+
+  This basic installation does not check that you have certain dependencies
+  (matplotlib or Pandas) installed.  These are only needed if you are using the
+  analysis and plotting machinery, not for the basic operation of `mfdnres`.  If
+  you want to make sure that these dependencies are also installed, do instead
+  (or in addition):
+  
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   % python3 -m pip install --user --editable ".[analysis]"
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  a. Subsequently updating source
+  a. Subsequently updating source:
 
   ~~~~~~~~~~~~~~~~
   % git pull
+  % python3 -m pip install --user --editable .
   ~~~~~~~~~~~~~~~~
+
+  This subsequent `pip install`, when updating the source code, is a precaution
+  in case, e.g., the package dependencies have changed.
 
 # 2. Environment variables
 
@@ -91,6 +107,7 @@ Department of Physics, University of Notre Dame
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   Alternatively, if your default shell is bash:
+  
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # mfdnres
   export GROUP_HOME=/afs/crc.nd.edu/group/nuclthy

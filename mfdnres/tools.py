@@ -17,7 +17,7 @@
     04/02/19 (mac): Move effective_am in from analysis.
     01/04/20 (mac): Fix canonicalize_Jgn_pair.
     11/19/20 (mac): Add nuclide_str and qn_str.
-
+    01/15/23 (mac): Support parsing of whitespaceless equal sign in split_and_prune_lines().
 """
 
 from __future__ import annotations
@@ -139,7 +139,10 @@ def split_and_prune_lines(lines):
     """Split input lines into tokenized lines, suppressing comment
     (beginning with hash token) or empty lines.
 
-    Tokenization is by whitespace, i.e., with split.
+    Tokenization is by whitespace, i.e., with split.  However, the first
+    occurrence of an equal sign ("=") in a line will be split as its own token,
+    to support "nonconformant" key-value input files with no spaces around equal
+    signs, e.g., "A=7" -> ["A", "=", "7"]
 
     The tokenized lines are returned as tuples rather than lists to
     support downstream processing.  For instance, structured array
@@ -165,9 +168,11 @@ def split_and_prune_lines(lines):
             (bool)
         """
         return bool(tokens) and (tokens[0]!="#")
-
-    tokenized_lines = map(lambda s : tuple(s.split()),lines)
-    return filter(is_active_line,tokenized_lines)
+                
+    tokenized_lines = map(lambda s : s.replace("=", " = ", 1), lines)  # pad equal sign with whitespace to ensure it is recognized as own token
+    tokenized_lines = map(lambda s : tuple(s.split()), tokenized_lines)
+    tokenized_lines = filter(is_active_line, tokenized_lines)
+    return tokenized_lines
 
 section_header_regex = re.compile(r"\[(.*)\]")
 
@@ -349,8 +354,8 @@ def tuple_of(conversion):
         return tuple(map(conversion,data))
     return f
 
-def extract_key_value_pairs(tokenized_lines,conversions):
-    """ Parse tokenized lines as key-value pairs.
+def extract_key_value_pairs(tokenized_lines, conversions):
+    """Parse tokenized lines as key-value pairs.
 
     A valid key-value line is of the form:
 
@@ -371,11 +376,15 @@ def extract_key_value_pairs(tokenized_lines,conversions):
     {'b': [1, 2, 3], 'a': 1}
 
     Arguments:
+
         tokenized_lines (iterator): tokenized input lines
+
         conversions (dict): conversion functions for recognized key strings
 
     Returns:
+
         (dict): key value pairs obtained through given conversions
+
     """
 
     # regexp for Fortran array-like output
@@ -383,7 +392,7 @@ def extract_key_value_pairs(tokenized_lines,conversions):
 
     results = dict()
     for tokenized_line in tokenized_lines:
-
+        
         # skip "null" key-value line
         null_line = (len(tokenized_line)==2) and (tokenized_line[1]=="=")
         if (null_line):

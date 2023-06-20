@@ -43,6 +43,7 @@
         - Add preprocessor option to merged_mesh; keep common params in merged mesh point.
     04/17/22 (mac): Make make_obs_table provide np.nan value when extractor raises exception.
     07/17/22 (mac): Change behavior of make_results_dict() to fail on duplicate mesh key.
+    02/19/23 (mac): Add selected_mesh_point() as wrapper for selected_mesh_data().
 """
 
 import copy
@@ -199,22 +200,17 @@ def make_results_dict(
     """Load mesh data into dictionary, using specified parameter tuple as
        key.
 
-    Example key descriptor:
+    Example key descriptors:
 
-       (("Nsigmamax",int),("Nmax",int),("hw",float))
-
-    Example:
         >>> KEY_DESCRIPTOR_NMAX_HW = (("Nmax",int),("hw",float))
 
-    For now, in the event that the same mesh point arises multiple
-    times on input (i.e., a given value for the key tuple is
-    duplicated), the final occurrence overwrites any earlier
-    occurrences.  In the future, a more sophisticated "merging"
-    process might be appropriate.
+        >>> KEY_DESCRIPTOR_NNHW = (("Nsigmamax",int),("Nmax",int),("hw",float))
 
-    In the event that the same mesh point arises multiple
-    times on input (i.e., a given value for the key tuple is
-    duplicated), dictionary creation failes with 
+    In the event that the same mesh point arises multiple times on input (i.e.,
+    a given value for the key tuple is duplicated), dictionary creation fails
+    with a KeyDuplicationError exception.  Any necessary "merging" of mesh
+    points with duplicate keys should be carried out in advance, using
+    mfdnres.analysis.merged_mesh().
 
     An optional key transformation is useful for, e.g., shifting the Nmax value
     stored in the dictionary when results are to be used as reference results
@@ -262,7 +258,7 @@ def selected_mesh_data(
 
         {"nuclide":(3,4),"interaction":"JISP16"}
 
-    which is then interpreted as
+    which is then interpreted as a key tuple
 
        (("nuclide",(3,4)),("interaction","JISP16"))
 
@@ -276,7 +272,7 @@ def selected_mesh_data(
 
     """
 
-    # set up key extraction and selection
+    # convert parameter dict to key tuple
     key_value_pairs = selection_dict.items()  # convert to view as iterable of pairs for cleaner debugging
     key_function = make_key_function(key_value_pairs)
     selected_values = tuple([value for (_,value) in key_value_pairs])
@@ -292,6 +288,37 @@ def selected_mesh_data(
     if (verbose):
         print("  selected_mesh_data: selected mesh points {}".format(len(new_mesh_data)))
     return new_mesh_data
+
+def selected_mesh_point(
+        mesh_data,selection_dict,
+        verbose=False
+):
+    """Select single mesh point with specific values for given paremeters.
+
+    This is a wrapper for selected_mesh_data, but which fails unless a unique
+    mesh point is selected, in which case it return just that unique mesh point.
+
+    Example key-value specification:
+
+        {"nuclide":(3,4),"interaction":"JISP16"}
+
+    Arguments:
+        mesh_data (list of ResultsData): data for mesh points
+        selection_dict (dict): key value pairs for parameter values to select
+        verbose (bool,optional): verbose output
+
+    Returns:
+        (ResultsData): data for selected mesh point
+
+    """
+
+    new_mesh_data = selected_mesh_data(mesh_data, selection_dict, verbose=verbose)
+    if len(new_mesh_data)>1:
+        raise KeyDuplicationError("duplicate mesh key found matching dict {}".format(selection_dict))
+    elif len(new_mesh_data)==0:
+        raise KeyError("no mesh key found matching dict {}".format(selection_dict))
+    else:
+        return new_mesh_data[0]
 
 def sorted_mesh_data(mesh_data, key_descriptor, reverse=False, verbose=False):
     """Sort mesh data, using specified parameter tuple as key.

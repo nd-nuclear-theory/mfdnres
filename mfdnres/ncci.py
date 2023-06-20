@@ -6,8 +6,41 @@
 
     05/31/19 (mac): Created.
     07/12/19 (mac): Add augment_params_with_parity().
+    06/20/23 (mac): Pull in oscillator length functions from mcscript-ncci/utils.py.
 
 """
+
+################################################################
+# oscillator length calculations
+################################################################
+
+def oscillator_length(hw):
+    """Calculate oscillator length for given oscillator frequency.
+
+    b(hw) = (hbar c)/[(m_N c^2) (hbar omega)]^(1/2)
+
+    Arguments:
+        hw (numeric): hbar omega in MeV
+
+    Returns:
+        (float): b in fm
+    """
+    return constants.k_hbar_c/math.sqrt(constants.k_mN_csqr*hw)
+
+
+def hw_from_oscillator_length(b):
+    """Calculate oscillator frequency for given oscillator length.
+
+    hw(b) = (hbar c)^2/[(m_N c^2) (b^2)]
+
+    Arguments:
+        b (numeric): oscillator length in fm
+
+    Returns:
+        (float): hbar omega in MeV
+    """
+    return constants.k_hbar_c**2/(constants.k_mN_csqr*b**2)
+
 
 ################################################################
 # shell model N0
@@ -22,7 +55,7 @@ def N0_for_nuclide(nuclide):
 
     Arguments:
         nuclide (tuple): (Z,N) for nuclide
-
+    
     Returns:
         N0 (int): number of quanta
     """

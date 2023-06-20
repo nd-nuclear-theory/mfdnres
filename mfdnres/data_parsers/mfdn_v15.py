@@ -1,4 +1,4 @@
-""" res_parser_mfdn_v15
+""" mfdn_v15
 
     Provides parser for mfdn v15 results files.
 
@@ -20,9 +20,11 @@
     07/08/20 (pjf): Fix quantum number types.
     09/17/20 (zz): Add one-body observable parser.
     09/17/20 (mac): Update data attribute names.  Add two-body obervable parser.
-    09/25/21 (mac): Add support for parsing extended relative radii observables.
+    09/25/21 (mac): Parse extended relative radii observables.
     10/12/21 (pjf): Warn if file is empty.
     08/01/22 (pjf): Use RMEData for RME storage, storing operator quantum numbers.
+    01/11/23 (mac): Parse Diagonalization parameters and truncate parsing to states within requested neivals.
+    01/15/23 (mac): Support res file output from MFDn menj variant.
 """
 
 from __future__ import annotations
@@ -52,6 +54,7 @@ from ..mfdn_results_data import (
 #     number labels
 
 k_parameter_g:int = None
+
 
 ################################################################
 # parsing utility
@@ -123,7 +126,6 @@ def parse_params(self:MFDnResultsData,tokenized_lines):
     Globals:
         k_parameter_g (output)
 
-    TODO: extract "observables" from numbered TBMEfile entries
     """
 
     # extract key-value pairs
@@ -145,6 +147,12 @@ def parse_params(self:MFDnResultsData,tokenized_lines):
         "Nmax" : tools.singleton_of(int),
         "DeltaN" : tools.singleton_of(int),
         "WTmax" : tools.singleton_of(float),
+        # Diagonalization
+        "neivals" : tools.singleton_of(int),
+        "maxits" : tools.singleton_of(int),
+        "startit" : tools.singleton_of(int),
+        "selectpiv" : tools.singleton_of(int),
+        "tol" : tools.singleton_of(float),
         # Many-body matrix
         "dimension" : tools.singleton_of(int),
         "numnonzero" : tools.singleton_of(int),
@@ -152,6 +160,11 @@ def parse_params(self:MFDnResultsData,tokenized_lines):
         "Hrank" : tools.singleton_of(int),
         "hbomeg" : tools.singleton_of(float),
         "fmass" : tools.singleton_of(float),
+        # Interaction -- menj variant
+        "EMax" : tools.singleton_of(int),
+        "MEID" : tools.singleton_of(str),
+        "E3Max" : tools.singleton_of(int),
+        "ME3ID" : tools.singleton_of(str),
         # Observables
         "numTBops" : tools.singleton_of(int),
         "TBMEfile" : tools.singleton_of(str),
@@ -194,6 +207,8 @@ def parse_params(self:MFDnResultsData,tokenized_lines):
     # update to params dictionary
     self.params.update(key_value_dict)
 
+    ## self.params["neivals"] = None
+    
 def parse_energies(self:MFDnResultsData,tokenized_lines):
     """ Parse energies.
 
@@ -201,6 +216,10 @@ def parse_energies(self:MFDnResultsData,tokenized_lines):
         k_parameter_g (input)
     """
 
+    # truncate to requested states
+    neivals = self.params.get("neivals")
+    tokenized_lines = tokenized_lines[:neivals]
+    
     # import energy tabulation
     table = np.array(
         tokenized_lines,
@@ -229,6 +248,7 @@ def parse_energies(self:MFDnResultsData,tokenized_lines):
         self.mfdn_level_residuals[qn] = error
         self.mfdn_level_properties["T"][qn] = T
 
+        
 def parse_decompositions_Nex(self:MFDnResultsData,tokenized_lines):
     """Parse Nex decomposition.
 
@@ -241,11 +261,18 @@ def parse_decompositions_Nex(self:MFDnResultsData,tokenized_lines):
     true for MFDn parser as well.
 
     """
+
+    # truncate to requested states
+    neivals = self.params.get("neivals")
+    tokenized_lines = tokenized_lines[:neivals]
+
+    # store decompositions
     self.mfdn_level_decompositions["Nex"] = {}
     for tokenized_line in tokenized_lines:
         (qn,data) = split_mfdn_results_line(tokenized_line)
         self.mfdn_level_decompositions["Nex"][qn]=data
 
+        
 def parse_generic_static_properties(self:MFDnResultsData,tokenized_lines,container,property_names):
     """Parse generic static properties given list of property names for the data columns.
 
@@ -255,27 +282,36 @@ def parse_generic_static_properties(self:MFDnResultsData,tokenized_lines,contain
         property_names (list of str): names for these properties
     """
 
+    # truncate to requested states
+    neivals = self.params.get("neivals")
+    tokenized_lines = tokenized_lines[:neivals]
+
+    # set up containers for properties
     for property_name in property_names:
         container[property_name] = {}
 
+    # store properties
     for tokenized_line in tokenized_lines:
         (qn,data) = split_mfdn_results_line(tokenized_line)
         for property_index in range(len(property_names)):
             property_name = property_names[property_index]
             container[property_name][qn]=data[property_index]
 
+            
 def parse_M1_moments(self:MFDnResultsData,tokenized_lines):
     """Parse M1 moments.
     """
     property_names = ["M1","Dlp","Dln","Dsp","Dsn"]
     parse_generic_static_properties(self,tokenized_lines,self.mfdn_ob_moments,property_names)
 
+    
 def parse_E2_moments(self:MFDnResultsData,tokenized_lines):
     """Parse E2 moments.
     """
     property_names = ["E2p","E2n"]
     parse_generic_static_properties(self,tokenized_lines,self.mfdn_ob_moments,property_names)
 
+    
 def parse_angular_momenta(self:MFDnResultsData,tokenized_lines):
     """Parse squared angular momenta.
     """
@@ -288,6 +324,7 @@ def parse_angular_momenta(self:MFDnResultsData,tokenized_lines):
         property_names = ["L_sqr","S_sqr","Lp_sqr","Sp_sqr","Ln_sqr","Sn_sqr","J_sqr"]
     parse_generic_static_properties(self,tokenized_lines,self.mfdn_level_properties,property_names)
 
+    
 def parse_radii(self:MFDnResultsData,tokenized_lines):
     """Parse radii.
     """
@@ -299,20 +336,36 @@ def parse_radii(self:MFDnResultsData,tokenized_lines):
         #
         # See cshalo [PRC 90, 034305 (2014)] (A5) for definitions.
         #
-        # Then an extra, untitled 11th column (populated with numerical zeros) appears to have been added sometime <=v15b01-37-gb46e061.
+        # Then an extra, untitled 11th column (populated with numerical zeros)
+        # appears to have been added sometime <=v15b01-37-gb46e061.
         property_names = ["rp","rn","r","rpp","rnn","rpn"]
     else:
         raise ValueError("unrecognized number of columns in radii section")
     parse_generic_static_properties(self,tokenized_lines,self.mfdn_tb_expectations,property_names)
 
+    
 def parse_other_tbo(self:MFDnResultsData,tokenized_lines):
     """Parse other two-body observables.
+
+    Requires "tbo_names" to have been parsed from TBMEfile entries in MFDn
+    output (as for MFDn h2).  Otherwise quietly skips parsing "other TBOs" (as
+    for MFDn menj variant).
+
     """
-    property_names = self.params["tbo_names"][1:]
+
+    if "tbo_names" in self.params:
+        property_names = self.params["tbo_names"][1:]
+    else:
+        property_names = []
     parse_generic_static_properties(self,tokenized_lines,self.mfdn_tb_expectations,property_names)
 
+    
 def parse_mfdn_ob_rmes(self:MFDnResultsData, tokenized_lines):
     """Parse native transition output.
+
+    Note: Native transitions were removed long before neivals parameter was
+    provided in MFDn res file output, so these need not be truncated to neivals
+    states.
     """
     transition_classes = {
         "GT": ["GTi(Z+1,N-1)", "GTi(Z-1,N+1)", "GTf(Z+1,N-1)", "GTf(Z-1,N+1)"],
@@ -346,6 +399,7 @@ def parse_mfdn_ob_rmes(self:MFDnResultsData, tokenized_lines):
             )
             transition_dict[(qnf,qni)] = value
 
+
 def parse_postprocessor_ob_rmes_legacy(self:MFDnResultsData, tokenized_lines):
     """Parse obscalc-ob output for transitions (legacy tabular format).
 
@@ -376,6 +430,7 @@ def parse_postprocessor_ob_rmes_legacy(self:MFDnResultsData, tokenized_lines):
             )
             transition_dict[(qnf,qni)] = value
 
+
 def parse_postprocessor_generic_rmes(self:MFDnResultsData,tokenized_lines,container:dict[str,results_data.RMEData]):
     """Parse generic (ob or tb) postprocessor rmes.
 
@@ -402,6 +457,7 @@ def parse_postprocessor_ob_rmes(self:MFDnResultsData, tokenized_lines):
     """
     parse_postprocessor_generic_rmes(self, tokenized_lines, self.postprocessor_ob_rmes)
 
+    
 def parse_postprocessor_tb_rmes(self:MFDnResultsData, tokenized_lines):
     """Parse postprocessor output (as digested by the scripting) for a two-body observable.
     """
@@ -412,6 +468,7 @@ section_handlers = {
     "MFDn" : parse_params,
     # PARAMETERS
     "Basis" : parse_params,
+    "Diagonalization" : parse_params,
     "Many-body matrix" : parse_params,
     "Interaction" : parse_params,
     "Observables" : parse_params,
@@ -430,6 +487,7 @@ section_handlers = {
     "Two-body observable": parse_postprocessor_tb_rmes,
 }
 
+
 ################################################################
 # parsing control code
 ################################################################
@@ -447,6 +505,7 @@ def parse_mesh_point(self:MFDnResultsData,sections,section_handlers):
         if section_name in section_handlers:
             section_handlers[section_name](self,tokenized_lines)
 
+            
 def parser(in_file,verbose):
     """ Parse full results file.
 
@@ -468,12 +527,16 @@ def parser(in_file,verbose):
     # set up container
     results = mfdn_results_data.MFDnResultsData()
 
+    # initialize data attributes for "global" use within parser
+    ## results._parameter_g:int = None  # TODO (mac): use to replace global k_parameter_g
+    
     # parse sections
     parse_mesh_point(results,sections,section_handlers)
 
     # package results
     mesh_data = [results]
     return mesh_data
+
 
 # register the parser
 input.register_data_format('mfdn_v15',parser)
