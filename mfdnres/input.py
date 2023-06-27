@@ -33,10 +33,13 @@
     09/02/20 (pjf): Add autodetection of filename format.
     09/07/20 (pjf): Fix filename parsing.
     10/12/21 (pjf): Print filename info if parser throws error.
+    06/27/23 (mac): Add basic mesh data caching facility, based on code
+        from pjf lenpic-analysis-2022.
 """
 
 import glob
 import os
+import pickle
 
 import numpy as np
 
@@ -338,6 +341,60 @@ def slurp_res_files(
 
     if (verbose):
         print("  slurp_res_files: extracted mesh points {}".format(len(mesh_data)))
+
+    return mesh_data
+
+################################################################
+# data pickling utility
+################################################################
+
+def read_data_with_caching(read_function, pickle_filename="mesh_data.pickle", read_function_kw={}):
+    """Read pickled mesh data with fallback to fresh read.
+
+    To purge cached data, manually delete pickle file.
+
+    TODO: Consider making kwargs a pass-through, with pickle_filename
+    suppressed.
+
+    Arguments:
+
+        read_function (callable): Function to read mesh data from data files
+
+        pickle_filename (str, optional): Pickle filename
+
+        read_function_kw (dict, optional): Keyword arguments for read function,
+        e.g., dict(verbose=True).
+
+    Returns:
+
+        mesh_data (list of ResultsData): Mesh data
+
+    """
+
+    # attempt to read cached data
+    try:
+        print("Attempting to read pickled mesh data from {}...  ".format(pickle_filename), end="", flush=True)
+        with open(pickle_filename, 'rb') as fp:
+            mesh_data = pickle.load(fp)
+        print("Done.", end="", flush=True)
+        return mesh_data
+    except:
+        print("Failed.", flush=True)
+    
+    # fall back on fresh read
+    print("Reading mesh_data afresh...", flush=True)
+    mesh_data = read_function(**read_function_kw)
+
+    # cache this data
+    try:
+        with open(pickle_filename, 'wb') as fp:
+            print("Attempting to write pickled mesh data to {}...  ".format(pickle_filename), end="", flush=True)
+            pickle.dump(mesh_data, fp, pickle.HIGHEST_PROTOCOL)
+            print("Done.", flush=True)
+    except:
+        # Not sure why caching might fail, other than, say, an invalid path for
+        # the pickle file?
+        print("Failed.", flush=True)
 
     return mesh_data
 
