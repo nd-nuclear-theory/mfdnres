@@ -213,22 +213,26 @@ def suppress_interior_labels(
     # TODO: Rather than annihilating the ticks and labels, simply control their
     # visibility, using ax.tick_params(right|left|...=bool,
     # labelright|labelleft|...=bool).
-    
+
+    # primary x axis
     if (axis in {"x","both"}) and (not ax.get_subplotspec().is_last_row()):
         if not show_axis_label:
             ax.set_xlabel(None)
         if not show_tick_labels:
             ax.set_xticklabels([])
+    # secondary x axis
     if (axis in {"x","both"}) and (not ax.get_subplotspec().is_first_row()) and (secondary_x_axis is not None):
         if not show_axis_label:
             secondary_x_axis.set_xlabel(None)
         if not show_tick_labels:
             secondary_x_axis.set_xticklabels([])
+    # primary y axis
     if (axis in {"y","both"}) and (not ax.get_subplotspec().is_first_col()):
         if not show_axis_label:
             ax.set_ylabel(None)
         if not show_tick_labels:
             ax.set_yticklabels([])
+    # secondary y axis
     if (axis in {"y","both"}) and (not ax.get_subplotspec().is_last_col()) and (secondary_y_axis is not None):
         if not show_axis_label:
             secondary_y_axis.set_ylabel(None)
