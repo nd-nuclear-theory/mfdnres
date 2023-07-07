@@ -42,8 +42,6 @@ class Observable(object):
         value (ResultsData -> float OR np.array): Retrieve observable value (or
         np.nan) from given ResultsData
 
-
-
     Properties:
 
         descriptor_str (str): Text string describing observable
@@ -67,8 +65,11 @@ class Observable(object):
     def data(self, mesh_data, key_descriptor, verbose=False):
         """Extract data frame of observable values over mesh.
 
-        To be overridden by child object if object does not identify with a
-        single _nuclide and provide a value extractor.
+        This default data extractor is provided for "simple" observable objects,
+        which identify with a single _nuclide and provide a value extractor.  It
+        is to be overridden by any child object which does not follow this
+        model, e.g., one which carries out an arithmetic operation on the entire
+        mesh.
 
         The verbose argument provides for debugging of missing observable values
         on mesh.  This argument can be passed through, e.g.,
@@ -87,6 +88,7 @@ class Observable(object):
         # generate hw table
         #
         # e.g., key_descriptor = (("Nmax",int),("hw",float))
+        #
         # TODO: Replace use of analysis.make_obs_table with stripped-down tabulation code. 
         table = analysis.make_obs_table(mesh_data_selected, key_descriptor, self.value, verbose=verbose)
 
@@ -208,11 +210,11 @@ class Difference(Observable):
     def data(self, mesh_data, key_descriptor, verbose=False):
         """ Extract data frame of observable values over mesh.
         """
-        data_meshes = (
+        observable_value_meshes = (
             self._arguments[0].data(mesh_data, key_descriptor, verbose=verbose),
             self._arguments[1].data(mesh_data, key_descriptor, verbose=verbose),
             )
-        return data_meshes[0] - data_meshes[1]
+        return observable_value_meshes[0] - observable_value_meshes[1]
 
     @property
     def descriptor_str(self):
@@ -310,11 +312,11 @@ class Sum(Observable):
     def data(self, mesh_data, key_descriptor, verbose=False):
         """ Extract data frame of observable values over mesh.
         """
-        data_meshes = (
+        observable_value_meshes = (
             self._arguments[0].data(mesh_data, key_descriptor, verbose=verbose),
             self._arguments[1].data(mesh_data, key_descriptor, verbose=verbose),
             )
-        return data_meshes[0] + data_meshes[1]
+        return observable_value_meshes[0] + observable_value_meshes[1]
 
     @property
     def descriptor_str(self):
@@ -413,11 +415,11 @@ class Ratio(Observable):
     def data(self, mesh_data, key_descriptor, verbose=False):
         """ Extract data frame of observable values over mesh.
         """
-        data_meshes = (
+        observable_value_meshes = (
             self._arguments[0].data(mesh_data, key_descriptor, verbose=verbose),
             self._arguments[1].data(mesh_data, key_descriptor, verbose=verbose),
             )
-        return data_meshes[0] / data_meshes[1]
+        return observable_value_meshes[0] / observable_value_meshes[1]
 
     @property
     def descriptor_str(self):
@@ -507,7 +509,7 @@ class Power(Observable):
 
         Arguments:
 
-            observable1 (Observable): first and second terms
+            observable1 (Observable): observable to be exponentiated
 
             power (int): power to which to raise observable
 
@@ -526,8 +528,8 @@ class Power(Observable):
     def data(self, mesh_data, key_descriptor, verbose=False):
         """ Extract data frame of observable values over mesh.
         """
-        data_mesh = self._argument.data(mesh_data, key_descriptor, verbose=verbose)
-        return data_mesh**self._power
+        observable_value_mesh = self._argument.data(mesh_data, key_descriptor, verbose=verbose)
+        return observable_value_mesh**self._power
 
     @property
     def descriptor_str(self):
@@ -743,11 +745,11 @@ class FixSignTo(Observable):
     def data(self, mesh_data, key_descriptor, verbose=False):
         """ Extract data frame of observable values over mesh.
         """
-        data_meshes = (
+        observable_value_meshes = (
             self._arguments[0].data(mesh_data, key_descriptor, verbose=verbose),
             self._arguments[1].data(mesh_data, key_descriptor, verbose=verbose),
             )
-        return data_meshes[0] * data_meshes[1].apply(np.sign, raw=True)
+        return observable_value_meshes[0] * observable_value_meshes[1].apply(np.sign, raw=True)
 
     @property
     def descriptor_str(self):
