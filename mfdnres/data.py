@@ -1751,6 +1751,10 @@ def set_up_hw_scan_secondary_axis(
 
         observable_norm_tick_specifier (tuple, optional): tick specification (min,max,step,num_subdivision) for observable ticks
 
+    Returns:
+
+        ax_secondary_y (mpl.axes.Axes): axes object
+
     """
 
     if observable_norm_scale is None:
@@ -1791,6 +1795,7 @@ def set_up_hw_scan_secondary_axis(
         labelpad=observable_norm_labelpad,
     )
 
+    return ax_secondary_y
     
 def set_up_Nmax_scan_axes(
         ax,nuclide_observable,Nmax_range,observable_range,
