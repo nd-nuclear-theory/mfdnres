@@ -35,6 +35,7 @@
     10/12/21 (pjf): Print filename info if parser throws error.
     06/27/23 (mac): Add basic mesh data caching facility, based on code
         from pjf lenpic-analysis-2022.
+    07/08/23 (mac): Add run_stem option for res_file_directory().
 """
 
 import glob
@@ -47,17 +48,27 @@ import numpy as np
 # filename utility
 ################################################################
 
-def res_file_directory(username,code,run_number,results_dir="results",res_file_subdir=os.path.join("results","res")):
+def res_file_directory(
+        username, code, run_number, *,
+        run_stem="run", results_dir="results", res_file_subdir=os.path.join("results","res"),
+):
     """Construct full path to res file directory, given user, code, and run.
 
         This function assumes directory naming conventions appropriate
         to mcscript archive files.
 
         Arguments:
+
             username (str): user name (e.g., "mcaprio")
+
             code (str): code name (e.g., "spncci")
+
             run_number (str): run name "tail" (e.g., "mac0424")
+
+            run_stem (str, optional): run name "stem" (normally "run")
+
             results_dir (str,optional): name of top-level results directory within GROUP_HOME
+
             res_file_subdir (str,optional): name of subdirectory within results directory (can be None for flat structure)
 
         Environment:
@@ -79,7 +90,7 @@ def res_file_directory(username,code,run_number,results_dir="results",res_file_s
     if (type(group_home) is not str):
         raise(ValueError("Need to set environment variable GROUP_HOME"))
 
-    res_directory = os.path.join(group_home,results_dir,username,code,"run"+run_number)
+    res_directory = os.path.join(group_home, results_dir, username, code, run_stem+run_number)
     if (res_file_subdir is not None):
         res_directory = os.path.join(res_directory,res_file_subdir)
 
@@ -348,13 +359,10 @@ def slurp_res_files(
 # data pickling utility
 ################################################################
 
-def read_data_with_caching(read_function, pickle_filename="mesh_data.pickle", read_function_kw={}):
+def read_data_with_caching(read_function, pickle_filename="mesh_data.pickle", **read_function_kw):
     """Read pickled mesh data with fallback to fresh read.
 
     To purge cached data, manually delete pickle file.
-
-    TODO: Consider making kwargs a pass-through, with pickle_filename
-    suppressed.
 
     Arguments:
 
@@ -362,8 +370,8 @@ def read_data_with_caching(read_function, pickle_filename="mesh_data.pickle", re
 
         pickle_filename (str, optional): Pickle filename
 
-        read_function_kw (dict, optional): Keyword arguments for read function,
-        e.g., dict(verbose=True).
+        **read_function_kw (dict, optional): Keyword arguments for read function,
+        e.g., verbose=True.
 
     Returns:
 
