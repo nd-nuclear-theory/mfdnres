@@ -48,7 +48,8 @@
       + Improve pass-through option handling in add_observable_panel_label().         
     - 03/21/23 (mac): Add set_up_hw_scan_secondary_axis().
     - 04/26/23 (mac): Support log axis in set_up_hw_scan_axes().
-    - 05/24/23 (mac): Add side option to add_hw_scan_plot_Nmax_labels().
+    - 05/24/23 (mac): Provide side option for add_hw_scan_plot_Nmax_labels().
+    - 07/08/23 (mac): Provide legend_position option for add_hw_scan_plot_Nmax_labels().
 
 """
 
@@ -1937,6 +1938,7 @@ def add_hw_scan_plot_Nmax_labels(
         side="right",
         data_point_index=None,
         text_displacement=None,
+        legend_position="bottom",
 ):
     """Add Nmax curve labels to previously drawn hw scan plot.
 
@@ -1958,13 +1960,15 @@ def add_hw_scan_plot_Nmax_labels(
         labeling (0 for "left" end of curve, -1 for "right" end of curve); or
         None for default based on side
 
-        text_displacement (tuple): xy displacement in points of text relative to curve point; or
+        text_displacement (tuple, optional): xy displacement in points of text relative to curve point; or
         None for default based on side
+
+        legend_position (str, optional): position of Nmax
+        legend label relative to Nmax labels ("bottom" or "top")
 
     """
 
-    # TODO (mac, 03/19/23): add in generalizations for call-out lines, placing
-    # the Nmax legend text *above* the Nmax labels, etc.
+    # TODO (mac, 03/19/23): add in generalizations for call-out lines
 
     if side=="right":
         if data_point_index is None:
@@ -1997,11 +2001,17 @@ def add_hw_scan_plot_Nmax_labels(
             
         # add "Nmax" legend label
         if len(Nmax_label_list)>0 and Nmax == Nmax_label_list[Nmax_label_tagged_index]:
+            if legend_position=="bottom":
+                xy=(1,0)
+                verticalalignment="top"
+            elif legend_position=="top":
+                xy=(1,1)
+                verticalalignment="bottom"
             ax.annotate(
                 r"$N_{\mathrm{max}}$",
-                xy=(1,0), xycoords=Nmax_label,
+                xy=xy, xycoords=Nmax_label,
                 fontsize="x-small",
-                horizontalalignment="right", verticalalignment="top",
+                horizontalalignment="right", verticalalignment=verticalalignment,
             )
 
             
