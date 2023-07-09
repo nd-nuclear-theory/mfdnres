@@ -50,7 +50,8 @@
     - 04/26/23 (mac): Support log axis in set_up_hw_scan_axes().
     - 05/24/23 (mac): Provide side option for add_hw_scan_plot_Nmax_labels().
     - 07/08/23 (mac): Provide legend_position option for add_hw_scan_plot_Nmax_labels().
-
+    - 07/09/23 (mac): Support value None for option Nmax_label_tagged_index in
+        add_hw_scan_plot_Nmax_labels().
 """
 
 import collections
@@ -1952,7 +1953,7 @@ def add_hw_scan_plot_Nmax_labels(
         Nmax_label_list (list of int): list of Nmax values for labels
 
         Nmax_label_tagged_index (int, optional): index within Nmax_label_list for Nmax
-        label to which to attach the legend "Nmax"
+        label to which to attach the legend "Nmax" (or None)
 
         side (str, optional): side of curve for label "left" or "right"
 
@@ -2000,7 +2001,11 @@ def add_hw_scan_plot_Nmax_labels(
             )
             
         # add "Nmax" legend label
-        if len(Nmax_label_list)>0 and Nmax == Nmax_label_list[Nmax_label_tagged_index]:
+        if (
+                len(Nmax_label_list)>0
+                and Nmax_label_tagged_index is not None
+                and Nmax == Nmax_label_list[Nmax_label_tagged_index]
+        ):
             if legend_position=="bottom":
                 xy=(1,0)
                 verticalalignment="top"
