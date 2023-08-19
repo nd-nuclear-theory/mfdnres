@@ -52,6 +52,7 @@
     - 07/08/23 (mac): Provide legend_position option for add_hw_scan_plot_Nmax_labels().
     - 07/09/23 (mac): Support value None for option Nmax_label_tagged_index in
         add_hw_scan_plot_Nmax_labels().
+    - 07/24/23 (mac): Simplify option names for add_hw_scan_plot_Nmax_labels().
 """
 
 import collections
@@ -1934,8 +1935,8 @@ def add_hw_scan_plot(
     return Nmax_groups
 
 def add_hw_scan_plot_Nmax_labels(
-        ax, Nmax_groups, Nmax_label_list,
-        Nmax_label_tagged_index=-1,
+        ax, Nmax_groups, label_list,
+        legend_index=-1,
         side="right",
         data_point_index=None,
         text_displacement=None,
@@ -1950,10 +1951,12 @@ def add_hw_scan_plot_Nmax_labels(
         Nmax_groups (pd.DataFrameGroupBy): curve data grouped by Nmax (as
             returned by add_hw_scan_plot())
 
-        Nmax_label_list (list of int): list of Nmax values for labels
+        label_list (list of int): list of Nmax values for labels [formerly
+        Nmax_label_list]
 
-        Nmax_label_tagged_index (int, optional): index within Nmax_label_list for Nmax
-        label to which to attach the legend "Nmax" (or None)
+        legend_index (int, optional): index within label_list for Nmax
+        label to which to attach the legend "Nmax" (or None to omit legend)
+        [formerly Nmax_label_tagged_index]
 
         side (str, optional): side of curve for label "left" or "right"
 
@@ -1989,7 +1992,7 @@ def add_hw_scan_plot_Nmax_labels(
         endpoint = curve_points[data_point_index]
         
         # generate Nmax label
-        if Nmax in Nmax_label_list:
+        if Nmax in label_list:
             Nmax_label = ax.annotate(
                 r"${}$".format(Nmax),
                 xy=endpoint, xycoords="data",
@@ -2002,9 +2005,9 @@ def add_hw_scan_plot_Nmax_labels(
             
         # add "Nmax" legend label
         if (
-                len(Nmax_label_list)>0
-                and Nmax_label_tagged_index is not None
-                and Nmax == Nmax_label_list[Nmax_label_tagged_index]
+                len(label_list)>0
+                and legend_index is not None
+                and Nmax == label_list[legend_index]
         ):
             if legend_position=="bottom":
                 xy=(1,0)
@@ -2175,7 +2178,8 @@ def add_expt_marker_band(
 
         y_with_error (float or tuple): (y,dy) given as y, (y,None), (y,dy), or
            (y,(dy_plus,dy_minus)), where all errors should have *positive*
-           values (in keeping with the conventions of Axes.errorbar)
+           values (in keeping with the conventions of Axes.errorbar); if None,
+           no marker is drawn
 
         color, linewidth (optional): styling parameters for central value
 
@@ -2186,6 +2190,8 @@ def add_expt_marker_band(
     """
 
     (x0,x1) = x_range
+    if y_with_error is None:
+        return
     if type(y_with_error)==tuple:
         (y,y_error) = y_with_error
     else:
@@ -2231,12 +2237,15 @@ def add_data_marker(ax,x,y_with_error,errorbar_kw=dict()):
 
         y_with_error (float or tuple): (y,dy) given as y, (y,None), (y,dy), or
            (y,(dy_plus,dy_minus)), where all errors should have *positive*
-           values (in keeping with the conventions of Axes.errorbar)
+           values (in keeping with the conventions of Axes.errorbar); if None,
+           no marker is drawn
 
         errorbar_kw (dict, optional): options to Axes.errorbar
 
     """
 
+    if y_with_error is None:
+        return
     if type(y_with_error)==tuple:
         (y,y_error) = y_with_error
     else:
