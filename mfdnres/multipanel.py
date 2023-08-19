@@ -181,7 +181,7 @@ def multipanel_fig_gs(
 def suppress_interior_labels(
         ax,
         axis="both", show_axis_label=False, show_tick_labels=False,
-        secondary_x_axis=None, secondary_y_axis=None, show_primary=True,
+        secondary_x_axis=None, secondary_y_axis=None, show_primary=False,
 ):
     """Suppress axis and tick labels on interior axes.
 
