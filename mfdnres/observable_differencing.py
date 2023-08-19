@@ -242,10 +242,15 @@ class RelativeDifference(mfdnres.observable.Observable):
         observable_label_delimiters = self._observable_label_delimiters
         if observable_label_delimiters is None:
             observable_label_delimiters = ("[","]")
-        return r"\Delta {}{}{}/{}{}{}".format(
-            observable_label_delimiters[0],
-            observable_label_text,
-            observable_label_delimiters[1],
+        ## return r"\Delta {}{}{}/{}{}{}".format(
+        ##     observable_label_delimiters[0],
+        ##     observable_label_text,
+        ##     observable_label_delimiters[1],
+        ##     observable_label_delimiters[0],
+        ##     observable_label_text,
+        ##     observable_label_delimiters[1],
+        ## )
+        return r"\Delta_{{\mathrm{{rel}}}} {}{}{}".format(
             observable_label_delimiters[0],
             observable_label_text,
             observable_label_delimiters[1],
@@ -256,8 +261,7 @@ class RelativeDifference(mfdnres.observable.Observable):
         """ Formatted LaTeX text representing axis label.
         """
         axis_label_text = self._argument.axis_label_text
-        # Note: Could divide out unit inside log.
-        return "\Delta [{}]/[{}]".format(axis_label_text[0],axis_label_text[0]), None
+        return "\Delta_{{\mathrm{{rel}}}} [{}]".format(axis_label_text[0]), None
 
 
 ################################################################
