@@ -7,6 +7,7 @@
     - 10/16/22 (mac): Provide Pow and E2 dimensionless ratio observables.
     - 03/21/23 (mac): Provide secondary axis labels for E2 dimensionless ratio observables.
     - 04/25/23 (mac): Provide ME observable for scalar operators.
+    - 08/15/23 (mac): Simplify secondary axis labels for dimensionless ratio observables to omit power.
 """
 
 
@@ -635,7 +636,8 @@ class RatioBE2r4(Ratio):
         """ Formatted LaTeX text representing axis label for secondary "calibrated" axis.
         """
 
-        return r"{}~({})~~[\mathrm{{via}}~{}]".format(*self._arguments[0].axis_label_text,*self._arguments[1].axis_label_text)
+        calibrator_label = "r"  # redefined form "[via r]"
+        return r"{}~({})~~[\mathrm{{via}}~{}]".format(*self._arguments[0].axis_label_text,calibrator_label)
     
    
 class RatioQr2(Ratio):
@@ -671,8 +673,10 @@ class RatioQr2(Ratio):
     def secondary_axis_label_text(self):
         """ Formatted LaTeX text representing axis label for secondary "calibrated" axis.
         """
-
-        return r"{}~({})~~[\mathrm{{via}}~{}]".format(*self._arguments[0].axis_label_text,*self._arguments[1].axis_label_text)
+        
+        ## calibrator_label = *self._arguments[1].axis_label_text  # original form "[via r^2]"
+        calibrator_label = "r"  # redefined form "[via r]"
+        return r"{}~({})~~[\mathrm{{via}}~{}]".format(*self._arguments[0].axis_label_text,calibrator_label)
 
     
 class RatioBE2Q2(Ratio):
@@ -708,7 +712,8 @@ class RatioBE2Q2(Ratio):
         """ Formatted LaTeX text representing axis label for secondary "calibrated" axis.
         """
 
-        return r"{}~({})~~[\mathrm{{via}}~{}]".format(*self._arguments[0].axis_label_text,*self._arguments[1].axis_label_text)
+        calibrator_label = "Q"  # redefined form "[via Q]"
+        return r"{}~({})~~[\mathrm{{via}}~{}]".format(*self._arguments[0].axis_label_text,calibrator_label)
 
     
 ################################################################
