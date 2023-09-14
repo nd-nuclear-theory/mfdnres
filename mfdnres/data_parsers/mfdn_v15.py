@@ -25,6 +25,7 @@
     08/01/22 (pjf): Use RMEData for RME storage, storing operator quantum numbers.
     01/11/23 (mac): Parse Diagonalization parameters and truncate parsing to states within requested neivals.
     01/15/23 (mac): Support res file output from MFDn menj variant.
+    09/13/23 (mac): Update handling of "Angular momenta" section for mfdn GPU version.
 """
 
 from __future__ import annotations
@@ -317,8 +318,12 @@ def parse_angular_momenta(self:MFDnResultsData,tokenized_lines):
     """
 
     # parse raw (squared observable) values
-    if (self.params.get("Revision","beta00")=="beta00"):  # early runs with beta00 left "Revision" field blank
+    revision = self.params.get("Revision","beta00")
+    if revision=="beta00":  # early runs with beta00 left "Revision" field blank
         property_names = ["L_sqr","S_sqr","Sp_sqr","Sn_sqr","J_sqr"]
+    elif revision=="v15b01-205-gdb2400a":  # this test will be fragile against new revisions
+        # GPU version also has T_sqr        
+        property_names = ["L_sqr","S_sqr","Lp_sqr","Sp_sqr","Ln_sqr","Sn_sqr","J_sqr", "T_sqr"]
     else:
         # nonsensical Lp^2 and Ln^2 observables (unclear definition and sometimes negative) added with v15beta01
         property_names = ["L_sqr","S_sqr","Lp_sqr","Sp_sqr","Ln_sqr","Sn_sqr","J_sqr"]
