@@ -445,7 +445,7 @@ def isotope(nuclide, format = None, as_tuple = False):
 def nuclide_str(nuclide):
     """Generate simple string for nuclide code, for use in filenames, e.g., "Z03-N03".
 
-    Special case of isotope_str.
+    Implements special case of isotope_str for format="ZN".
 
     Arguments:
 
@@ -467,7 +467,8 @@ def isotope_str(nuclide, format = None, lower = False):
 
         nuclide (tuple): (Z,N)
 
-        format (str, optional): format code for label ("AS"=A+Symbol, "As"=A+symbol, "ZN"=Zxx-Nxx)
+        format (str, optional): format code for label ("AS"=A+Symbol,
+        "As"=A+symbol, "ZN"=Zxx-Nxx); if None, defaults to "AS"
 
         lower (bool, optional, deprecated): force lowercase (redundant to format
         option value "As")
@@ -2002,7 +2003,7 @@ def add_hw_scan_plot_Nmax_labels(
                 ##arrowprops=dict(arrowstyle="-", linewidth=0.5, shrinkA=1, shrinkB=3),
                 ##bbox=dict(boxstyle="square", visible=False, pad=0.),  # to clip call-out line under text
             )
-            
+
         # add "Nmax" legend label
         if (
                 len(label_list)>0
