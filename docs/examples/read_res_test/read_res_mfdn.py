@@ -41,6 +41,8 @@ def read_data():
         data_dir,
         res_format="mfdn_v15",
         filename_format="mfdn_format_7_ho",
+        glob_pattern="runmfdn13-mfdn15-*-Mj1.0-*.res",  # pick just one input file for this simple test
+        ## glob_pattern="runmfdn13gpu-mfdn15-*-Mj1.0-*.res",  # pick just one input file for this simple test
         verbose=True
     )
     print()
