@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="mfdnres",
-    version="1.0.0",
+    version="1.0.1",
     author="Mark A. Caprio, University of Notre Dame",
     description=("A scripting library for universal results postprocessing"),
     license="MIT",
