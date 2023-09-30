@@ -12,8 +12,9 @@
     University of Notre Dame
 
     - 05/23/21 (mac): Created.
-    - 05/25/21 (mac): Move in suppress_interior_labels from data.py.
-    - 12/26/21 (mac): Add support for secondary axes in suppress_interior_labels.
+    - 05/25/21 (mac): Move in suppress_interior_labels() from data.py.
+    - 12/26/21 (mac): Add support for secondary axes in suppress_interior_labels().
+    - 08/19/23 (mac): Add option show_primary for suppress_interior_labels().
 
 """
 
@@ -180,9 +181,9 @@ def multipanel_fig_gs(
 def suppress_interior_labels(
         ax,
         axis="both", show_axis_label=False, show_tick_labels=False,
-        secondary_x_axis=None, secondary_y_axis=None
+        secondary_x_axis=None, secondary_y_axis=None, show_primary=False,
 ):
-    """ Suppress axis and tick labels on interior axes.
+    """Suppress axis and tick labels on interior axes.
 
     Arguments:
 
@@ -195,6 +196,9 @@ def suppress_interior_labels(
         show_tick_labels (bool, optional): whether or not to still permit tick labels
 
         secondary_x_axis, secondary_y_axis (mpl.axes._secondary_axes.SecondaryAxis, optional): secondary axes
+
+        show_primary (bool, optional): whether or not to still let the axis or
+        tick labels for the primary axis to still "show through", i.e., act only on the secondary axes
 
     """
 
@@ -213,22 +217,26 @@ def suppress_interior_labels(
     # TODO: Rather than annihilating the ticks and labels, simply control their
     # visibility, using ax.tick_params(right|left|...=bool,
     # labelright|labelleft|...=bool).
-    
-    if (axis in {"x","both"}) and (not ax.get_subplotspec().is_last_row()):
+
+    # primary x axis
+    if (axis in {"x","both"}) and (not ax.get_subplotspec().is_last_row()) and not show_primary:
         if not show_axis_label:
             ax.set_xlabel(None)
         if not show_tick_labels:
             ax.set_xticklabels([])
+    # secondary x axis
     if (axis in {"x","both"}) and (not ax.get_subplotspec().is_first_row()) and (secondary_x_axis is not None):
         if not show_axis_label:
             secondary_x_axis.set_xlabel(None)
         if not show_tick_labels:
             secondary_x_axis.set_xticklabels([])
-    if (axis in {"y","both"}) and (not ax.get_subplotspec().is_first_col()):
+    # primary y axis
+    if (axis in {"y","both"}) and (not ax.get_subplotspec().is_first_col()) and not show_primary:
         if not show_axis_label:
             ax.set_ylabel(None)
         if not show_tick_labels:
             ax.set_yticklabels([])
+    # secondary y axis
     if (axis in {"y","both"}) and (not ax.get_subplotspec().is_last_col()) and (secondary_y_axis is not None):
         if not show_axis_label:
             secondary_y_axis.set_ylabel(None)

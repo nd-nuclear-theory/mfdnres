@@ -7,6 +7,9 @@
     - 10/16/22 (mac): Provide Pow and E2 dimensionless ratio observables.
     - 03/21/23 (mac): Provide secondary axis labels for E2 dimensionless ratio observables.
     - 04/25/23 (mac): Provide ME observable for scalar operators.
+    - 08/15/23 (mac): Simplify secondary axis labels for dimensionless ratio observables to omit power.
+    - 09/07/23 (mac): Provide conversion dictionaries for matter/proton/neutron observable tag.
+    - 09/16/23 (mac): Refactor dimensionless ratio observables to observable_ratio.py.
 """
 
 
@@ -18,6 +21,49 @@ from . import (
     analysis,
     data,
 )
+
+################################################################
+# conversion dictionaries for observable tag ("m"/"p"/"n")
+################################################################
+
+NUCLEON_NUMBER_STR_BY_OBSERVABLE_TAG = {
+    "m": "A",
+    "p": "Z",
+    "n": "N",
+}
+E2_OPERATOR_BY_OBSERVABLE_TAG = {
+    "m": "E20",
+    "p": "E2p",
+    "n": "E2n",
+}
+RADIUS_OPERATOR_BY_OBSERVABLE_TAG = {
+    "m": "r",
+    "p": "rp",
+    "n": "rn",
+}
+
+def nucleon_number_by_observable_tag(nuclide):
+    """ Provide dictionary giving nucleon number for mass/proton/neutron observable.
+
+    Arguments:
+
+        nuclide (tuple): (Z, N)
+
+    Returns:
+    
+        (dict): observable tag ("m", "p", "n") -> (A, Z, N)
+    """
+
+    A = sum(nuclide)
+    Z, N = nuclide
+
+    nucleon_number_by_observable_tag = {
+        "m": A,
+        "p": Z,
+        "n": N,
+    }
+    return nucleon_number_by_observable_tag
+
 
 ###############################################################
 # Observable interface
@@ -42,8 +88,6 @@ class Observable(object):
         value (ResultsData -> float OR np.array): Retrieve observable value (or
         np.nan) from given ResultsData
 
-
-
     Properties:
 
         descriptor_str (str): Text string describing observable
@@ -67,8 +111,11 @@ class Observable(object):
     def data(self, mesh_data, key_descriptor, verbose=False):
         """Extract data frame of observable values over mesh.
 
-        To be overridden by child object if object does not identify with a
-        single _nuclide and provide a value extractor.
+        This default data extractor is provided for "simple" observable objects,
+        which identify with a single _nuclide and provide a value extractor.  It
+        is to be overridden by any child object which does not follow this
+        model, e.g., one which carries out an arithmetic operation on the entire
+        mesh.
 
         The verbose argument provides for debugging of missing observable values
         on mesh.  This argument can be passed through, e.g.,
@@ -87,6 +134,7 @@ class Observable(object):
         # generate hw table
         #
         # e.g., key_descriptor = (("Nmax",int),("hw",float))
+        #
         # TODO: Replace use of analysis.make_obs_table with stripped-down tabulation code. 
         table = analysis.make_obs_table(mesh_data_selected, key_descriptor, self.value, verbose=verbose)
 
@@ -208,11 +256,11 @@ class Difference(Observable):
     def data(self, mesh_data, key_descriptor, verbose=False):
         """ Extract data frame of observable values over mesh.
         """
-        data_meshes = (
+        observable_value_meshes = (
             self._arguments[0].data(mesh_data, key_descriptor, verbose=verbose),
             self._arguments[1].data(mesh_data, key_descriptor, verbose=verbose),
             )
-        return data_meshes[0] - data_meshes[1]
+        return observable_value_meshes[0] - observable_value_meshes[1]
 
     @property
     def descriptor_str(self):
@@ -310,11 +358,11 @@ class Sum(Observable):
     def data(self, mesh_data, key_descriptor, verbose=False):
         """ Extract data frame of observable values over mesh.
         """
-        data_meshes = (
+        observable_value_meshes = (
             self._arguments[0].data(mesh_data, key_descriptor, verbose=verbose),
             self._arguments[1].data(mesh_data, key_descriptor, verbose=verbose),
             )
-        return data_meshes[0] + data_meshes[1]
+        return observable_value_meshes[0] + observable_value_meshes[1]
 
     @property
     def descriptor_str(self):
@@ -413,11 +461,11 @@ class Ratio(Observable):
     def data(self, mesh_data, key_descriptor, verbose=False):
         """ Extract data frame of observable values over mesh.
         """
-        data_meshes = (
+        observable_value_meshes = (
             self._arguments[0].data(mesh_data, key_descriptor, verbose=verbose),
             self._arguments[1].data(mesh_data, key_descriptor, verbose=verbose),
             )
-        return data_meshes[0] / data_meshes[1]
+        return observable_value_meshes[0] / observable_value_meshes[1]
 
     @property
     def descriptor_str(self):
@@ -507,7 +555,7 @@ class Power(Observable):
 
         Arguments:
 
-            observable1 (Observable): first and second terms
+            observable1 (Observable): observable to be exponentiated
 
             power (int): power to which to raise observable
 
@@ -526,8 +574,8 @@ class Power(Observable):
     def data(self, mesh_data, key_descriptor, verbose=False):
         """ Extract data frame of observable values over mesh.
         """
-        data_mesh = self._argument.data(mesh_data, key_descriptor, verbose=verbose)
-        return data_mesh**self._power
+        observable_value_mesh = self._argument.data(mesh_data, key_descriptor, verbose=verbose)
+        return observable_value_mesh**self._power
 
     @property
     def descriptor_str(self):
@@ -541,7 +589,7 @@ class Power(Observable):
         except AttributeError:
             pass
 
-        return r"{}_{:d}_{}".format(
+        return r"{}_{:g}_{}".format(
             arithmetic_operation,
             self._power,
             self._argument.descriptor_str,
@@ -586,127 +634,11 @@ class Power(Observable):
         """ Formatted LaTeX text representing axis label.
         """
         axis_label_text = self._argument.axis_label_text
-        return "{}^{:d}".format(axis_label_text[0], self._power), "{}^{:d}".format(axis_label_text[1], self._power)
-
-    
-################################################################
-# deduced observables: dimensionless E2 ratios
-################################################################
-
-# TODO enable analogous E0 ratio support
-
-class RatioBE2r4(Ratio):
-    """Observable extractor for dimensionless ratio B(E2)/(e^2r^4).
-
-    """
-
-    def __init__(self, observable1, observable2, observable_label_delimiters=(("",""),("[e^2","]"))):
-        """Initialize with given parameters.
-
-        Arguments:
-
-            observable1, observable2 (Observable): first and second terms
-
-            observable_label_delimiters (tuple, optional): left/right delimiter
-            pairs to put around the labels for the first/second observable
-            appearing in the ratio, e.g., (("[","]"),("[","]"))
-
-        """
-        if not (isinstance(observable1, RTP) and isinstance(observable2, Radius)):
-            raise ValueError("Unexpected observable types in RatioBE2r4 (found {} and {})".format(observable1, observable2))
-        super().__init__(observable1, Power(observable2, 4), observable_label_delimiters)
-
-    @property
-    def axis_label_text(self):
-        """ Formatted LaTeX text representing axis label.
-        """
-        ## axis_label_texts = self._arguments[0].axis_label_text, self._arguments[1].axis_label_text
-        # e.g., ('B(E2)', 'e^2\\,\\mathrm{fm}^{4}') and ('r^4', '\\mathrm{fm}^4'))
-        
-        # Would need more info than available from observable objects to
-        # specialize as, e.g., "$B(E2)/(e^2r_p^4)$".
-        
-        return r"B(E2)/(e^2r^4)", None
-
-    @property
-    def secondary_axis_label_text(self):
-        """ Formatted LaTeX text representing axis label for secondary "calibrated" axis.
-        """
-
-        return r"{}~({})~~[\mathrm{{via}}~{}]".format(*self._arguments[0].axis_label_text,*self._arguments[1].axis_label_text)
-    
-   
-class RatioQr2(Ratio):
-    """ Observable extractor for dimensionless ratio Q/(er^2).
-
-    """
-
-    def __init__(self, observable1, observable2, observable_label_delimiters=None):
-        """Initialize with given parameters.
-
-        Arguments:
-
-            observable1, observable2 (Observable): first and second terms
-
-            observable_label_delimiters (tuple, optional): left/right delimiter
-            pairs to put around the labels for the first/second observable
-            appearing in the ratio, e.g., (("[","]"),("[","]"))
-
-        """
-        if not (isinstance(observable1, Moment) and isinstance(observable2, Radius)):
-            raise ValueError("Unexpected observable types in RatioQr2 (found {} and {})".format(observable1, observable2))
-        super().__init__(observable1, Power(observable2, 2), observable_label_delimiters)
-
-    @property
-    def axis_label_text(self):
-        """ Formatted LaTeX text representing axis label.
-        """
-       
-        return r"Q/r^2", None
-
-
-    @property
-    def secondary_axis_label_text(self):
-        """ Formatted LaTeX text representing axis label for secondary "calibrated" axis.
-        """
-
-        return r"{}~({})~~[\mathrm{{via}}~{}]".format(*self._arguments[0].axis_label_text,*self._arguments[1].axis_label_text)
-
-    
-class RatioBE2Q2(Ratio):
-    """Observable extractor for dimensionless ratio B(E2)/(e^2Q^2).
-
-    """
-
-    def __init__(self, observable1, observable2, observable_label_delimiters=(("",""),("[e^2","]"))):
-        """Initialize with given parameters.
-
-        Arguments:
-
-            observable1, observable2 (Observable): first and second terms
-
-            observable_label_delimiters (tuple, optional): left/right delimiter
-            pairs to put around the labels for the first/second observable
-            appearing in the ratio, e.g., (("[","]"),("[","]"))
-
-        """
-        if not (isinstance(observable1, RTP) and isinstance(observable2, Moment)):
-            raise ValueError("Unexpected observable types in RatioBE2Q2 (found {} and {})".format(observable1, observable2))
-        super().__init__(observable1, Power(observable2, 2), observable_label_delimiters)
-
-    @property
-    def axis_label_text(self):
-        """ Formatted LaTeX text representing axis label.
-        """
-        ##return r"B(E2)/(e^2Q^2)", None
-        return r"B(E2)/(eQ)^2", None
-
-    @property
-    def secondary_axis_label_text(self):
-        """ Formatted LaTeX text representing axis label for secondary "calibrated" axis.
-        """
-
-        return r"{}~({})~~[\mathrm{{via}}~{}]".format(*self._arguments[0].axis_label_text,*self._arguments[1].axis_label_text)
+        if self._power==1/2:
+            power_text = r"1/2"
+        else:
+            power_text = "{:d}".format(self._power)
+        return "{}^{{{:s}}}".format(axis_label_text[0], power_text), "{}^{:s}".format(axis_label_text[1], power_text)
 
     
 ################################################################
@@ -743,11 +675,11 @@ class FixSignTo(Observable):
     def data(self, mesh_data, key_descriptor, verbose=False):
         """ Extract data frame of observable values over mesh.
         """
-        data_meshes = (
+        observable_value_meshes = (
             self._arguments[0].data(mesh_data, key_descriptor, verbose=verbose),
             self._arguments[1].data(mesh_data, key_descriptor, verbose=verbose),
             )
-        return data_meshes[0] * data_meshes[1].apply(np.sign, raw=True)
+        return observable_value_meshes[0] * observable_value_meshes[1].apply(np.sign, raw=True)
 
     @property
     def descriptor_str(self):
@@ -1265,7 +1197,11 @@ class Moment(Observable):
         elif self._operator in {"E2p","E2n","E20","E21","E2"}:
             observable_text = r"Q_{{{}}}".format(self._operator[2:])
         level_text = self._level.label_text
-        label = r"{}^{:d}({})".format(observable_text,power,level_text)
+        if power==1/2:
+            power_text = "1/2"
+        else:
+            power_text = "{:d}".format(power)
+        label = r"{}^{{{:s}}}({})".format(observable_text,power_text,level_text)
         return label
     
     @property

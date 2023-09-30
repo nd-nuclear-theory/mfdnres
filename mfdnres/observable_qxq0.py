@@ -1,5 +1,8 @@
 """Intrinsic QxQ_0 observables calculated from lab-frame two-body observables.
 
+    TODO 09/07/23 (mac): Consider switching to observable selection by
+    observable tag (m/p/n), as in observable_ratio.py.
+
     Mark A. Caprio
     University of Notre Dame
 

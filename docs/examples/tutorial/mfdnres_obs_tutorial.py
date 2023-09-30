@@ -293,7 +293,7 @@ def make_basic_plot_canned(mesh_data):
 
     # TUTORIAL: Here is where the output files will go.
     
-    plot_directory="plots/basic-canned"
+    plot_directory = "plots/basic-canned"
     os.makedirs(plot_directory, exist_ok=True)
 
     # mesh parameters
@@ -450,7 +450,7 @@ def make_basic_plot(mesh_data):
     """
 
     # plot directory
-    plot_directory="plots/basic"
+    plot_directory = "plots/basic"
     os.makedirs(plot_directory, exist_ok=True)
 
     # mesh parameters
@@ -466,11 +466,11 @@ def make_basic_plot(mesh_data):
     )
 
     # plot parameters
-    hw_range_extension=(0.02,0.08),
-    hw_tick_specifier=(0,50,5,5)
+    hw_range_extension = (0.02,0.08),
+    hw_tick_specifier = (0,50,5,5)
     observable_range = (-60.,-45.)
-    observable_range_extension=(0.02,0.02),
-    observable_tick_specifier=(-70,-20,5,5)
+    observable_range_extension = (0.02,0.02),
+    observable_tick_specifier = (-70,-20,5,5)
  
     # generate descriptor
     descriptor = mfdnres.data.hw_scan_descriptor(interaction_coulomb,observable)
@@ -479,9 +479,9 @@ def make_basic_plot(mesh_data):
     interaction, coulomb = interaction_coulomb
     observable_data = mfdnres.data.make_hw_scan_data(
         mesh_data, observable,
-        selector =  {"interaction": interaction, "coulomb": coulomb},
-        Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range,
-        verbose = False
+        selector={"interaction": interaction, "coulomb": coulomb},
+        Nmax_range=(NMAX_MIN,Nmax_max), hw_range = hw_range,
+        verbose=False,
         )
    
     # write data
@@ -491,7 +491,7 @@ def make_basic_plot(mesh_data):
     )
 
     # initialize plot
-    figsize=(6,4)
+    figsize = (6,4)
     fig, ax = plt.subplots(figsize=figsize)
 
     # set up axes
@@ -541,7 +541,7 @@ def make_basic_plot(mesh_data):
     Nmax_groups = mfdnres.data.add_hw_scan_plot(ax,observable_data,Nmax_max)
     mfdnres.data.add_hw_scan_plot_Nmax_labels(
         ax, Nmax_groups,
-        Nmax_label_list=[4,6,8,10],
+        label_list=[4, 6, 8, 10],
     )
     
     # finalize plot
@@ -564,7 +564,7 @@ def make_gallery(mesh_data):
     """
 
     # plot directory
-    plot_directory="plots/gallery"
+    plot_directory = "plots/gallery"
     os.makedirs(plot_directory, exist_ok=True)
 
     # mesh parameters
@@ -731,9 +731,9 @@ def make_gallery(mesh_data):
         interaction, coulomb = interaction_coulomb
         observable_data = mfdnres.data.make_hw_scan_data(
             mesh_data, observable,
-            selector =  {"interaction": interaction, "coulomb": coulomb},
-            Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range,
-            verbose = False  # set to True if debugging new observable
+            selector= "interaction": interaction, "coulomb": coulomb},
+            Nmax_range=(NMAX_MIN,Nmax_max), hw_range=hw_range,
+            verbose=False,  # set to True if debugging new observable
             )
        
         # write data
@@ -767,14 +767,14 @@ def make_survey_plot(mesh_data):
 
     """
 
-    plot_directory="plots/survey"
+    plot_directory = "plots/survey"
     os.makedirs(plot_directory, exist_ok=True)
 
     # figure layout parameters
     num_rows = 3  # rows permitted per page
     num_cols = len(INTERACTION_COULOMB_LIST)  # allow column for each interaction
     dimensions = (num_rows, num_cols)
-    panel_size=(3.0,2.0)
+    panel_size = (3.0,2.0)
 
     # figure contents
     nuclide = (4,5)
@@ -828,15 +828,15 @@ def make_survey_plot(mesh_data):
                 (interaction,coulomb) = interaction_coulomb
 
                 # generate descriptor
-                descriptor=mfdnres.data.hw_scan_descriptor(interaction_coulomb,observable)
+                descriptor = mfdnres.data.hw_scan_descriptor(interaction_coulomb,observable)
 
                 # tabulate
                 hw_range = HW_RANGE_BY_INTERACTION_COULOMB[interaction_coulomb]
                 Nmax_max = NMAX_MAX_BY_NUCLIDE[nuclide]
                 observable_data = mfdnres.data.make_hw_scan_data(
-                    mesh_data,observable,
-                    selector =  {"interaction": interaction, "coulomb": coulomb},
-                    Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range
+                    mesh_data, observable,
+                    selector={"interaction": interaction, "coulomb": coulomb},
+                    Nmax_range=(NMAX_MIN,Nmax_max), hw_range=hw_range,
                 )
                 
                 # write data
@@ -902,7 +902,7 @@ def make_multipanel_plot(mesh_data):
 
     """
 
-    plot_directory="plots/multipanel"
+    plot_directory = "plots/multipanel"
     os.makedirs(plot_directory, exist_ok=True)
 
     # data set parameters
@@ -917,8 +917,8 @@ def make_multipanel_plot(mesh_data):
     Nmax_max = NMAX_MAX_BY_NUCLIDE[nuclide]
 
     # plot formatting parameters
-    hw_range_extension=(0.15,0.15),
-    observable_range_extension=(0.05,0.05),
+    hw_range_extension = (0.15,0.15),
+    observable_range_extension = (0.05,0.05),
     
     # specifications needed to plot each panel
     #
@@ -1009,8 +1009,8 @@ def make_multipanel_plot(mesh_data):
     }
 
     # initialize figure
-    dimensions=(2,2)
-    panel_size=(2.2,2.0)
+    dimensions = (2,2)
+    panel_size = (2.2,2.0)
     fig, gs = mfdnres.multipanel.multipanel_fig_gs(
         dimensions=dimensions,
         panel_size=panel_size,
@@ -1054,12 +1054,12 @@ def make_multipanel_plot(mesh_data):
         # specifications, enable the following definitions (True)...
 
         if True:
-            hw_tick_specifier=(0,50,5,2)
-            observable_tick_specifier=panel_info["observable_tick_specifier"]
+            hw_tick_specifier = (0,50,5,2)
+            observable_tick_specifier = panel_info["observable_tick_specifier"]
         else:
             # just use default ticks
-            hw_tick_specifier=None
-            observable_tick_specifier=None
+            hw_tick_specifier = None
+            observable_tick_specifier = None
             
         mfdnres.data.set_up_hw_scan_axes(
             ax, panel_info["observable_list"][0], hw_range, panel_info["observable_range"],
@@ -1124,8 +1124,8 @@ def make_multipanel_plot(mesh_data):
             interaction, coulomb = interaction_coulomb
             observable_data = mfdnres.data.make_hw_scan_data(
                 mesh_data, observable,
-                selector =  {"interaction": interaction, "coulomb": coulomb},
-                Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range,
+                selector={"interaction": interaction, "coulomb": coulomb},
+                Nmax_range=(NMAX_MIN,Nmax_max), hw_range=hw_range,
             )
         
             # write data
@@ -1180,7 +1180,7 @@ def make_teardrop_plot(mesh_data):
     """
 
     # plotting parameters
-    plot_directory="plots/teardrop"
+    plot_directory = "plots/teardrop"
     os.makedirs(plot_directory, exist_ok=True)
 
     # plot contents
@@ -1246,9 +1246,9 @@ def make_teardrop_plot(mesh_data):
             hw = HW_BY_INTERACTION_COULOMB[interaction_coulomb]
             Nmax_max = NMAX_MAX_BY_NUCLIDE[nuclide]
             observable_data = mfdnres.data.make_hw_scan_data(
-                mesh_data,observable,
-                selector =  {"interaction": interaction, "coulomb": coulomb},
-                Nmax_range = (NMAX_MIN,Nmax_max), hw_range = (hw,hw)
+                mesh_data, observable,
+                selector={"interaction": interaction, "coulomb": coulomb},
+                Nmax_range=(NMAX_MIN,Nmax_max), hw_range=(hw,hw),
             )
             
             # plot data
@@ -1292,7 +1292,7 @@ def make_teardrop_plot(mesh_data):
 
 def main():    
 
-    mesh_data=read_data()
+    mesh_data = read_data()
 
     make_basic_plot_canned(mesh_data)
     make_basic_plot(mesh_data)

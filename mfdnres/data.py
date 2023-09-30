@@ -48,8 +48,11 @@
       + Improve pass-through option handling in add_observable_panel_label().         
     - 03/21/23 (mac): Add set_up_hw_scan_secondary_axis().
     - 04/26/23 (mac): Support log axis in set_up_hw_scan_axes().
-    - 05/24/23 (mac): Add side option to add_hw_scan_plot_Nmax_labels().
-
+    - 05/24/23 (mac): Provide side option for add_hw_scan_plot_Nmax_labels().
+    - 07/08/23 (mac): Provide legend_position option for add_hw_scan_plot_Nmax_labels().
+    - 07/09/23 (mac): Support value None for option Nmax_label_tagged_index in
+        add_hw_scan_plot_Nmax_labels().
+    - 07/24/23 (mac): Simplify option names for add_hw_scan_plot_Nmax_labels().
 """
 
 import collections
@@ -442,7 +445,7 @@ def isotope(nuclide, format = None, as_tuple = False):
 def nuclide_str(nuclide):
     """Generate simple string for nuclide code, for use in filenames, e.g., "Z03-N03".
 
-    Special case of isotope_str.
+    Implements special case of isotope_str for format="ZN".
 
     Arguments:
 
@@ -464,7 +467,8 @@ def isotope_str(nuclide, format = None, lower = False):
 
         nuclide (tuple): (Z,N)
 
-        format (str, optional): format code for label ("AS"=A+Symbol, "As"=A+symbol, "ZN"=Zxx-Nxx)
+        format (str, optional): format code for label ("AS"=A+Symbol,
+        "As"=A+symbol, "ZN"=Zxx-Nxx); if None, defaults to "AS"
 
         lower (bool, optional, deprecated): force lowercase (redundant to format
         option value "As")
@@ -1751,6 +1755,10 @@ def set_up_hw_scan_secondary_axis(
 
         observable_norm_tick_specifier (tuple, optional): tick specification (min,max,step,num_subdivision) for observable ticks
 
+    Returns:
+
+        ax_secondary_y (mpl.axes.Axes): axes object
+
     """
 
     if observable_norm_scale is None:
@@ -1791,6 +1799,7 @@ def set_up_hw_scan_secondary_axis(
         labelpad=observable_norm_labelpad,
     )
 
+    return ax_secondary_y
     
 def set_up_Nmax_scan_axes(
         ax,nuclide_observable,Nmax_range,observable_range,
@@ -1927,11 +1936,12 @@ def add_hw_scan_plot(
     return Nmax_groups
 
 def add_hw_scan_plot_Nmax_labels(
-        ax, Nmax_groups, Nmax_label_list,
-        Nmax_label_tagged_index=-1,
+        ax, Nmax_groups, label_list,
+        legend_index=-1,
         side="right",
         data_point_index=None,
         text_displacement=None,
+        legend_position="bottom",
 ):
     """Add Nmax curve labels to previously drawn hw scan plot.
 
@@ -1942,10 +1952,12 @@ def add_hw_scan_plot_Nmax_labels(
         Nmax_groups (pd.DataFrameGroupBy): curve data grouped by Nmax (as
             returned by add_hw_scan_plot())
 
-        Nmax_label_list (list of int): list of Nmax values for labels
+        label_list (list of int): list of Nmax values for labels [formerly
+        Nmax_label_list]
 
-        Nmax_label_tagged_index (int, optional): index within Nmax_label_list for Nmax
-        label to which to attach the legend "Nmax"
+        legend_index (int, optional): index within label_list for Nmax
+        label to which to attach the legend "Nmax" (or None to omit legend)
+        [formerly Nmax_label_tagged_index]
 
         side (str, optional): side of curve for label "left" or "right"
 
@@ -1953,13 +1965,15 @@ def add_hw_scan_plot_Nmax_labels(
         labeling (0 for "left" end of curve, -1 for "right" end of curve); or
         None for default based on side
 
-        text_displacement (tuple): xy displacement in points of text relative to curve point; or
+        text_displacement (tuple, optional): xy displacement in points of text relative to curve point; or
         None for default based on side
+
+        legend_position (str, optional): position of Nmax
+        legend label relative to Nmax labels ("bottom" or "top")
 
     """
 
-    # TODO (mac, 03/19/23): add in generalizations for call-out lines, placing
-    # the Nmax legend text *above* the Nmax labels, etc.
+    # TODO (mac, 03/19/23): add in generalizations for call-out lines
 
     if side=="right":
         if data_point_index is None:
@@ -1979,7 +1993,7 @@ def add_hw_scan_plot_Nmax_labels(
         endpoint = curve_points[data_point_index]
         
         # generate Nmax label
-        if Nmax in Nmax_label_list:
+        if Nmax in label_list:
             Nmax_label = ax.annotate(
                 r"${}$".format(Nmax),
                 xy=endpoint, xycoords="data",
@@ -1989,14 +2003,24 @@ def add_hw_scan_plot_Nmax_labels(
                 ##arrowprops=dict(arrowstyle="-", linewidth=0.5, shrinkA=1, shrinkB=3),
                 ##bbox=dict(boxstyle="square", visible=False, pad=0.),  # to clip call-out line under text
             )
-            
+
         # add "Nmax" legend label
-        if len(Nmax_label_list)>0 and Nmax == Nmax_label_list[Nmax_label_tagged_index]:
+        if (
+                len(label_list)>0
+                and legend_index is not None
+                and Nmax == label_list[legend_index]
+        ):
+            if legend_position=="bottom":
+                xy=(1,0)
+                verticalalignment="top"
+            elif legend_position=="top":
+                xy=(1,1)
+                verticalalignment="bottom"
             ax.annotate(
                 r"$N_{\mathrm{max}}$",
-                xy=(1,0), xycoords=Nmax_label,
+                xy=xy, xycoords=Nmax_label,
                 fontsize="x-small",
-                horizontalalignment="right", verticalalignment="top",
+                horizontalalignment="right", verticalalignment=verticalalignment,
             )
 
             
@@ -2155,7 +2179,8 @@ def add_expt_marker_band(
 
         y_with_error (float or tuple): (y,dy) given as y, (y,None), (y,dy), or
            (y,(dy_plus,dy_minus)), where all errors should have *positive*
-           values (in keeping with the conventions of Axes.errorbar)
+           values (in keeping with the conventions of Axes.errorbar); if None,
+           no marker is drawn
 
         color, linewidth (optional): styling parameters for central value
 
@@ -2166,6 +2191,8 @@ def add_expt_marker_band(
     """
 
     (x0,x1) = x_range
+    if y_with_error is None:
+        return
     if type(y_with_error)==tuple:
         (y,y_error) = y_with_error
     else:
@@ -2211,12 +2238,15 @@ def add_data_marker(ax,x,y_with_error,errorbar_kw=dict()):
 
         y_with_error (float or tuple): (y,dy) given as y, (y,None), (y,dy), or
            (y,(dy_plus,dy_minus)), where all errors should have *positive*
-           values (in keeping with the conventions of Axes.errorbar)
+           values (in keeping with the conventions of Axes.errorbar); if None,
+           no marker is drawn
 
         errorbar_kw (dict, optional): options to Axes.errorbar
 
     """
 
+    if y_with_error is None:
+        return
     if type(y_with_error)==tuple:
         (y,y_error) = y_with_error
     else:

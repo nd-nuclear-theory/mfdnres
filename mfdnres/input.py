@@ -33,10 +33,14 @@
     09/02/20 (pjf): Add autodetection of filename format.
     09/07/20 (pjf): Fix filename parsing.
     10/12/21 (pjf): Print filename info if parser throws error.
+    06/27/23 (mac): Add basic mesh data caching facility, based on code
+        from pjf lenpic-analysis-2022.
+    07/08/23 (mac): Add run_stem option for res_file_directory().
 """
 
 import glob
 import os
+import pickle
 
 import numpy as np
 
@@ -44,17 +48,27 @@ import numpy as np
 # filename utility
 ################################################################
 
-def res_file_directory(username,code,run_number,results_dir="results",res_file_subdir=os.path.join("results","res")):
+def res_file_directory(
+        username, code, run_number, *,
+        run_stem="run", results_dir="results", res_file_subdir=os.path.join("results","res"),
+):
     """Construct full path to res file directory, given user, code, and run.
 
         This function assumes directory naming conventions appropriate
         to mcscript archive files.
 
         Arguments:
+
             username (str): user name (e.g., "mcaprio")
+
             code (str): code name (e.g., "spncci")
+
             run_number (str): run name "tail" (e.g., "mac0424")
+
+            run_stem (str, optional): run name "stem" (normally "run")
+
             results_dir (str,optional): name of top-level results directory within GROUP_HOME
+
             res_file_subdir (str,optional): name of subdirectory within results directory (can be None for flat structure)
 
         Environment:
@@ -76,7 +90,7 @@ def res_file_directory(username,code,run_number,results_dir="results",res_file_s
     if (type(group_home) is not str):
         raise(ValueError("Need to set environment variable GROUP_HOME"))
 
-    res_directory = os.path.join(group_home,results_dir,username,code,"run"+run_number)
+    res_directory = os.path.join(group_home, results_dir, username, code, run_stem+run_number)
     if (res_file_subdir is not None):
         res_directory = os.path.join(res_directory,res_file_subdir)
 
@@ -338,6 +352,57 @@ def slurp_res_files(
 
     if (verbose):
         print("  slurp_res_files: extracted mesh points {}".format(len(mesh_data)))
+
+    return mesh_data
+
+################################################################
+# data pickling utility
+################################################################
+
+def read_data_with_caching(read_function, pickle_filename="mesh_data.pickle", **read_function_kw):
+    """Read pickled mesh data with fallback to fresh read.
+
+    To purge cached data, manually delete pickle file.
+
+    Arguments:
+
+        read_function (callable): Function to read mesh data from data files
+
+        pickle_filename (str, optional): Pickle filename
+
+        **read_function_kw (dict, optional): Keyword arguments for read function,
+        e.g., verbose=True.
+
+    Returns:
+
+        mesh_data (list of ResultsData): Mesh data
+
+    """
+
+    # attempt to read cached data
+    try:
+        print("Attempting to read pickled mesh data from {}...  ".format(pickle_filename), end="", flush=True)
+        with open(pickle_filename, 'rb') as fp:
+            mesh_data = pickle.load(fp)
+        print("Done.", end="", flush=True)
+        return mesh_data
+    except:
+        print("Failed.", flush=True)
+    
+    # fall back on fresh read
+    print("Reading mesh_data afresh...", flush=True)
+    mesh_data = read_function(**read_function_kw)
+
+    # cache this data
+    try:
+        with open(pickle_filename, 'wb') as fp:
+            print("Attempting to write pickled mesh data to {}...  ".format(pickle_filename), end="", flush=True)
+            pickle.dump(mesh_data, fp, pickle.HIGHEST_PROTOCOL)
+            print("Done.", flush=True)
+    except:
+        # Not sure why caching might fail, other than, say, an invalid path for
+        # the pickle file?
+        print("Failed.", flush=True)
 
     return mesh_data
 

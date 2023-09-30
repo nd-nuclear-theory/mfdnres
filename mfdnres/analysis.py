@@ -394,6 +394,11 @@ def subdict(d,keys):
 def dict_items(d):
     """ Convert dictionary to sorted tuple of items.
 
+    Example:
+
+        >>> mfdnres.analysis.dict_items({"a": 1, "b": 2})
+        (('a', 1), ('b', 2))
+
     Arguments:
         d (dict): dictionary
 
