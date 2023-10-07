@@ -323,11 +323,13 @@ class MFDnResultsData(results_data.ResultsData):
         # extract labels
         (J,gex,n) = qn
 
-        # trap deduced observables (single species radii relative to own center
-        # of mass)
+        # trap deduced observables
+        
+        # single species radii relative to own center of mass
         #
-        # Relation to MFDn output observables "r_pp" and "r_nn" deduced from
-        # cshalo [PRC 90, 034305 (2014)] (A5).
+        # The relation of the single species radii (relative to own center of
+        # mass) to the MFDn output observables "r_pp" and "r_nn" is read off
+        # from cshalo [PRC 90, 034305 (2014)] (A5).
         if (radius_type == "rp-ss"):
             nuclide = self.params["nuclide"]
             Np, Nn = nuclide
