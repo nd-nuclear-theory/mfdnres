@@ -30,10 +30,10 @@ def parser(filename):
     special case, but allowing for natural orbitals built on this basis.
 
     Args:
-        filename (string) : filename (as basename)
+        filename (string): filename (as basename)
 
     Returns:
-        (dict) : info parsed from filename
+        (dict): info parsed from filename
 
     """
 
@@ -53,41 +53,49 @@ def parser(filename):
         r"(\-Mj(?P<M>-?[\d\.]+))?"
         r"(\-lan(?P<lanczos>\d+))?"
         r"(\-tol(?P<tolerance>\d+\.\d+[eE][+-]\d+))?"
-        r"("   # begin natorb group
+        # natorb group (optional)
+        r"("  # begin natorb group
           r"(?P<natural_orbital_flag>\-natorb)"
-          r"(\-J(?P<J>[\d\.]+)\-g(?P<g>[01])\-n(?P<n>[\d]+))?"
+          r"(\-J(?P<natural_orbital_J>[\d\.]+)\-g(?P<natural_orbital_g>[01])\-n(?P<natural_orbital_n>[\d]+))?"
           r"(\-no(?P<natural_orbital_iteration>\d+))?"
         r")?"  # end natorb group
-        r"(\-J(?P<decomp_J>[\d\.]+)\-g(?P<decomp_g>[01])\-n(?P<decomp_n>[\d]+))?"
+        # decomposition group (optional)
+        r"(\-J(?P<decomposition_J>[\d\.]+)\-g(?P<decomposition_g>[01])\-n(?P<decomposition_n>[\d]+))?"
         r"(\-op(?P<decomposition_operator>.+)\-dlan(?P<decomposition_lanczos>\d+))?"
         r"(?P<decomposition_flag>\-decomp)?"
+        # subset index (optional)
         r"(\-subset(?P<subset_index>\d+))?"
         # epilog
         r").(?P<extension>((res)|(out)|(lanczos)))"
     )
 
     flag_conversions = {
-        "mixed_parity_flag" : (lambda s  :  (s=="x")),
-        "fci_flag" : (lambda s  :  (s=="-fci")),
-        "natural_orbital_flag" : (lambda s  :  (s=="-natorb")),
-        "decomposition_flag" : (lambda s  :  (s=="-decomp")),
+        "mixed_parity_flag": (lambda s : (s=="x")),
+        "fci_flag": (lambda s  :  (s=="-fci")),
+        "natural_orbital_flag": (lambda s  :  (s=="-natorb")),
+        "decomposition_flag": (lambda s  :  (s=="-decomp")),
     }
 
     conversions = {
-        "Z" : int,
-        "N" : int,
-        "interaction" : str,
-        "coulomb" : int,
-        "hw" : float,
-        "lawson" : float,
-        "Nmax" : int,
-        "Ncut" : int,
-        "M" : float,
-        "lanczos" : int,
-        "J": float, "g": int, "n": int,
-        "decomp_J": float, "decomp_g": int, "decomp_n": int,
+        "Z": int,
+        "N": int,
+        "interaction": str,
+        "coulomb": int,
+        "hw": float,
+        "lawson": float,
+        "Nmax": int,
+        "Ncut": int,
+        "M": float,
+        "lanczos": int,
+        # natorb group (optional)
+        "natural_orbital_J": float, "natural_orbital_g": int, "natural_orbital_n": int,
+        "natural_orbital_iteration": int,
+        # decomposition group (optional)
+        "decomposition_operator": str,
+        "decomposition_J": float, "decomposition_g": int, "decomposition_n": int,
         "decomposition_lanczos": int,
-        "natural_orbital_iteration" : int
+        # subset index (optional)
+        "subset_index": int,
         }
 
     match = regex.match(filename)
@@ -96,7 +104,7 @@ def parser(filename):
     info = match.groupdict()
 
     # convert fields
-    for key,conversion in flag_conversions.items():
+    for key, conversion in flag_conversions.items():
         info[key] = conversion(info[key])
     for key in conversions:
         conversion = conversions[key]
@@ -107,10 +115,10 @@ def parser(filename):
         info["natural_orbital_iteration"] = 0
 
     # build natorb base state
-    info["natorb_base_state"] = (info.pop("J"), info.pop("g"), info.pop("n"))
+    info["natorb_base_state"] = (info.pop("natural_orbital_J"), info.pop("natural_orbital_g"), info.pop("natural_orbital_n"))
 
     # build decomposition state
-    info["decomposition_state"] = (info.pop("decomp_J"), info.pop("decomp_g"), info.pop("decomp_n"))
+    info["decomposition_state"] = (info.pop("decomposition_J"), info.pop("decomposition_g"), info.pop("decomposition_n"))
 
     return info
 
