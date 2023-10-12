@@ -1,5 +1,7 @@
 """ mfdn_format_7_ho.py -- declares descriptor parser
 
+    See mfdn_format_7_ho_test.py for parsing tests.
+
     Language: Python 3
     Mark A. Caprio
     Patrick J. Fasano
@@ -18,6 +20,8 @@
         + Support natural orbital base state information in descriptor.
         + Support "decomp" flag.
     12/06/20 (pjf): Add additional decomposition descriptor parsing support.
+    10/12/23 (mac): Update decomposition descriptor parsing to support task_descriptor_decomposition_2.
+
 """
 
 import re
@@ -60,9 +64,13 @@ def parser(filename):
           r"(\-no(?P<natural_orbital_iteration>\d+))?"
         r")?"  # end natorb group
         # decomposition group (optional)
-        r"(\-J(?P<decomposition_J>[\d\.]+)\-g(?P<decomposition_g>[01])\-n(?P<decomposition_n>[\d]+))?"
-        r"(\-op(?P<decomposition_operator>.+)\-dlan(?P<decomposition_lanczos>\d+))?"
-        r"(?P<decomposition_flag>\-decomp)?"
+        r"("  # begin decomposition group
+          r"\-J(?P<decomposition_J>[\d\.]+)\-g(?P<decomposition_g>[01])\-n(?P<decomposition_n>[\d]+)"
+          # task_descriptor_decomposition_1 has "op" prefix before "decomposition_operator_name"
+          # task_descriptor_decomposition_2 has no prefix before "decomposition_type"
+          r"\-(op)?(?P<decomposition_type>.+)\-dlan(?P<decomposition_lanczos>\d+)"
+          r"(?P<decomposition_flag>\-decomp)?"
+        r")?"  # end decomposition group
         # subset index (optional)
         r"(\-subset(?P<subset_index>\d+))?"
         # epilog
@@ -91,7 +99,7 @@ def parser(filename):
         "natural_orbital_J": float, "natural_orbital_g": int, "natural_orbital_n": int,
         "natural_orbital_iteration": int,
         # decomposition group (optional)
-        "decomposition_operator": str,
+        "decomposition_type": str,
         "decomposition_J": float, "decomposition_g": int, "decomposition_n": int,
         "decomposition_lanczos": int,
         # subset index (optional)
@@ -120,28 +128,9 @@ def parser(filename):
     # build decomposition state
     info["decomposition_state"] = (info.pop("decomposition_J"), info.pop("decomposition_g"), info.pop("decomposition_n"))
 
+    # provide legacy decomposition_operator field
+    info["decomposition_operator"] = info.get("decomposition_type")
+    
     return info
 
 input.register_filename_format("mfdn_format_7_ho", parser)
-
-if (__name__ == "__main__"):
-
-    filename = r"run0000-mfdn-Z2-N6-Daejeon16-coul1-hw05.000-a_cm20-Nmax02-Mj0.0-lan500-tol1.0e-06-natorb-no0.res"
-    info = input.parse_filename(filename, filename_format="mfdn_format_7_ho")
-    print(filename)
-    print(info)
-
-    filename = r"run0000-mfdn-Z2-N6-Daejeon16-coul1-hw05.000-a_cm20-Nmax02x-Mj0.0-lan500-tol1.0e-06.res"
-    info = input.parse_filename(filename, filename_format="mfdn_format_7_ho")
-    print(filename)
-    print(info)
-
-    filename = r"runpjf0015-mfdn15-Z3-N4-JISP16-coul1-hw20.000-a_cm40-Nmax02-Mj0.5-lan1000-tol1.0e-06-natorb-no0.res"
-    info = input.parse_filename(filename, filename_format="mfdn_format_7_ho")
-    print(filename)
-    print(info)
-
-    filename = r"runpjf0069-mfdn15-Z2-N1-Daejeon16-coul1-hw22.500-a_cm0-Nmax14-Mj0.5-lan400-tol1.0e-06-natorb-J00.5-g0-n01-no0.res"
-    info = input.parse_filename(filename, filename_format="mfdn_format_7_ho")
-    print(filename)
-    print(info)
