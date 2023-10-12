@@ -11,13 +11,21 @@ University of Notre Dame
 + 01/25/21 (pjf): Pull raw decomposition generation into its own function.
 + 03/29/21 (zz): Add a function to canonicalize a nuclide and add support for reading canonicalized nuclei files in read_eigenvalues.
 + 05/05/21 (zz): Add rebinning functions for U3LS, Sp3R and Sp3RS.
++ 10/12/23 (mac): Provide decomposition rebinning based on namedtuple label types.
+
 """
+
+import collections
 
 import numpy as np
 import scipy.linalg as linalg
 from . import histogram
 
 import mcscript.utils  # for value_range
+
+################################################################
+# raw decomposition generation
+################################################################
 
 def read_lanczos(filename="mfdn_alphabeta.dat"):
     """Read and parse mfdn_alphabeta file into d and e arrays for eigh_tridiagonal.
@@ -36,9 +44,10 @@ def read_lanczos(filename="mfdn_alphabeta.dat"):
 
     # extract raw vectors
     alphabeta_array = np.loadtxt(filename, usecols=(1, 2))
-    (alpha,beta) = (alphabeta_array[:, 0], alphabeta_array[:-1, 1])
+    alpha, beta = (alphabeta_array[:, 0], alphabeta_array[:-1, 1])
 
-    return (alpha,beta)
+    return alpha, beta
+
 
 def generate_raw_decomposition(alphabeta, lanczos_iterations=None):
     """Generate raw decomposition from Lanczos alpha-beta matrix.
@@ -59,7 +68,7 @@ def generate_raw_decomposition(alphabeta, lanczos_iterations=None):
 
     # trim vectors
     if (lanczos_iterations is not None):
-        (alpha, beta) = (alpha[:lanczos_iterations],beta[:lanczos_iterations-1])
+        (alpha, beta) = (alpha[:lanczos_iterations], beta[:lanczos_iterations-1])
 
     # generate Lanczos decomposition
     eigvals, eigvecs = linalg.eigh_tridiagonal(alpha, beta)
@@ -70,36 +79,12 @@ def generate_raw_decomposition(alphabeta, lanczos_iterations=None):
 
     return raw_decomposition
 
-def generate_decomposition_LEGACY(labels, expected_eigenvalues, alphabeta):
-    """Generate decomposition from Lanczos alpha-beta matrix and expected eigenvalues.
 
-    This is the initial implementation which returns "low level" decomposition,
-    still by eigenvalues, as well as histogram.BinMapping object.
+################################################################
+# decomposition binning
+################################################################
 
-    Arguments:
-        labels (list): irrep labels
-        expected_eigenvalues: expected eigenvalues of Casimir (or linear combination thereof)
-        alphabeta (tuple): (alpha,beta)
-            alpha (np.array of float): alpha matrix elements
-            beta (np.array of float): beta matrix elements
-
-    Returns:
-        raw_decomposition (list of tuple): (eigenvalue,probability) pairs from Lanczos alphabeta diagonalization
-        binned_decomposition (histogram.BinMapping): probabilities binned by expected labels
-
-    """
-    # generate Lanczos decomposition
-    raw_decomposition = generate_raw_decomposition(alphabeta)
-
-    # bin Lanczos decomposition
-    bins = histogram.BinMapping.create_bisection_bins(expected_eigenvalues)
-    binned_decomposition = histogram.BinMapping(keys=labels, bins=bins)
-    for eigval, probability in raw_decomposition:
-        binned_decomposition[eigval] += probability
-
-    return (raw_decomposition,binned_decomposition)
-
-def generate_decomposition(alphabeta,eigenvalue_label_dict,lanczos_iterations=None,verbose=False):
+def generate_decomposition(alphabeta, eigenvalue_label_dict, lanczos_iterations=None, verbose=False):
     """Generate decomposition from Lanczos alpha-beta matrix and expected eigenvalues.
 
     Arguments:
@@ -127,7 +112,7 @@ def generate_decomposition(alphabeta,eigenvalue_label_dict,lanczos_iterations=No
     if (verbose):
         print("Expected eigenvalue -> label group")
         for eigenvalue in expected_eigenvalues:
-            print("{:+8.3f} -> {}".format(eigenvalue,eigenvalue_label_dict[eigenvalue]))
+            print("{:+8.3f} -> {}".format(eigenvalue, eigenvalue_label_dict[eigenvalue]))
     label_groups = []
     for eigenvalue in expected_eigenvalues:
         label_groups.append(eigenvalue_label_dict[eigenvalue])
@@ -138,14 +123,15 @@ def generate_decomposition(alphabeta,eigenvalue_label_dict,lanczos_iterations=No
     if (verbose):
         print("Binned results (sorted by eigenvalue)")
         for eigenvalue in expected_eigenvalues:
-            print("{:+8.3f} : {:8.6f}".format(eigenvalue,binned_decomposition[eigenvalue]))
+            print("{:+8.3f} : {:8.6f}".format(eigenvalue, binned_decomposition[eigenvalue]))
 
     # convert to dict for well-behaved access using label (rather than eigenvalue) as key
     decomposition = binned_decomposition.as_dict()
 
     return decomposition
 
-def eigenvalue_label_dict_am(am_max,verbose=False):
+
+def eigenvalue_label_dict_am(am_max, verbose=False):
     """Generate eigenvalue dictionary for decomposition by angular momentum Casimir eigenvalue.
 
     Arguments:
@@ -158,11 +144,12 @@ def eigenvalue_label_dict_am(am_max,verbose=False):
 
     eigenvalue_label_dict = {
         float(J*(J+1)): float(J)
-        for J in mcscript.utils.value_range(am_max%1,am_max,1)
+        for J in mcscript.utils.value_range(am_max%1, am_max, 1)
         }
     return eigenvalue_label_dict
 
-def eigenvalue_label_dict_Nex(Nmax,verbose=False):
+
+def eigenvalue_label_dict_Nex(Nmax, verbose=False):
     """Generate eigenvalue dictionary for decomposition by Nex.
 
     Arguments:
@@ -175,11 +162,12 @@ def eigenvalue_label_dict_Nex(Nmax,verbose=False):
 
     eigenvalue_label_dict = {
         float(Nex): Nex
-        for Nex in mcscript.utils.value_range(Nmax%2,Nmax,2)
+        for Nex in mcscript.utils.value_range(Nmax%2, Nmax, 2)
         }
     return eigenvalue_label_dict
 
-def read_eigenvalues(filename,swap=False,verbose=False):
+
+def read_eigenvalues(filename, swap=False, verbose=False):
     """Read table mapping irrep labels to Casimir eigenvalues.
 
     Eigenvalue degeneracies are allowed.
@@ -219,17 +207,22 @@ def read_eigenvalues(filename,swap=False,verbose=False):
 
     # diagnostic output
     if (verbose):
-        for (eigenvalue,label_list) in eigenvalue_label_dict.items():
-            print("{:12e} {:1d} {}".format(eigenvalue,len(label_list),label_list))
+        for (eigenvalue, label_list) in eigenvalue_label_dict.items():
+            print("{:12e} {:1d} {}".format(eigenvalue, len(label_list), label_list))
 
     return eigenvalue_label_dict
+
+
+################################################################
+# decomposition postprocessing
+################################################################
 
 def mean_am_sqr(decomposition):
     """Calculate mean angular momentum squared from angular momentum distribution.
 
     May be used for check against MFDn observable mean am sqr.
 
-    May use with mfdnres.tools.effective_am to extract effective am by:
+    May be used with mfdnres.tools.effective_am to extract effective am by:
 
         J*(J+1) = <J^2>
 
@@ -245,7 +238,7 @@ def mean_am_sqr(decomposition):
         mean_am2+=am*(am+1)*decomposition[am]
     return mean_am2
 
-def print_decomposition(decomposition,label_format="",probability_format="8.6f"):
+def print_decomposition(decomposition, label_format="", probability_format="8.6f"):
     """Print diagnostic output of decomposition, sorted by labels.
 
     Note: Must use label_format="", not label_format="s", for tuple labels (or
@@ -257,16 +250,20 @@ def print_decomposition(decomposition,label_format="",probability_format="8.6f")
         probability_format (str,optional): format descriptor for probability
     """
 
-    format_str = "{{:{}}} {{:{}}}".format(probability_format,label_format)
+    format_str = "{{:{}}} {{:{}}}".format(probability_format, label_format)
     for labels in sorted(decomposition.keys()):
-        print(format_str.format(decomposition[labels],labels))
+        print(format_str.format(decomposition[labels], labels))
 
+        
 ################################################################
 # labeling native decompositions
 ################################################################
 
-def labeled_decomposition(label_list,decomposition):
+def labeled_decomposition(label_list, decomposition):
     """Digest natively-calculated decomposition into dictionary.
+
+    This function repackaged decompositions provided in the results from the
+    many-body code (e.g., the decomposition by Nex from mfdn).
 
     Dictionary is of form:
 
@@ -287,15 +284,20 @@ def labeled_decomposition(label_list,decomposition):
         raise ValueError("mismatched lengths for label_list and decomposition")
 
     decomposition_dict = {
-        (label,) : probability
-        for (label,probability) in zip(label_list,decomposition)
+        (label, ) : probability
+        for (label, probability) in zip(label_list, decomposition)
     }
 
     return decomposition_dict
 
+
 ################################################################
-# decomposition binning
+# decomposition rebinning -- legacy subsetting functions
 ################################################################
+
+# transformation functions to extract coarse-grained labeling from fine-grained labeling
+
+# DEPRECATED in favor of using label_subsetting_function factory function
 
 def label_transformation_u3spsns_to_nex(labels):
     """
@@ -381,40 +383,111 @@ def label_transformation_baby_spncci_to_sp3rs(labels):
     (N_sigma,lambda_sigma,mu_sigma,N_omega,lambda_omega,mu_omega,Sp,Sn,S) = labels
     return (N_sigma,lambda_sigma,mu_sigma,S)
 
-def rebinned_decomposition(decomposition,label_transformation,verbose=False):
-    """ Rebin decomposition according to new labeling.
+################################################################
+# decomposition rebinning -- label subsetting
+################################################################
+
+# singlet labels
+NexLabels = collections.namedtuple("NexLabels", ["N_omega"])
+SLabels = collections.namedtuple("SLabels", ["S"])
+LLabels = collections.namedtuple("LLabels", ["L"])
+
+# U(3) but non-Sp(3,R) labels
+U3Labels = collections.namedtuple("U3Labels", ["N_omega", "lambda_omega", "mu_omega"])
+U3SLabels = collections.namedtuple("U3SLabels", ["N_omega", "lambda_omega", "mu_omega", "S"])
+U3LSpSnSLabels = collections.namedtuple("U3LSpSnSLabels", ["N_omega", "lambda_omega", "mu_omega", "Sp", "Sn", "S", "L"])
+U3SpSnSLabels = collections.namedtuple("U3SpSnSLabels", ["N_omega", "lambda_omega", "mu_omega", "Sp", "Sn", "S"])
+
+# Sp(3,R) labels
+Sp3RLabels = collections.namedtuple("Sp3RLabels", ["N_sigma", "lambda_sigma", "mu_sigma"])
+Sp3RSLabels = collections.namedtuple("Sp3RSLabels", ["N_sigma", "lambda_sigma", "mu_sigma", "S"])
+BabySpNCCILabels = collections.namedtuple("BabySpNCCILabels", ["N_sigma", "lambda_sigma", "mu_sigma", "N_omega", "lambda_omega", "mu_omega", "Sp", "Sn", "S"])
+
+def namedtuple_subsetting_function(long_labels_type, short_labels_type):
+    """Factory function to provide subsetting function between namedtuple types.
+
+    Assumes fields in short_labels_type are subset of those in long_labels_type.
+    Otherwise, use of resulting subsetting function will result in a TypeError
+    exception.
+
+    The subsetting function produced here is based on dictionary operations.  It
+    could perhaps be made much more efficient if the mapping between long and
+    short tuple fields were set up in terms of positional arguments at function
+    production time.
+
+    Example:
+
+        >>> import collections
+        >>> LongLabels = collections.namedtuple("LongLabels", ["a", "b", "c"])
+        >>> ShortLabels = collections.namedtuple("ShortLabels", ["a", "c"])
+        >>> long_labels = LongLabels(1,2,3)
+        >>> f = mfdnres.decomposition.namedtuple_subsetting_function(LongLabels, ShortLabels)
+        >>> short_labels = f(long_labels)
+        >>> print("{} -> {}".format(long_labels, short_labels))
+        
+        LongLabels(a=1, b=2, c=3) -> ShortLabels(a=1, c=3)
+
+    Arguments:
+
+        long_labels_type (collections.namedtuple): long label tuple type
+
+        short_labels_type (collections.namedtuple): short label tuple type
+
+    Return:
+
+        (callable): subsetting function (tuple or long_labels_type -> short_labels_type)
+
+    """
+
+    def the_subsetting_function(long_labels):
+        # cast argument (which might just be plain tuple) to long_labels_type namedtuple
+        long_labels = long_labels_type(*long_labels)
+
+        # subset the key-value pairs from long_labels to those supported by short_labels_type
+        filtered_dict = {
+            k: v
+            for k, v in long_labels._asdict().items()
+            if k in short_labels_type._fields
+        }
+
+        # cast result to short_labels_type namedtuple
+        short_labels = short_labels_type(**filtered_dict)
+        
+        return short_labels
+    
+    return the_subsetting_function
+
+def rebinned_decomposition(decomposition, subsetting_specifier, verbose=False):
+    """Rebin decomposition according to new labeling.
 
     E.g., may by used to rebin "U3S" to S, by transformation
     label_transformation_U3S_to_S.
 
     Arguments:
+
         decomposition (dict): mapping from tuple of degenerate labels label (typically int or tuple) to probability
-        label_transformation (callable): function mapping old label to new label
+
+        subsetting_specifier (tuple or callable): tuple (old_label_type,
+        new_label_type) giving old (long) and new (short) label types; for
+        legacy support, may be function mapping old label to new label
 
     Returns
         (dict): rebinned decomposition
+
     """
 
+    if type(subsetting_specifier) is tuple:
+        old_label_type, new_label_type = subsetting_specifier
+        subsetting_function = namedtuple_subsetting_function(old_label_type, new_label_type)
+    else:
+        print("gh")
+        subsetting_function = subsetting_specifier
+        
     new_decomposition = {}
     for (label_list,probability) in decomposition.items():
         if (verbose):
-            print(label_transformation,label_list,probability)
-        new_label_list = tuple(set(map(label_transformation,label_list)))
+            print(subsetting_function,label_list,probability)
+        new_label_list = tuple(set(map(subsetting_function,label_list)))
         new_decomposition[new_label_list] = new_decomposition.get(new_label_list,0) + probability
 
     return new_decomposition
-
-def canonicalize_nuclide(nuclide):
-    """ Canonicalize nuclide, swap Z and N if Z>N.
-
-    Arguments:
-        nuclide: (Z, N) for the nuclide
-
-    Returns:
-        canonical_nuclide (tuple): canonicalized nuclide
-        swap (bool):  whether swapping N and Z is needed for canonicalizing
-    """
-
-    canonical_nuclide = tuple(sorted(nuclide))
-    swap = (canonical_nuclide != nuclide)
-    return (canonical_nuclide,swap)
