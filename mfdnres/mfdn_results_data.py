@@ -41,6 +41,8 @@
     08/01/22 (pjf): Use RMEData for RME storage.
     11/19/22 (mac): Deduce two-body RME from MFDn two-body expectation value in get_rme().
     04/27/23 (mac): Provide get_me() accessor for use with scalar observables.
+    10/12/23 (mac): Provide support for Lanczos decomposition filename storage in
+        mfdn_level_lanczos_decomposition_filenames.
 """
 
 from __future__ import annotations
@@ -194,6 +196,16 @@ class MFDnResultsData(results_data.ResultsData):
 
             Mapping: observable_name -> (qnf,qni) -> value
 
+        mfdn_level_lanczos_decomposition_filenames (dict): filename for Lanczos decomposition data
+
+            Mapping: decomposition_type -> qn -> filename
+
+                decomposition_type (str): decomposition type ("U3SpSnS", etc.)
+
+                qn: (J,g,n)
+
+                filename (str): path to lanczos file containing alpha and beta coefficients
+
     Accessors:
        [See definitions below.]
     """
@@ -249,6 +261,7 @@ class MFDnResultsData(results_data.ResultsData):
         self.mfdn_tb_expectations = {}
         self.postprocessor_ob_rmes = {}
         self.postprocessor_tb_rmes = {}
+        self.mfdn_level_lanczos_decomposition_filenames = {}
 
     ########################################
     # Accessors
@@ -1052,6 +1065,29 @@ class MFDnResultsData(results_data.ResultsData):
 
         return expectation_value
 
+    def get_lanczos_decomposition_filename(self,decomposition_type,qn:LevelQNType,verbose=False):
+        """ Retrieve Lanczos decomposition filename.
+
+        Arguments:
+            decomposition_type (str): decomposition type ("U3SpSnS", etc.)
+            qn (tuple): quantum numbers for state
+
+        Returns:
+            (str): filename
+        """
+
+        # retrieve decomposition
+        try:
+            lanczos_decomposition_filename = self.mfdn_level_lanczos_decomposition_filenames[decomposition_type][qn]
+        except:
+            return None
+
+        if verbose:
+            print("{} {} {}".format(decomposition_type, qn, lanczos_decomposition_filename))
+
+        return lanczos_decomposition_filename
+
+    
     ########################################
     # Updating method
     ########################################
@@ -1075,6 +1111,7 @@ class MFDnResultsData(results_data.ResultsData):
         update_observable_dictionary(self.mfdn_tb_expectations,other.mfdn_tb_expectations,dict)
         update_observable_dictionary(self.postprocessor_ob_rmes,other.postprocessor_ob_rmes,results_data.RMEData)
         update_observable_dictionary(self.postprocessor_tb_rmes,other.postprocessor_tb_rmes,results_data.RMEData)
+        update_observable_dictionary(self.mfdn_level_lanczos_decomposition_filenames,other.mfdn_level_lanczos_decomposition_filenames,dict)
 
 #################################################
 # test code

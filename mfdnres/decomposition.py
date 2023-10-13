@@ -4,27 +4,31 @@ Language: Python 3
 Patrick J. Fasano
 University of Notre Dame
 
-+ 10/24/19 (pjf): Created, migrated from diagonalize_alphabeta.py.
-+ 02/20/20 (mac): Provide eigenvalue input and overhaul to handle degenerate labels.
-+ 09/02/20 (mac): Add labeled_decomposition and rebinned_decomposition.
-+ 09/21/20 (mac): Provide decomposition based on truncated number of Lanczos iterations.
-+ 01/25/21 (pjf): Pull raw decomposition generation into its own function.
-+ 03/29/21 (zz): Add a function to canonicalize a nuclide and add support for reading canonicalized nuclei files in read_eigenvalues.
-+ 05/05/21 (zz): Add rebinning functions for U3LS, Sp3R and Sp3RS.
-+ 10/12/23 (mac): Provide decomposition rebinning based on namedtuple label types.
+    - 10/24/19 (pjf): Created, migrated from diagonalize_alphabeta.py.
+    - 02/20/20 (mac): Provide eigenvalue input and overhaul to handle degenerate labels.
+    - 09/02/20 (mac): Add labeled_decomposition and rebinned_decomposition.
+    - 09/21/20 (mac): Provide decomposition based on truncated number of Lanczos iterations.
+    - 01/25/21 (pjf): Pull raw decomposition generation into its own function.
+    - 03/29/21 (zz): Add a function to canonicalize a nuclide and add support for reading canonicalized nuclei files in read_eigenvalues.
+    - 05/05/21 (zz): Add rebinning functions for U3LS, Sp3R and Sp3RS.
+    - 10/12/23 (mac):
+        + Provide decomposition rebinning based on namedtuple label types.
+        + Add slurp_lanczos_filenames() to populate MFDnResultsData Lanczos decomposition filenames.
 
 """
 
 import collections
+import glob
+import os
 
 import numpy as np
 import scipy.linalg as linalg
-from . import histogram
+from . import histogram, input, mfdn_results_data
 
 import mcscript.utils  # for value_range
 
 ################################################################
-# raw decomposition generation
+# lanczos data input
 ################################################################
 
 def read_lanczos(filename="mfdn_alphabeta.dat"):
@@ -48,6 +52,83 @@ def read_lanczos(filename="mfdn_alphabeta.dat"):
 
     return alpha, beta
 
+
+def slurp_lanczos_filenames(
+        directory_list,
+        filename_format,
+        glob_pattern="*.lanczos",
+        verbose=False,
+):
+    """Read all lanczos files in given directories.
+
+    The results will be a list of results data objects, one for
+    each lanczos data set.
+
+    Inspired by mfdnres.input.slurp_res_files().
+
+    Arguments:
+
+        directory_list (str or list of str): directory or list of directories
+            containing files to import
+
+        filename_format (str,optional): identifier string for the results
+            filename parser to use
+
+        glob_pattern (str,optional): glob pattern for results filenames to read
+            within each directory
+
+        verbose (bool,optional): enable debugging output
+
+    Returns:
+        (list of MFDnResultsData): list of mesh point data objects
+
+    """
+
+    # process argument: upgrade single directory to list
+    if (type(directory_list) == str):
+        directory_list = [directory_list]
+    directory_list = sorted(list(set(directory_list)))  # remove duplicate input directories
+    if (verbose):
+        print("  slurp_lanczos_filenames: directory list {}".format(directory_list))
+
+    # accumulate mesh points
+    mesh_data = []
+    for directory in directory_list:
+        full_glob_pattern = os.path.join(directory, glob_pattern)
+        if (verbose):
+            print("  slurp_lanczos_filenames: searching for files {}...".format(full_glob_pattern))
+        filename_list = glob.glob(full_glob_pattern)
+
+        # accumulate parsed data from different res files
+        for filename in filename_list:
+
+            # set up container
+            results = mfdn_results_data.MFDnResultsData()
+
+            # parse lanczos filename for run parameters
+            info_from_filename = input.parse_filename(filename, filename_format)
+            results.params.update(info_from_filename)
+
+            # save lanczos filename
+            decomposition_type = results.params["decomposition_type"]
+            qn = results.params["decomposition_state"]
+            results.mfdn_level_lanczos_decomposition_filenames = {
+                decomposition_type: {
+                    qn: filename
+                }
+            }
+
+            mesh_data.append(results)
+
+    if (verbose):
+        print("  slurp_lanczos_filenames: extracted mesh points {}".format(len(mesh_data)))
+
+    return mesh_data
+
+
+################################################################
+# raw decomposition generation
+################################################################
 
 def generate_raw_decomposition(alphabeta, lanczos_iterations=None):
     """Generate raw decomposition from Lanczos alpha-beta matrix.

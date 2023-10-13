@@ -234,7 +234,7 @@ def register_code_name(code_name,format_name):
 # data file import control
 ##################################################
 
-def read_file(filename,res_format=None,filename_format=None,verbose=False):
+def read_file(filename, res_format=None, filename_format=None, params=None, verbose=False):
     """Extract results from single results file.
 
     Dispatches filename to appropriate filename parser.  Dispatches
@@ -252,11 +252,16 @@ def read_file(filename,res_format=None,filename_format=None,verbose=False):
 
     Arguments:
         filename (str): filename for results file
+
         res_format (str, optional): identifier string for the results file
             parser to use
-        filename_format (str,optional): identifier string for the results
+
+        filename_format (str, optional): identifier string for the results
             filename parser to use
-        verbose (bool,optional): enable debugging output
+
+        params (dict, optional): supplementary parameters to append to params attribute
+
+        verbose (bool, optional): enable debugging output
 
     Returns:
         (list of ResultsData): list of mesh point data objects
@@ -264,7 +269,7 @@ def read_file(filename,res_format=None,filename_format=None,verbose=False):
     """
 
     # parse results filename for any supplementary run parameters
-    info_from_filename = parse_filename(filename,filename_format)
+    info_from_filename = parse_filename(filename, filename_format)
 
     if res_format is None:
         if info_from_filename.get("code_name") is not None:
@@ -277,7 +282,7 @@ def read_file(filename,res_format=None,filename_format=None,verbose=False):
         print("  read_file: filename {}".format(filename))
     with open(filename,'rt') as fin:
         try:
-            results_list = data_format_parser[res_format](fin,verbose=verbose)
+            results_list = data_format_parser[res_format](fin, verbose=verbose)
         except Exception as e:
             print("filename {} filename_format {} res_format {}".format(filename, filename_format, res_format))
             raise e
@@ -296,22 +301,28 @@ def read_file(filename,res_format=None,filename_format=None,verbose=False):
         results.params.update(info_from_filename)
         results.filename = os.path.basename(filename)
 
+    # augment parameters with those explicitly given
+    if params is not None:
+        for results in results_list:
+            results.params.update(params)
+        
     return results_list
 
 def slurp_res_files(
-        res_directory_list,
+        directory_list,
         res_format=None,
         filename_format=None,
+        params=None,
         glob_pattern="*.res",
-        verbose=False
+        verbose=False,
 ):
-    """Read all results file in given directories.
+    """Read all results files in given directories.
 
     The results will be a list of results data objects, one for
     each mesh point within the results file.
 
     Arguments:
-        res_directory_list (str or list of str): directory or list of directories
+        directory_list (str or list of str): directory or list of directories
             containing files to import
         res_format (str, optional): identifier string for the results file parser to use
         filename_format (str,optional): identifier string for the results
@@ -326,25 +337,27 @@ def slurp_res_files(
     """
 
     # process argument: upgrade single directory to list
-    if (type(res_directory_list) == str):
-        res_directory_list = [res_directory_list]
-    res_directory_list = sorted(list(set(res_directory_list)))  # remove duplicate input directories
+    if (type(directory_list) == str):
+        directory_list = [directory_list]
+    directory_list = sorted(list(set(directory_list)))  # remove duplicate input directories
     if (verbose):
-        print("  slurp_res_files: directory list {}".format(res_directory_list))
+        print("  slurp_res_files: directory list {}".format(directory_list))
 
     # accumulate mesh points
     mesh_data = []
-    for res_directory in res_directory_list:
-        full_glob_pattern = os.path.join(res_directory,glob_pattern)
+    for directory in directory_list:
+        full_glob_pattern = os.path.join(directory, glob_pattern)
         if (verbose):
             print("  slurp_res_files: searching for files {}...".format(full_glob_pattern))
-        res_filename_list = glob.glob(full_glob_pattern)
+        filename_list = glob.glob(full_glob_pattern)
 
         # accumulate parsed data from different res files
-        for res_filename in res_filename_list:
+        for filename in filename_list:
             new_mesh_data = read_file(
-                res_filename,
-                res_format=res_format,filename_format=filename_format,
+                filename,
+                res_format=res_format,
+                filename_format=filename_format,
+                params=params,
                 ##verbose=(verbose=="verbose_by_file")
                 verbose=False  # disabled file-by-file verbosity
             )

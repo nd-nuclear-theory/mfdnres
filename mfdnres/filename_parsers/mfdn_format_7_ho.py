@@ -79,9 +79,9 @@ def parser(filename):
 
     flag_conversions = {
         "mixed_parity_flag": (lambda s : (s=="x")),
-        "fci_flag": (lambda s  :  (s=="-fci")),
-        "natural_orbital_flag": (lambda s  :  (s=="-natorb")),
-        "decomposition_flag": (lambda s  :  (s=="-decomp")),
+        "fci_flag": (lambda s : (s=="-fci")),
+        "natural_orbital_flag": (lambda s : (s=="-natorb")),
+        "decomposition_flag": (lambda s : (s=="-decomp")),
     }
 
     conversions = {
@@ -128,7 +128,7 @@ def parser(filename):
     # build decomposition state
     info["decomposition_state"] = (info.pop("decomposition_J"), info.pop("decomposition_g"), info.pop("decomposition_n"))
 
-    # provide legacy decomposition_operator field
+    # provide legacy decomposition_operator field (DEPRECATED)
     info["decomposition_operator"] = info.get("decomposition_type")
     
     return info

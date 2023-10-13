@@ -555,7 +555,7 @@ section_handlers = {
 # parsing control code
 ################################################################
 
-def parse_mesh_point(self:MFDnResultsData,sections,section_handlers):
+def parse_mesh_point(self:MFDnResultsData, sections, section_handlers):
     """ Parse single mesh point into results object.
 
     Arguments:
@@ -572,7 +572,7 @@ def parse_mesh_point(self:MFDnResultsData,sections,section_handlers):
                 print("ERROR: Unexpected content in results file section '{}'".format(section_name))
                 raise err
             
-def parser(in_file,verbose):
+def parser(in_file, verbose):
     """ Parse full results file.
 
     Arguments:
@@ -605,7 +605,7 @@ def parser(in_file,verbose):
 
 
 # register the parser
-input.register_data_format('mfdn_v15',parser)
+input.register_data_format('mfdn_v15', parser)
 input.register_code_name('mfdn15', 'mfdn_v15')
 input.register_code_name('obscalc', 'mfdn_v15')
 input.register_code_name('obscalc-ob', 'mfdn_v15')
