@@ -616,6 +616,8 @@ def select_network_transitions(
             reference_results_data = results_data
         level_f, level_i = reference_strength
         qn_pair = level_f.select_level(reference_results_data), level_i.select_level(reference_results_data)
+        if None in qn_pair:
+            print("ERROR: Missing level in reference transition")
         s0 = abs(reference_strength_accessor(operator,qn_pair))
     else:
         s0 = reference_strength
