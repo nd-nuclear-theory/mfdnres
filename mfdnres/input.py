@@ -234,7 +234,7 @@ def register_code_name(code_name,format_name):
 # data file import control
 ##################################################
 
-def read_file(filename, res_format=None, filename_format=None, params=None, verbose=False):
+def read_file(filename, *, res_format=None, filename_format=None, params=None, verbose=False):
     """Extract results from single results file.
 
     Dispatches filename to appropriate filename parser.  Dispatches
@@ -310,6 +310,7 @@ def read_file(filename, res_format=None, filename_format=None, params=None, verb
 
 def slurp_res_files(
         directory_list,
+        *,
         res_format=None,
         filename_format=None,
         params=None,
@@ -359,7 +360,7 @@ def slurp_res_files(
                 filename_format=filename_format,
                 params=params,
                 ##verbose=(verbose=="verbose_by_file")
-                verbose=False  # disabled file-by-file verbosity
+                verbose=False,  # disabled file-by-file verbosity
             )
             mesh_data += new_mesh_data
 
