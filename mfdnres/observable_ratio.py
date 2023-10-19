@@ -127,7 +127,7 @@ class RatioQr2(mfdnres.observable.Ratio):
                 and isinstance(observable2, mfdnres.observable.Radius)
         ):
             raise ValueError("Unexpected observable types in RatioQr2 (found {} and {})".format(observable1, observable2))
-        super().__init__(observable1, mfdnres.observable.mfdnres.observable.Power(observable2, 2), observable_label_delimiters)
+        super().__init__(observable1, mfdnres.observable.Power(observable2, 2), observable_label_delimiters)
 
     @property
     def axis_label_text(self):
