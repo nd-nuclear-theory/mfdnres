@@ -148,7 +148,7 @@ class MixingAdmixture(MixingObservable):
         ## label = r"\sin^2\theta({:1.0f}^+_{{0\hbar\omega}}/{:1.0f}^+_{{2\hbar\omega}})_{}".format(self._J, self._J, self._operator_flavor)
         ##label = r"\sin^2\theta_{{{:1.0f},{}}}".format(self._J, self._operator_flavor)
         qn_text = mfdnres.data.qn_text((self._J,self._g,None), show_parity=True, show_index=False)
-        label = r"\sin^2\theta_{{{}}}~[\mathrm{{from}}~E0_{}]".format(qn_text, self._operator_flavor)        
+        label = r"\sin^2\theta_{{{}}}~[\mathrm{{from}}~{}_{}]".format(qn_text, self._operator_family, self._operator_flavor)        
         return label
 
     @property
@@ -194,7 +194,7 @@ class MixingMatrixElement(MixingObservable):
         ## P_str = "+" if self._g==0 else "-"
         qn_text = mfdnres.data.qn_text((self._J,self._g,None), show_parity=True, show_index=False)
 
-        label = r"V_{{{}}}~[\mathrm{{from}}~E0_{}]".format(qn_text, self._operator_flavor)
+        label = r"V_{{{}}}~[\mathrm{{from}}~{}_{}]".format(qn_text, self._operator_family, self._operator_flavor)
         return label
 
     @property
