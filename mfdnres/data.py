@@ -53,6 +53,8 @@
     - 07/09/23 (mac): Support value None for option Nmax_label_tagged_index in
         add_hw_scan_plot_Nmax_labels().
     - 07/24/23 (mac): Simplify option names for add_hw_scan_plot_Nmax_labels().
+    - 10/24/23 (mac): Provide observable_scale, tick_specifier, and labelpad options
+        for set_up_Nmax_scan_axes().
 """
 
 import collections
@@ -1664,9 +1666,9 @@ def set_up_hw_scan_axes(
         ax, nuclide_observable, hw_range, observable_range,
         hw_range_extension=(0.05,0.05), observable_range_extension=(0.05,0.05),
         observable_scale=None,
+        observable_axis_label_text=None,
         hw_labelpad=None,
         observable_labelpad=None,
-        observable_axis_label_text=None,
         hw_tick_specifier=None,
         observable_tick_specifier=None,
 ):
@@ -1684,6 +1686,8 @@ def set_up_hw_scan_axes(
 
         observable_scale (str): y scale ("linear" or "log")
 
+        observable_axis_label_text (str, optional): override for observable axis label text
+
         hw_range_extension (tuple of float, optional): x range relative extension
 
         observable_range_extension (tuple of float, optional): y range relative extension
@@ -1691,8 +1695,6 @@ def set_up_hw_scan_axes(
         hw_labelpad (scalar, optional): pass-though labelpad option for xlabel
 
         observable_labelpad (scalar, optional): pass-though labelpad option for ylabel
-
-        observable_axis_label_text (str, optional): override for observable axis label text
 
         hw_tick_specifier (tuple, optional): tick specification (min,max,step,num_subdivision) for hw ticks
 
@@ -1802,8 +1804,15 @@ def set_up_hw_scan_secondary_axis(
     return ax_secondary_y
     
 def set_up_Nmax_scan_axes(
-        ax,nuclide_observable,Nmax_range,observable_range,
-        Nmax_range_extension=(0.05,0.05),observable_range_extension=(0.05,0.05)
+        ax, nuclide_observable, Nmax_range, observable_range,
+        Nmax_range_extension=(0.05,0.05),
+        observable_range_extension=(0.05,0.05),
+        observable_scale=None,
+        observable_axis_label_text=None,
+        Nmax_labelpad=None,
+        observable_labelpad=None,
+        Nmax_tick_specifier=None,
+        observable_tick_specifier=None,
 ):
     """ Set up axes.
 
@@ -1817,19 +1826,53 @@ def set_up_Nmax_scan_axes(
 
         observable_range (tuple of float): y range, or None for matplotlib auto
 
+        observable_scale (str): y scale ("linear" or "log")
+
+        observable_axis_label_text (str, optional): override for observable axis label text
+
         Nmax_range_extension (tuple of float, optional): x range relative extension
 
         observable_range_extension (tuple of float, optional): y range relative extension
 
+        Nmax_labelpad (scalar, optional): pass-though labelpad option for xlabel
+
+        observable_labelpad (scalar, optional): pass-though labelpad option for ylabel
+
+        Nmax_tick_specifier (tuple, optional): tick specification (min,max,step,num_subdivision) for Nmax ticks
+
+        observable_tick_specifier (tuple, optional): tick specification (min,max,step,num_subdivision) for observable ticks
+
     """
 
-    # TODO 03/19/23 (mac): Add tick specifier arguments.
-    
-    ax.set_xlabel(NMAX_AXIS_LABEL_TEXT)
+    # set ticks
+    #
+    # Note that the tick specification must come *before* setting range limits,
+    # since the range limits automatically readjust when you set the ticks.
+    if Nmax_tick_specifier is not None:
+        x_ticks = ticks.linear_ticks(*Nmax_tick_specifier)
+        ticks.set_ticks(ax,"x",x_ticks)
+    if observable_tick_specifier is not None:
+        y_ticks = ticks.linear_ticks(*observable_tick_specifier)
+        ticks.set_ticks(ax,"y",y_ticks)
+
+    # set limits
     ax.set_xlim(*extend_interval_relative(Nmax_range,Nmax_range_extension))
-    ax.set_ylabel(r"${}$".format(make_observable_axis_label_text(nuclide_observable)))
+    if observable_scale=="log":
+        # Note: Override any range extension for log scale
+        observable_range_extension=(0.,0.)
+        ax.set_yscale("log")
     if (observable_range is not None) and np.isfinite(observable_range[0]).all():
         ax.set_ylim(*extend_interval_relative(observable_range,observable_range_extension))
+        
+    # set axis labels
+    ax.set_xlabel(NMAX_AXIS_LABEL_TEXT, labelpad=Nmax_labelpad)
+    if observable_axis_label_text is None:
+        observable_axis_label_text = make_observable_axis_label_text(nuclide_observable)
+    ax.set_ylabel(
+        r"${}$".format(observable_axis_label_text),
+        labelpad=observable_labelpad,
+    )
+        
 
 def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**kwargs):
     """ Add observable panel label to plot.
