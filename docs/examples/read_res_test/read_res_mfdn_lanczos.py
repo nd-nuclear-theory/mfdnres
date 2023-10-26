@@ -19,6 +19,8 @@
 
 import os
 
+import numpy as np
+
 import mfdnres
 import mfdnres.ncci
 import mfdnres.decomposition
@@ -31,9 +33,9 @@ def read_data():
     """Read results.
     """
 
-    print("Reading lanczos filenames...")
+    print("Reading lanczos files...")
     data_dir = os.path.join("data","mfdn","v15-lanczos")
-    mesh_data = mfdnres.decomposition.slurp_lanczos_filenames(
+    mesh_data = mfdnres.decomposition.slurp_lanczos_files(
         data_dir,
         filename_format="mfdn_format_7_ho",
         glob_pattern="*.lanczos",
@@ -75,15 +77,28 @@ def explore_point(results_data):
 
     """
 
+    # set numpy formatting to abbreviate array output
+    np.set_printoptions(threshold=0, edgeitems=2)
+    
     # examine data attributes
     print("Data attributes...")
-    print("results_data.mfdn_level_lanczos_decomposition_filenames {}".format(results_data.mfdn_level_lanczos_decomposition_filenames))
+    print("results_data.mfdn_level_lanczos_decomposition_data {}".format(results_data.mfdn_level_lanczos_decomposition_data))
     print()
 
-    # access filename
+    # access data
     print("Test accessor...")
-    print("Lanczos decomposition filename {}".format(results_data.get_lanczos_decomposition_filename("Nex",(1.0,0,1))))
+    print("Lanczos decomposition filename {}".format(results_data.get_lanczos_decomposition_filename("Nex", (1.0,0,1))))
+    alpha, beta = results_data.get_lanczos_decomposition_alpha_beta("Nex", (1.0,0,1))
+    print("Lanczos decomposition alpha & beta\n    {}\n    {}".format(alpha, beta))
     print()
+
+    # do decomposition
+    alpha_beta = results_data.get_lanczos_decomposition_alpha_beta("Nex", (1.0,0,1))
+    eigenvalue_label_dict = mfdnres.decomposition.eigenvalue_label_dict_Nex(Nmax=2)
+    decomposition = mfdnres.decomposition.generate_decomposition(alpha_beta, eigenvalue_label_dict)
+    print("Nex decomposition by Lanczos")
+    mfdnres.decomposition.print_decomposition(decomposition)
+
     
 ################################################################
 # main

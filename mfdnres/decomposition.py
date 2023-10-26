@@ -14,6 +14,8 @@ University of Notre Dame
     - 10/12/23 (mac):
         + Provide decomposition rebinning based on namedtuple label types.
         + Add slurp_lanczos_filenames() to populate MFDnResultsData Lanczos decomposition filenames.
+    - 10/25/23 (mac): Replace Add slurp_lanczos_filenames() with slurp_lanczos_files().
+    - 10/26/23 (mac): Support use of eigenvalue dict as label list for labeled_decomposition().
 
 """
 
@@ -47,13 +49,13 @@ def read_lanczos(filename="mfdn_alphabeta.dat"):
     """
 
     # extract raw vectors
-    alphabeta_array = np.loadtxt(filename, usecols=(1, 2))
-    alpha, beta = (alphabeta_array[:, 0], alphabeta_array[:-1, 1])
+    alpha_beta_array = np.loadtxt(filename, usecols=(1, 2))
+    alpha, beta = (alpha_beta_array[:, 0], alpha_beta_array[:-1, 1])
 
     return alpha, beta
 
 
-def slurp_lanczos_filenames(
+def slurp_lanczos_files(
         directory_list,
         filename_format,
         glob_pattern="*.lanczos",
@@ -112,9 +114,10 @@ def slurp_lanczos_filenames(
             # save lanczos filename
             decomposition_type = results.params["decomposition_type"]
             qn = results.params["decomposition_state"]
-            results.mfdn_level_lanczos_decomposition_filenames = {
+            alpha, beta = read_lanczos(filename)
+            results.mfdn_level_lanczos_decomposition_data = {
                 decomposition_type: {
-                    qn: filename
+                    qn: (filename, alpha, beta)
                 }
             }
 
@@ -130,13 +133,13 @@ def slurp_lanczos_filenames(
 # raw decomposition generation
 ################################################################
 
-def generate_raw_decomposition(alphabeta, lanczos_iterations=None):
+def generate_raw_decomposition(alpha_beta, lanczos_iterations=None):
     """Generate raw decomposition from Lanczos alpha-beta matrix.
 
     This does not perform any binning on eigenvalues.
 
     Arguments:
-        alphabeta (tuple): (alpha,beta)
+        alpha_beta (tuple): (alpha,beta)
             alpha (np.array of float): alpha matrix elements
             beta (np.array of float): beta matrix elements
         lanczos_iterations (int, optional): number of effective Lanczos iterations to which to truncate
@@ -145,7 +148,7 @@ def generate_raw_decomposition(alphabeta, lanczos_iterations=None):
         raw_decomposition (list of tuple): (eigenvalue,probability) pairs from Lanczos alphabeta diagonalization
     """
     # extract matrix elements
-    alpha, beta = alphabeta
+    alpha, beta = alpha_beta
 
     # trim vectors
     if (lanczos_iterations is not None):
@@ -160,16 +163,15 @@ def generate_raw_decomposition(alphabeta, lanczos_iterations=None):
 
     return raw_decomposition
 
-
 ################################################################
 # decomposition binning
 ################################################################
 
-def generate_decomposition(alphabeta, eigenvalue_label_dict, lanczos_iterations=None, verbose=False):
+def generate_decomposition(alpha_beta, eigenvalue_label_dict, lanczos_iterations=None, verbose=False):
     """Generate decomposition from Lanczos alpha-beta matrix and expected eigenvalues.
 
     Arguments:
-        alphabeta (tuple): (alpha,beta)
+        alpha_beta (tuple): (alpha,beta)
             alpha (np.array of float): alpha matrix elements
             beta (np.array of float): beta matrix elements
         eigenvalue_label_dict (dict): mapping of eigenvalue to labels (may be tuple of degenerate labels)
@@ -183,7 +185,7 @@ def generate_decomposition(alphabeta, eigenvalue_label_dict, lanczos_iterations=
     """
 
     # generate Lanczos decomposition
-    raw_decomposition = generate_raw_decomposition(alphabeta, lanczos_iterations=lanczos_iterations)
+    raw_decomposition = generate_raw_decomposition(alpha_beta, lanczos_iterations=lanczos_iterations)
     if (verbose):
         print("Raw decomposition")
         print(np.array(raw_decomposition))
@@ -353,17 +355,39 @@ def labeled_decomposition(label_list, decomposition):
     Although the native decompositions have no label degeneracies, the label
     must still be wrapped in a tuple for compatibility with analyses of
     decompositions where multiple labels may be binned together (e.g., from
-    Lanczos decompositions where different labels have degenerat eigenvalues).
+    Lanczos decompositions where different labels have degenerate eigenvalues).
 
+    Example:
+
+        >>> results_data = ...
+        >>> Nmax = 4
+        >>> state = (1.5,1,1)
+        >>> native_decomposition = results_data.get_decomposition("Nex", state)
+        >>> eigenvalue_label_dict = mfdnres.decomposition.eigenvalue_label_dict_Nex(Nmax)
+        >>> decomposition = mfdnres.decomposition.labeled_decomposition(eigenvalue_label_dict, native_decomposition)
+
+        {(0,): 0.7587, (2,): 0.1309, (4,): 0.1104}
+  
     Arguments:
-        label_list (list): list of individual bin labels (typically int or tuple)
+
+        label_list (list or dict): list of individual bin labels (typically int
+        or tuple); if dict, as returned by eigenvalue_label_dict_am() or
+        eigenvalue_label_dict_Nex(), the dict values are used
+
         decomposition (np.array): one-dimensional array of probabilities
 
     """
 
+    # take list from eigenvalue_label_dict
+    if isinstance(label_list, dict):
+        label_list = label_list.values()
+
+    # validate number of provided labels
+    print(label_list, decomposition)
     if (len(label_list) != len(decomposition)):
         raise ValueError("mismatched lengths for label_list and decomposition")
 
+    # pair labels with values
     decomposition_dict = {
         (label, ) : probability
         for (label, probability) in zip(label_list, decomposition)

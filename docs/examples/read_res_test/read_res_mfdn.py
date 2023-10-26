@@ -19,6 +19,7 @@
     - 09/17/20 (mac): Created.
     - 05/10/21 (mac): Update example file.
     - 05/18/22 (mac): Update example file.
+    - 11/26/23 (mac): Add Nex decomposition.
 
 """
 
@@ -72,14 +73,20 @@ def explore_point(results_data):
 
     # access ob moments
     print("Test accessors (one-body)...")
-    print("M1 moment (native physical) {}".format(results_data.get_moment("M1-native",(1.0,0,1))))
-    print("M1 moment (from dipole term rmes) {}".format(results_data.get_moment("M1",(1.0,0,1))))
-    print("E2 moment (from dipole term rmes) {}".format(results_data.get_moment("E2p",(1.0,0,1))))
+    print("M1 moment (native physical) {}".format(results_data.get_moment("M1-native", (1.0,0,1))))
+    print("M1 moment (from dipole term rmes) {}".format(results_data.get_moment("M1", (1.0,0,1))))
+    print("E2 moment (from dipole term rmes) {}".format(results_data.get_moment("E2p", (1.0,0,1))))
     print()
 
     # access tb expectations
     print("Test accessors (two-body)...")
-    print("Rp {}".format(results_data.get_radius("rp",(1.0,0,1))))
+    print("Rp {}".format(results_data.get_radius("rp", (1.0,0,1))))
+    print()
+
+    # access Nex decomposition
+    print("Test Nex decomposition...")
+    decomposition = results_data.get_decomposition("Nex", (1.0,0,1))
+    print("Nex decomposition {}".format(decomposition))
     print()
     
 ################################################################
