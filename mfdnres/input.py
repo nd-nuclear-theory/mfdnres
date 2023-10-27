@@ -69,7 +69,8 @@ def res_file_directory(
 
             results_dir (str,optional): name of top-level results directory within GROUP_HOME
 
-            res_file_subdir (str,optional): name of subdirectory within results directory (can be None for flat structure)
+            res_file_subdir (str,optional): name of subdirectory within results
+                directory (can be None for flat structure)
 
         Environment:
             GROUP_HOME: directory name for group top-level results directory
@@ -398,7 +399,7 @@ def read_data_with_caching(read_function, pickle_filename="mesh_data.pickle", **
         print("Attempting to read pickled mesh data from {}...  ".format(pickle_filename), end="", flush=True)
         with open(pickle_filename, 'rb') as fp:
             mesh_data = pickle.load(fp)
-        print("Done.", end="", flush=True)
+        print("Done.", flush=True)
         return mesh_data
     except:
         print("Failed.", flush=True)

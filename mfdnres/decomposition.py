@@ -585,7 +585,6 @@ def rebinned_decomposition(decomposition, subsetting_specifier, verbose=False):
         old_label_type, new_label_type = subsetting_specifier
         subsetting_function = namedtuple_subsetting_function(old_label_type, new_label_type)
     else:
-        print("gh")
         subsetting_function = subsetting_specifier
         
     new_decomposition = {}
