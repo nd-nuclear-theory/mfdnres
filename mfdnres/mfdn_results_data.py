@@ -1118,11 +1118,31 @@ class MFDnResultsData(results_data.ResultsData):
             return None
 
         filename, alpha, beta = lanczos_decomposition_data
-        if verbose:
-            print("{} {} {}".format(decomposition_type, qn, filename))
 
         return alpha, beta
 
+    def get_lanczos_decomposition_num_iterations(self,decomposition_type,qn:LevelQNType,verbose=False):
+        """ Retrieve number of iterations in Lanczos decomposition data.
+
+        Arguments:
+            decomposition_type (str): decomposition type ("U3SpSnS", etc.)
+            qn (tuple): quantum numbers for state
+
+        Returns:
+            (int): number of Lanczos iterations
+        """
+
+        # retrieve decomposition
+        try:
+            lanczos_decomposition_data = self.mfdn_level_lanczos_decomposition_data[decomposition_type][qn]
+        except:
+            return None
+
+        filename, alpha, beta = lanczos_decomposition_data
+        iterations = len(alpha)
+
+        return iterations
+    
     
     ########################################
     # Updating method
