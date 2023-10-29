@@ -14,8 +14,16 @@ University of Notre Dame
     - 10/12/23 (mac):
         + Provide decomposition rebinning based on namedtuple label types.
         + Add slurp_lanczos_filenames() to populate MFDnResultsData Lanczos decomposition filenames.
-    - 10/25/23 (mac): Replace Add slurp_lanczos_filenames() with slurp_lanczos_files().
+    - 10/25/23 (mac): Replace slurp_lanczos_filenames() with slurp_lanczos_files().
     - 10/26/23 (mac): Support use of eigenvalue dict as label list for labeled_decomposition().
+    - 10/28/23 (mac):
+        + Add eigenvalue filename search function decomposition_eigenvalue_filename().
+        + Provide __str__ method to label classes.
+        + Add plotting functions set_up_decomposition_axes() and add_decomposition_plot().
+    - 10/29/23 (mac):
+        + Add canonical sorting (of labels within degenerate set, and of bins by
+        their label sets) to rebinned_decomposition().
+        + Add filter_decomposition().
 
 """
 
@@ -25,7 +33,7 @@ import os
 
 import numpy as np
 import scipy.linalg as linalg
-from . import histogram, input, mfdn_results_data
+from . import data, histogram, input, mfdn_results_data, ticks
 
 import mcscript.utils  # for value_range
 
@@ -213,6 +221,9 @@ def generate_decomposition(alpha_beta, eigenvalue_label_dict, lanczos_iterations
 
     return decomposition
 
+################################################################
+# decomposition eigenvalues
+################################################################
 
 def eigenvalue_label_dict_am(am_max, verbose=False):
     """Generate eigenvalue dictionary for decomposition by angular momentum Casimir eigenvalue.
@@ -249,6 +260,58 @@ def eigenvalue_label_dict_Nex(Nmax, verbose=False):
         }
     return eigenvalue_label_dict
 
+
+# decomposition eigenvalue/coefficient paths
+decomposition_dir_list = [
+]
+
+def decomposition_eigenvalue_filename(
+        nuclide, Nmax, decomposition_type, *,
+        decomposition_base_path=None,
+        verbose=False
+):
+    """Search for full path name of decomposition eigenvalue file.
+
+    Searches under decompositoin_base_path, in subdirectories listed in
+    mfdnres.decomposition.decomposition_dir_list.
+
+    Arguments:
+
+        nuclide (tuple): (Z,N)
+        
+        Nmax (int): Nmax
+
+        decomposition_type (str): decomposition type ("U3SpSnS", etc.)
+
+        decomposition_base_path (str, optional): base path under which subdirectories
+        containing eigenvalue files are to be found; if None, defaults to standard path
+        ${GROUP_HOME}/data/u3-subspaces/decomposition
+
+
+    Returns:
+
+        (str): qualified filename
+
+    """
+
+    if decomposition_base_path is None:
+        decomposition_base_path = os.path.join(os.environ["GROUP_HOME"], "data", "u3-subspaces", "decomposition")
+    eigenvalue_filename_format ="decomposition_Z{nuclide[0]:02d}_N{nuclide[1]:02d}_Nmax{Nmax:02d}_{decomposition_type}_eigenvalues.dat"
+    decomposition_types_with_casimir_in_filename = ["SU3", "Sp3R"]
+    if decomposition_type in decomposition_types_with_casimir_in_filename: 
+        decomposition_type_for_filename = "C{}".format(decomposition_type)
+    else:
+        decomposition_type_for_filename = decomposition_type
+    eigenvalue_filename = eigenvalue_filename_format.format(nuclide=nuclide, Nmax=Nmax, decomposition_type=decomposition_type_for_filename)
+    qualified_filename = mcscript.utils.search_in_subdirectories(
+        decomposition_base_path,
+        decomposition_dir_list,
+        eigenvalue_filename,
+        error_message="decomposition eigenvalue file not found",
+        verbose=verbose,
+    )
+
+    return qualified_filename
 
 def read_eigenvalues(filename, swap=False, verbose=False):
     """Read table mapping irrep labels to Casimir eigenvalues.
@@ -489,7 +552,7 @@ def label_transformation_baby_spncci_to_sp3rs(labels):
     return (N_sigma,lambda_sigma,mu_sigma,S)
 
 ################################################################
-# decomposition rebinning -- label subsetting
+# decomposition label classes
 ################################################################
 
 # singlet labels
@@ -506,7 +569,55 @@ U3SpSnSLabels = collections.namedtuple("U3SpSnSLabels", ["N_omega", "lambda_omeg
 # Sp(3,R) labels
 Sp3RLabels = collections.namedtuple("Sp3RLabels", ["N_sigma", "lambda_sigma", "mu_sigma"])
 Sp3RSLabels = collections.namedtuple("Sp3RSLabels", ["N_sigma", "lambda_sigma", "mu_sigma", "S"])
+Sp3RSpSnSLabels = collections.namedtuple("Sp3RSLabels", ["N_sigma", "lambda_sigma", "mu_sigma", "Sp", "Sn", "S"])
 BabySpNCCILabels = collections.namedtuple("BabySpNCCILabels", ["N_sigma", "lambda_sigma", "mu_sigma", "N_omega", "lambda_omega", "mu_omega", "Sp", "Sn", "S"])
+
+# lookup table for decomosition label classes
+LABEL_CLASS_BY_DECOMPOSITION_TYPE = {
+    "Nex": NexLabels,
+    "S": SLabels,
+    "L": LLabels,
+    "U3": U3Labels,
+    "U3S": U3SLabels,
+    "U3LSpSnS": U3LSpSnSLabels,
+    "U3SpSnS": U3SpSnSLabels,
+    "Sp3R": Sp3RLabels,
+    "Sp3RS": Sp3RSLabels,
+    "Sp3RSpSnS": Sp3RSpSnSLabels,
+    "BabySpNCCI": BabySpNCCILabels,
+}
+
+# string formatting
+
+def format_u3_label(self):
+    N, lam, mu = self
+    label_text = "{:d}({:d},{:d})".format(int(N), int(lam), int(mu))
+    return label_text
+
+U3Labels.__str__ = format_u3_label
+Sp3RLabels.__str__ = format_u3_label
+
+def format_u3s_label(self):
+    # TODO 10/28/23 (mac): upgrade spin formatting from float to solidus fraction
+    N, lam, mu, S = self
+    label_text = "{:d}({:d},{:d}){:s}".format(int(N), int(lam), int(mu), ticks.half_int_str(S))
+    return label_text
+
+U3SLabels.__str__ = format_u3s_label
+Sp3RLabels.__str__ = format_u3s_label
+
+def format_u3sss_label(self):
+    # TODO 10/28/23 (mac): upgrade spin formatting from float to solidus fraction
+    N, lam, mu, Sp, Sn, S = self
+    label_text = "{:d}({:d},{:d}){:s},{:s},{:s}".format(int(N), int(lam), int(mu), ticks.half_int_str(Sp), ticks.half_int_str(Sn), ticks.half_int_str(S))
+    return label_text
+
+U3SpSnSLabels.__str__ = format_u3sss_label
+Sp3RSpSnSLabels.__str__ = format_u3sss_label
+
+################################################################
+# decomposition rebinning -- label subsetting
+################################################################
 
 def namedtuple_subsetting_function(long_labels_type, short_labels_type):
     """Factory function to provide subsetting function between namedtuple types.
@@ -565,33 +676,204 @@ def namedtuple_subsetting_function(long_labels_type, short_labels_type):
 def rebinned_decomposition(decomposition, subsetting_specifier, verbose=False):
     """Rebin decomposition according to new labeling.
 
+    
+
     E.g., may by used to rebin "U3S" to S, by transformation
     label_transformation_U3S_to_S.
+
+    TODO 10/28/23 (mac): Merge overlapping label lists.
 
     Arguments:
 
         decomposition (dict): mapping from tuple of degenerate labels label (typically int or tuple) to probability
 
-        subsetting_specifier (tuple or callable): tuple (old_label_type,
-        new_label_type) giving old (long) and new (short) label types; for
-        legacy support, may be function mapping old label to new label
+        subsetting_specifier (tuple[str]): tuple (old_decomposition_type,
+            new_decomposition_type) defining old (longer) and new (shorter)
+            label types; for legacy support, may instead be a callable
+            (function) mapping old label to new label
 
     Returns
         (dict): rebinned decomposition
 
     """
 
+    # construct label subsetting function
     if type(subsetting_specifier) is tuple:
-        old_label_type, new_label_type = subsetting_specifier
+        old_decomposition_type, new_decomposition_type = subsetting_specifier
+        old_label_type = LABEL_CLASS_BY_DECOMPOSITION_TYPE[old_decomposition_type]
+        new_label_type = LABEL_CLASS_BY_DECOMPOSITION_TYPE[new_decomposition_type]
         subsetting_function = namedtuple_subsetting_function(old_label_type, new_label_type)
     else:
         subsetting_function = subsetting_specifier
-        
+
+    # rebin decomposition
     new_decomposition = {}
-    for (label_list,probability) in decomposition.items():
+    for (label_list, probability) in decomposition.items():
         if (verbose):
-            print(subsetting_function,label_list,probability)
-        new_label_list = tuple(set(map(subsetting_function,label_list)))
-        new_decomposition[new_label_list] = new_decomposition.get(new_label_list,0) + probability
+            print(subsetting_function, label_list, probability)
+        new_label_set = set(map(subsetting_function, label_list))  # downsample and remove redundancies (with set)
+        new_label_list = tuple(sorted(tuple(new_label_set)))   # canonicalize order of labels
+        new_decomposition[new_label_list] = new_decomposition.get(new_label_list, 0) + probability
+
+    # sort new decomposition canonically by label sets
+    new_decomposition = dict(sorted(new_decomposition.items()))
 
     return new_decomposition
+
+
+def filter_decomposition(condition, decomposition, verbose=False):
+    """Filter decomposition (by labels or value).
+
+    Order of arguments is chosen to match that of built-in filter().
+
+    Arguments:
+
+        condition (callable): filter condition applied to decomposition
+            dictionary items (should have signature ((labels_1, labels_2, ...),
+            probability) -> bool)
+
+        decomposition (dict): mapping from tuple of degenerate labels label
+            (typically int or tuple) to probability
+
+    Returns
+        (dict): filtered decomposition
+
+    """
+
+    decomposition = dict(filter(condition, decomposition.items()))
+    
+    return decomposition
+
+
+def Nex_filter(Nex_max):
+    """ Generate filter condition to select by Nex of first decomposition label.
+
+    For use with filter_decomposition().
+    """
+    
+    return lambda decomposition_item : decomposition_item[0][0][0]<=Nex_max
+
+################################################################
+# decomposition plotting
+################################################################
+
+def set_up_decomposition_axes(
+        ax, decomposition, *,
+        decomposition_range_extension=(0.02,0.02),
+        decomposition_axis_label_text=None,
+        probability_range=(0.00,1.00),
+        probability_range_extension=(0.00,0.00),
+        probability_scale=None,
+        probability_axis_label_text=None,
+        decomposition_labelpad=None,
+        probability_labelpad=None,
+        probability_tick_specifier=None,
+        labelrotation=0,
+        verbose=False,
+):
+    """ Set up axes for probability decomposition plot.
+
+    Arguments:
+
+        ax (mpl.axes.Axes): axes object
+
+        decomposition (dict): decomposition dictionary (with label sets as keys)
+ 
+        decomposition_axis_label_text (str, optional): override for decomposition axis label text
+
+        probability_range (tuple of float): y range, or None for matplotlib auto
+
+        probability_scale (str): y scale ("linear" or "log")
+
+        probability_axis_label_text (str, optional): override for probability axis label text
+
+        decomposition_range_extension (tuple of float, optional): x range relative extension
+
+        decomposition_range_extension (tuple of float, optional): y range relative extension
+
+        decomposition_labelpad (scalar, optional): pass-though labelpad option for xlabel
+
+        probability_labelpad (scalar, optional): pass-though labelpad option for ylabel
+
+        probability_tick_specifier (tuple, optional): tick specification (min,max,step,num_subdivision) for probability ticks
+
+        labelrotation (int): pass through option for ax.tick_params for x tick rotation
+
+    """
+
+    # construct labels
+    def format_label_set(label_set):
+        label_text = " / ".join(map(str, label_set))
+        return label_text
+    decomposition_labels = list(map(format_label_set, decomposition.keys()))
+    num_labels = len(decomposition_labels)
+    if verbose:
+        print("Labels ({}): {}".format(num_labels, decomposition_labels))
+    
+    # set ticks
+    #
+    # Note that the tick specification must come *before* setting range limits,
+    # since the range limits automatically readjust when you set the ticks.
+    ax.set_xticks(range(num_labels), decomposition_labels)
+    ax.tick_params(axis="x", bottom=False, labelrotation=labelrotation)
+    
+    if probability_tick_specifier is not None:
+        y_ticks = ticks.linear_ticks(*probability_tick_specifier)
+        ticks.set_ticks(ax,"y",y_ticks)
+
+    # set limits
+    decomposition_range = (-0.5, num_labels-0.5)  # histogram bar rendering range (for width=1.0)
+    ax.set_xlim(*data.extend_interval_relative(decomposition_range, decomposition_range_extension))
+    if probability_scale=="log":
+        # Note: Override any range extension for log scale
+        probability_range_extension=(0.,0.)
+        ax.set_yscale("log")
+    if (probability_range is not None) and np.isfinite(probability_range[0]).all():
+        ax.set_ylim(*data.extend_interval_relative(probability_range, probability_range_extension))
+        
+    # set axis labels
+    if probability_axis_label_text is not None:
+        ax.set_xlabel(decomposition_axis_label_text, labelpad=decomposition_labelpad)
+    if probability_axis_label_text is None:
+        probability_axis_label_text = "P"
+    ax.set_ylabel(
+        r"${}$".format(probability_axis_label_text),
+        labelpad=probability_labelpad,
+    )
+
+
+def add_decomposition_plot(
+        ax, decomposition,
+        **kwargs,
+):
+    """Add decomposition bar plot to axes.
+
+    Arguments:
+
+        ax (mpl.axes.Axes): axes object
+
+        decomposition (dict): decomposition dictionary (with label sets as keys)
+
+        kwargs (Line2D properties, optional): kwargs are used to specify line
+        properties
+
+    """
+
+    kw_defaults = {
+        "width": 1.0,
+        "color": "white",
+        "edgecolor": "black",
+    }
+
+    kw_full = {
+        **kw_defaults,
+        **kwargs,
+    }
+    
+    ax.bar(
+        range(len(decomposition.values())),
+        decomposition.values(), 
+        **kw_full,
+    )
+
+    
