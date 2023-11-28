@@ -5,6 +5,7 @@
 
     - 09/07/23 (mac): Created.  Refactor dimensionless ratio observables from
         observable.py.
+    - 11/26/23 (mac): Remove species subscript from beta axis label in BetaFromRatioQr2.
 
 """
 
@@ -292,10 +293,13 @@ class BetaFromRatioQr2(mfdnres.observable.Observable):
     def axis_label_text(self):
         """ Formatted LaTeX text representing axis label.
         """
-        if self._axis_label_has_observable_tag:
-            observable_text = r"\beta_{{{}}}".format(self._observable_tag)
-        else:
-            observable_text = r"\beta"
+        # 11/26/23 (mac): Omit species subscript, for consistency with Q, r, etc.,
+        # observable axis labels.
+        ## if self._axis_label_has_observable_tag:
+        ##     observable_text = r"\beta_{{{}}}".format(self._observable_tag)
+        ## else:
+        ##     observable_text = r"\beta"
+        observable_text = r"\beta"
 
         units_text = None
         return observable_text, units_text
