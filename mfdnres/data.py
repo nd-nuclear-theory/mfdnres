@@ -55,6 +55,9 @@
     - 07/24/23 (mac): Simplify option names for add_hw_scan_plot_Nmax_labels().
     - 10/24/23 (mac): Provide observable_scale, tick_specifier, and labelpad options
         for set_up_Nmax_scan_axes().
+    - 11/28/23 (mac): 
+        + Provide label_text option for add_hw_scan_plot_Nmax_labels().
+        + Change add_hw_scan_plot_Nmax_labels() option legend_index default to None.
 """
 
 import collections
@@ -1980,11 +1983,12 @@ def add_hw_scan_plot(
 
 def add_hw_scan_plot_Nmax_labels(
         ax, Nmax_groups, label_list,
-        legend_index=-1,
+        legend_index=None,
         side="right",
         data_point_index=None,
         text_displacement=None,
         legend_position="bottom",
+        label_text=None,
 ):
     """Add Nmax curve labels to previously drawn hw scan plot.
 
@@ -2014,6 +2018,10 @@ def add_hw_scan_plot_Nmax_labels(
         legend_position (str, optional): position of Nmax
         legend label relative to Nmax labels ("bottom" or "top")
 
+        label_text (str, optional): template string for label (applied as format
+        string to the value of Nmax), default "{}"; may be used to provide an arbitrary text label for hw
+        scan curves
+
     """
 
     # TODO (mac, 03/19/23): add in generalizations for call-out lines
@@ -2037,8 +2045,12 @@ def add_hw_scan_plot_Nmax_labels(
         
         # generate Nmax label
         if Nmax in label_list:
+            if label_text is None:
+                label_text = r"{}"
+            resolved_label_text = label_text.format(Nmax)
             Nmax_label = ax.annotate(
-                r"${}$".format(Nmax),
+                r"${}$".format(resolved_label_text),
+                ##r"${}$".format(Nmax),
                 xy=endpoint, xycoords="data",
                 xytext=text_displacement, textcoords="offset points",
                 fontsize="x-small",
