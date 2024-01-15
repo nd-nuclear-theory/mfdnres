@@ -6,7 +6,7 @@
     - 09/07/23 (mac): Created.  Refactor dimensionless ratio observables from
         observable.py.
     - 11/26/23 (mac): Remove species subscript from beta axis label in BetaFromRatioQr2.
-
+    - 12/31/23 (mac): Add observable BetaFromRatioBE2r4.
 """
 
 import numpy as np
@@ -203,7 +203,7 @@ class BetaFromRatioQr2(mfdnres.observable.Observable):
 
     """
 
-    def __init__(self, nuclide, observable_tag, level, J, K, axis_label_has_observable_tag=True):
+    def __init__(self, nuclide, observable_tag, level, J, K, axis_label_has_observable_tag=True, force_beta_positive=True):
         """Initialize with given parameters.
 
         Arguments:
@@ -221,6 +221,9 @@ class BetaFromRatioQr2(mfdnres.observable.Observable):
             axis_label_has_observable_tag (bool): whether to include subscript
                 on axis label (as beta_{m,p,n})
 
+            force_beta_positive (bool): whether or not to force beta to be
+            positive, regardless of sign of Q
+
         """
         super().__init__()
         self._nuclide = nuclide
@@ -229,6 +232,7 @@ class BetaFromRatioQr2(mfdnres.observable.Observable):
         self._J = J
         self._K = K
         self._axis_label_has_observable_tag = axis_label_has_observable_tag
+        self._force_beta_positive = force_beta_positive
 
     def data(self, mesh_data, key_descriptor, verbose=False):
         """ Extract data frame of observable values over mesh.
@@ -261,6 +265,121 @@ class BetaFromRatioQr2(mfdnres.observable.Observable):
         ratio_mesh = ratio_observable.data(mesh_data, key_descriptor, verbose=verbose)
         
         # convert to beta
+        prefactor = (J+1)*(2*J+3)/(3*K**2-J*(J+1)) * np.sqrt(np.pi/5)/nucleon_number
+        beta_mesh = prefactor * ratio_mesh
+
+        if self._force_beta_positive:
+            beta_mesh = np.abs(beta_mesh)
+        
+        return beta_mesh
+
+    @property
+    def descriptor_str(self):
+        """ Text string describing observable.
+        """
+        return "-".join([
+            mfdnres.data.nuclide_str(self._nuclide),
+            "beta-from-ratio-q-rsqr",
+            self._observable_tag,
+            self._level.descriptor_str,
+        ])
+
+    @property
+    def observable_label_text(self):
+        """ Formatted LaTeX text representing observable.
+        """
+        observable_text = r"\beta_{{{}}}".format(self._observable_tag)
+        level_text = self._level.label_text
+        label = r"{}({})".format(observable_text,level_text)
+        return label
+
+    @property
+    def axis_label_text(self):
+        """ Formatted LaTeX text representing axis label.
+        """
+        # 11/26/23 (mac): Omit species subscript, for consistency with Q, r, etc.,
+        # observable axis labels.
+        ## if self._axis_label_has_observable_tag:
+        ##     observable_text = r"\beta_{{{}}}".format(self._observable_tag)
+        ## else:
+        ##     observable_text = r"\beta"
+        observable_text = r"\beta"
+
+        units_text = None
+        return observable_text, units_text
+    
+
+################################################################
+# deduced observable: BetaFromRatioBE2r4
+################################################################
+
+class BetaFromRatioBE2r4(mfdnres.observable.Observable):
+    """ Observable extractor for beta deformation.
+
+    """
+
+    def __init__(self, nuclide, observable_tag, levelf, leveli, level, J, K, axis_label_has_observable_tag=True):
+        """Initialize with given parameters.
+
+        Arguments:
+
+            nuclide (tuple): (Z, N)
+
+            observable_tag (str): identifier tag for beta observable ("p", "n", or "m")
+
+            levelf, leveli, level (LevelSelector): levels for transition (final
+            and initial) and for radius, respectively
+
+            J (float): J quantum number for level (assumed unique across mesh)
+
+            K (float): K quantum number for level (assumed unique across mesh)
+
+            axis_label_has_observable_tag (bool): whether to include subscript
+                on axis label (as beta_{m,p,n})
+
+        """
+        super().__init__()
+        self._nuclide = nuclide
+        self._observable_tag = observable_tag
+        self._levelf = levelf
+        self._leveli = leveli
+        self._level = level
+        self._J = J
+        self._K = K
+        self._axis_label_has_observable_tag = axis_label_has_observable_tag
+
+    def data(self, mesh_data, key_descriptor, verbose=False):
+        """ Extract data frame of observable values over mesh.
+        """
+
+        nuclide = self._nuclide
+        observable_tag = self._observable_tag
+        levelf = self._levelf
+        leveli = self._leveli
+        J = self._J
+        K = self._K
+        
+        # retrieve nucleon number
+        A = sum(nuclide)
+        Z, N = nuclide
+        nucleon_number = mfdnres.observable.nucleon_number_by_observable_tag(nuclide)[observable_tag]
+
+        # select E2 RTP
+        e2_operator = mfdnres.observable.E2_OPERATOR_BY_OBSERVABLE_TAG[observable_tag]
+        rtp_observable = mfdnres.observable.RTP(nuclide, e2_operator, levelf, leveli)
+        
+        # select radius
+        radius_operator = mfdnres.observable.RADIUS_OPERATOR_BY_OBSERVABLE_TAG[observable_tag]
+        radius_observable = mfdnres.observable.Radius(nuclide, radius_operator, level)
+
+        # deduce ratio
+        ratio_observable = RatioBE2r42(rtp_observable, radius_observable)
+
+        # calculate mesh
+        ratio_mesh = ratio_observable.data(mesh_data, key_descriptor, verbose=verbose)
+        
+        # convert to beta
+        assert(False)  # WIP
         prefactor = (J+1)*(2*J+3)/(3*K**2-J*(J+1)) * np.sqrt(np.pi/5)/nucleon_number
         beta_mesh = prefactor * ratio_mesh
 
