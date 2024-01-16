@@ -859,7 +859,10 @@ class ExcitationEnergy(Observable):
 ################################################################
 
 class Isospin(Observable):
-    """ Observable extractor for level energy.
+    """Observable extractor for level isospin.
+
+    This is the isosopin as calculated and then printed to low precision in the
+    mfdn results.
 
     """
 
