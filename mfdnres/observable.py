@@ -646,7 +646,10 @@ class Power(Observable):
 ################################################################
 
 class FixSignTo(Observable):
-    """ Observable extractor for ratio of observables.
+    """Fix sign of one observable by multiplying it by sign of another observable
+    (e.g., to fix signs from arbitrary phases of initial and final states).
+
+    As a special case, takes the absolute value for a single observable.
 
     """
 
