@@ -58,6 +58,7 @@
     - 11/28/23 (mac): 
         + Provide label_text option for add_hw_scan_plot_Nmax_labels().
         + Change add_hw_scan_plot_Nmax_labels() option legend_index default to None.
+    - 12/29/23 (mac): Provide zorder and linestyle options for add_expt_marker_band().
 """
 
 import collections
@@ -2219,12 +2220,17 @@ def write_hw_scan_plot(
 ################################################################
 
 def add_expt_marker_band(
-        ax,x_range,y_with_error,
-        color="black",linewidth=1,
-        error_facecolor="lightgray",error_edgecolor="black",error_linewidth=0.5,
-        error_full_rectangle=False
+        ax,x_range, y_with_error,
+        error_full_rectangle=False,
+        color="black", linewidth=1, linestyle="solid",
+        error_facecolor="lightgray",
+        error_edgecolor="black", error_linewidth=0.5, error_linestyle="solid",
+        zorder=None,
 ):
     """Add marker indicating value with error band (rectangle) and central value (line).
+
+    Limitation: Giving a value for error_linestyle other than "solid" seems to
+    break the rendering of the whole axis.
 
     Arguments:
 
@@ -2237,11 +2243,14 @@ def add_expt_marker_band(
            values (in keeping with the conventions of Axes.errorbar); if None,
            no marker is drawn
 
+        error_full_rectangle (bool, optional): draw full rectangle for error band, instead of just top and bottom lines
+
         color, linewidth (optional): styling parameters for central value
 
-        error_facecolor, error_edgecolor, error_linewidth (optional): styling parameters error band
+        error_facecolor, error_edgecolor, error_linewidth, error_linestyle (optional): styling parameters error band
 
-        error_full_rectangle (bool, optional): draw full rectangle for error band, instead of just top and bottom lines
+        zorder (optional): styling parameters for whole object
+
 
     """
 
@@ -2259,6 +2268,12 @@ def add_expt_marker_band(
         dy_plus = y_error
         dy_minus = y_error
 
+    # support zorder overrides
+    if zorder is None:
+        zorder_options = {}
+    else:
+        zorder_options = dict(zorder=zorder)
+        
     # error band
     if y_error is not None:
         y0 = y-dy_minus
@@ -2267,20 +2282,30 @@ def add_expt_marker_band(
             ax.fill(
                 [x0,x1,x1,x0],
                 [y0,y0,y1,y1],
-                edgecolor=error_edgecolor,linewidth=error_linewidth,
-                facecolor=error_facecolor
+                edgecolor=error_edgecolor, linewidth=error_linewidth, linestyle=error_linestyle,
+                facecolor=error_facecolor,
+                **zorder_options,
             )
         else:
             ax.fill(
                 [x0,x1,x1,x0],
                 [y0,y0,y1,y1],
-                edgecolor=error_edgecolor,linewidth=0,
-                facecolor=error_facecolor
+                edgecolor=error_edgecolor, linewidth=0, linestyle=error_linestyle,
+                facecolor=error_facecolor,
+                **zorder_options,
             )
-            ax.hlines([y0,y1],*x_range,color=error_edgecolor,linewidth=error_linewidth)
+            ax.hlines(
+                [y0,y1], *x_range,
+                color=error_edgecolor, linewidth=error_linewidth,
+                **zorder_options,
+            )
 
     # central value
-    ax.hlines(y,*x_range,color=color,linewidth=linewidth)
+    ax.hlines(
+        y, *x_range,
+        color=color, linewidth=linewidth, linestyle=linestyle,
+        **zorder_options,
+    )
 
 def add_data_marker(ax,x,y_with_error,errorbar_kw=dict()):
     """Add marker indicating value with error band (rectangle) and central value (line).

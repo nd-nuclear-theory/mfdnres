@@ -8,6 +8,9 @@
 
     - 04/27/23 (mac): Created, incorporating code extracted from 12be-shape testbed.
     - 05/01/23 (mac): Add level selection, transition initial level selection, and valence marker line.
+    - 11/28/23 (mac):
+      + Change draw_expt_levels() to handle empty energy list gracefully.
+      + Provide half-integer J labels in set_up_network_axes().
 
 """
 
@@ -113,13 +116,13 @@ def set_up_network_axes(
         # Note that the tick specification must come *before* setting range limits,
         # since the range limits automatically readjust when you set the ticks.
         # 
-        # TODO (mac): implement tick_post_transformation and tick_label_function in
-        # linear_ticks
-        x_ticks = [J for J in range(0,int(J_max)+1,1)]  # TODO (mac): currently only provides integer ticks
+        # TODO (mac): Clean up code by implementing tick_post_transformation and
+        # tick_label_function in ticks.linear_ticks().
+        J_min = J_max % 1
+        x_ticks, _ = ticks.linear_ticks(J_min, J_max, 1.0, 1)
         x_tick_values = [x*(x+1) for x in x_ticks]
-        ax.xaxis.set_major_formatter(ticks.HalfIntFormatter())
-        ## x_tick_labels=[mfdnres.ticks.half_int_str(x) for x in x_ticks]
-        ax.set_xticks(x_tick_values, x_ticks)
+        x_tick_labels=[ticks.half_int_str(x) for x in x_ticks]
+        ax.set_xticks(x_tick_values, x_tick_labels)
         if E_tick_specifier is not None:
             y_ticks = ticks.linear_ticks(*E_tick_specifier)
             ticks.set_ticks(ax,"y",y_ticks)
@@ -358,6 +361,8 @@ def draw_expt_levels(
     ##     [J*(J+1), E]
     ##     for J, E in expt_energies
     ## ])
+    if len(expt_energies) == 0:
+        return
     level_coordinates = np.array(expt_energies)
     level_coordinates[:,0] = level_coordinates[:,0]*(level_coordinates[:,0]+1)
 
