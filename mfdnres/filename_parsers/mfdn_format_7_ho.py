@@ -21,6 +21,7 @@
         + Support "decomp" flag.
     12/06/20 (pjf): Add additional decomposition descriptor parsing support.
     10/12/23 (mac): Update decomposition descriptor parsing to support task_descriptor_decomposition_2.
+    01/16/23 (zz): Add isoscalar coulomb support in parser.
 
 """
 
@@ -49,6 +50,7 @@ def parser(filename):
         # descriptor contents
         r"Z(?P<Z>\d+)\-N(?P<N>\d+)"
         r"\-(?P<interaction>.+)\-coul(?P<coulomb>\d)"
+        r"(is)?"
         r"\-hw(?P<hw>[\d\.]+)"
         r"(\-a_cm(?P<lawson>[\d\.]+))?"
         r"\-Nmax(?P<Nmax>\d+)"
@@ -130,7 +132,7 @@ def parser(filename):
 
     # provide legacy decomposition_operator field (DEPRECATED)
     info["decomposition_operator"] = info.get("decomposition_type")
-    
+
     return info
 
 input.register_filename_format("mfdn_format_7_ho", parser)
