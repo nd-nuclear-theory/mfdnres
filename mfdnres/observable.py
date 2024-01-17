@@ -10,6 +10,7 @@
     - 08/15/23 (mac): Simplify secondary axis labels for dimensionless ratio observables to omit power.
     - 09/07/23 (mac): Provide conversion dictionaries for matter/proton/neutron observable tag.
     - 09/16/23 (mac): Refactor dimensionless ratio observables to observable_ratio.py.
+    - 01/16/23 (zz): Add support for other scalars with user defined label text in ME.
 """
 
 
@@ -50,7 +51,7 @@ def nucleon_number_by_observable_tag(nuclide):
         nuclide (tuple): (Z, N)
 
     Returns:
-    
+
         (dict): observable tag ("m", "p", "n") -> (A, Z, N)
     """
 
@@ -135,13 +136,13 @@ class Observable(object):
         #
         # e.g., key_descriptor = (("Nmax",int),("hw",float))
         #
-        # TODO: Replace use of analysis.make_obs_table with stripped-down tabulation code. 
+        # TODO: Replace use of analysis.make_obs_table with stripped-down tabulation code.
         table = analysis.make_obs_table(mesh_data_selected, key_descriptor, self.value, verbose=verbose)
 
         # structure table into DataFrame with compound index
         keys = [key for key, _ in key_descriptor]
         observable_data = pd.DataFrame(table).set_index(keys)
-        
+
         return observable_data
 
     ## def value(self, results_data):
@@ -183,7 +184,7 @@ class Observable(object):
             return {self._nuclide}
         except AttributeError:
             return ""
-        
+
     @property
     def observable_label_text(self):
         """ Formatted LaTeX text representing observable.
@@ -212,7 +213,7 @@ class LegacyObservable(Observable):
     """
 
     # WIP
-    
+
     def __init__(self, specifier):
         """Initialize with given parameters.
 
@@ -225,7 +226,7 @@ class LegacyObservable(Observable):
         super().__init__()
         self._specifier = specifier
 
-        
+
 ################################################################
 # deduced observable: Difference
 ################################################################
@@ -298,7 +299,7 @@ class Difference(Observable):
         """Set of nuclides entering calculation of observable.
         """
         return self._arguments[0].nuclide_set | self._arguments[1].nuclide_set
-    
+
     @property
     def observable_label_text(self):
         """ Formatted LaTeX text representing observable.
@@ -400,7 +401,7 @@ class Sum(Observable):
         """Set of nuclides entering calculation of observable.
         """
         return self._arguments[0].nuclide_set | self._arguments[1].nuclide_set
-    
+
     @property
     def observable_label_text(self):
         """ Formatted LaTeX text representing observable.
@@ -429,7 +430,7 @@ class Sum(Observable):
         if not axis_label_texts_same:
             raise ValueError("Expect observables with identical axis labels in Difference (found {} and {})".format(axis_label_texts[0], axis_label_texts[1]))
         return r"\Sigma {}".format(axis_label_texts[0][0]), axis_label_texts[0][1]
-    
+
 
 ################################################################
 # deduced observable: Ratio
@@ -537,7 +538,7 @@ class Ratio(Observable):
                 raise ValueError("Expect observables with identical axis labels in Ratio (found {} and {})".format(axis_label_texts[0], axis_label_texts[1]))
         return r"\mathrm{Ratio}", None
 
-    
+
 ################################################################
 # deduced observable: Power
 ################################################################
@@ -606,7 +607,7 @@ class Power(Observable):
         """Set of nuclides entering calculation of observable.
         """
         return self._argument.nuclide_set
-    
+
     @property
     def observable_label_text(self):
         """ Formatted LaTeX text representing observable.
@@ -640,7 +641,7 @@ class Power(Observable):
             power_text = "{:d}".format(self._power)
         return "{}^{{{:s}}}".format(axis_label_text[0], power_text), "{}^{:s}".format(axis_label_text[1], power_text)
 
-    
+
 ################################################################
 # deduced observable: FixSignTo
 ################################################################
@@ -698,7 +699,7 @@ class FixSignTo(Observable):
         """Set of nuclides entering calculation of observable.
         """
         return self._arguments[0].nuclide_set | self._arguments[1].nuclide_set
-    
+
     @property
     def observable_label_text(self):
         """ Formatted LaTeX text representing observable.
@@ -775,7 +776,7 @@ class Energy(Observable):
         units_text = r"\mathrm{MeV}"
         return observable_text, units_text
 
-    
+
 ################################################################
 # observable: ExcitationEnergy
 ################################################################
@@ -910,7 +911,7 @@ class Isospin(Observable):
         units_text = None
         return observable_text, units_text
 
-    
+
 ################################################################
 # observable: LevelIndex
 ################################################################
@@ -969,7 +970,7 @@ class LevelIndex(Observable):
         observable_text = r"n"
         units_text = None
         return observable_text, units_text
-    
+
 ################################################################
 # observable: Radius
 ################################################################
@@ -1042,7 +1043,7 @@ class Radius(Observable):
         level_text = self._level.label_text
         label = r"{}^{:d}({})".format(observable_text,power,level_text)
         return label
-    
+
     @property
     def axis_label_text(self):
         """ Formatted LaTeX text representing axis label.
@@ -1051,43 +1052,43 @@ class Radius(Observable):
         units_text = r"\mathrm{fm}"
         return observable_text, units_text
 
-    
+
 ################################################################
 # observable: RadiusPower -- OMIT in favor of deduced Power
 ################################################################
 
 ## class RadiusPower(Observable):
 ##     """ Observable extractor for power of r.m.s. radius.
-## 
+##
 ##     """
-## 
+##
 ##     def __init__(self, nuclide, operator, level, power):
 ##         """Initialize with given parameters.
-## 
+##
 ##         Arguments:
-## 
+##
 ##             nuclide (tuple): (Z, N)
-## 
+##
 ##             operator (str): identifier for radius operator, as accepted by
 ##             MFDnResultsData.get_radius()
-## 
+##
 ##             level (LevelSelector): level
-## 
+##
 ##             power (int): power to which to raise radius
-## 
+##
 ##         """
 ##         super().__init__()
 ##         self._nuclide = nuclide
 ##         self._operator = operator
 ##         self._level = level
 ##         self._power = power
-## 
+##
 ##     def value(self, results_data):
 ##         """ Extract observable.
 ##         """
 ##         qn = self._level.select_level(results_data)
 ##         return results_data.get_radius(self._operator, qn)**self._power
-## 
+##
 ##     @property
 ##     def descriptor_str(self):
 ##         """ Text string describing observable.
@@ -1098,7 +1099,7 @@ class Radius(Observable):
 ##             self._operator,
 ##             self._level.descriptor_str,
 ##         ])
-## 
+##
 ##     @property
 ##     def observable_label_text(self):
 ##         """ Formatted LaTeX text representing observable.
@@ -1107,7 +1108,7 @@ class Radius(Observable):
 ##         level_text = self._level.label_text
 ##         label = r"{}^{:d}({})".format(observable_text,self._power,level_text)
 ##         return label
-## 
+##
 ##     @property
 ##     def axis_label_text(self):
 ##         """ Formatted LaTeX text representing axis label.
@@ -1155,7 +1156,7 @@ class Moment(Observable):
         # fix up "dipole term" names to standard multipole notation
         if self._operator in DIPOLE_ALIASES:
             self._operator = self._operator[self._operator]
-                              
+
     def value(self, results_data):
         """ Extract observable.
         """
@@ -1203,7 +1204,7 @@ class Moment(Observable):
             power_text = "{:d}".format(power)
         label = r"{}^{{{:s}}}({})".format(observable_text,power_text,level_text)
         return label
-    
+
     @property
     def axis_label_text(self):
         """ Formatted LaTeX text representing axis label.
@@ -1227,7 +1228,7 @@ class RME(Observable):
     """
 
     # TODO restore E1 functionality; consider combining E0/E1/E2 implementation
-    
+
     def __init__(self, nuclide, operator, levelf, leveli):
         """Initialize with given parameters.
 
@@ -1249,7 +1250,7 @@ class RME(Observable):
         # fix up "dipole term" names to standard multipole notation
         if self._operator in DIPOLE_ALIASES:
             self._operator = self._operator[self._operator]
-                              
+
     def value(self, results_data):
         """ Extract observable.
         """
@@ -1302,7 +1303,7 @@ class RME(Observable):
             observable_text = r"\langle \mathcal{{M}}(E0) \rangle"
             units_text = r"e\,\mathrm{fm}^{2}"
         return observable_text, units_text
-    
+
 
 ################################################################
 # observable: ME -- scalar observable only
@@ -1311,11 +1312,13 @@ class RME(Observable):
 class ME(Observable):
     """ Observable extractor for electromagnetic non-reduced matrix element.
 
-    Applies only to scalar (E0) observable.
+    Applies only to scalar (E0) observable by default.
+
+    Also provides support for other scalars with user defined observable and axis label text.
 
     """
 
-    def __init__(self, nuclide, operator, levelf, leveli):
+    def __init__(self, nuclide, operator, levelf, leveli, *, label_text = None, rank="ob"):
         """Initialize with given parameters.
 
         Arguments:
@@ -1327,18 +1330,25 @@ class ME(Observable):
 
             level (LevelSelector): level
 
+            label_text (str, (str, str)): overide for observable and axis label text
+            (observable_label_text, axis_label_text)
+
         """
         super().__init__()
         self._nuclide = nuclide
         self._operator = operator
         self._level_pair = levelf, leveli
-                              
+        self._label_text = label_text
+        self._rank = rank
+
     def value(self, results_data):
         """ Extract observable.
         """
         qn_pair = self._level_pair[0].select_level(results_data), self._level_pair[1].select_level(results_data)
-        assert(self._operator in {"E0p","E0n","E00","E01","E0"})
-        return results_data.get_me(self._operator, qn_pair)
+        # assert(self._operator in {"E0p","E0n","E00","E01","E0"})
+        if self._label_text is None:
+            assert(self._operator in {"E0p","E0n","E00","E01","E0"})
+        return results_data.get_me(self._operator, qn_pair, rank = self._rank)
 
     @property
     def descriptor_str(self):
@@ -1356,23 +1366,29 @@ class ME(Observable):
     def observable_label_text(self):
         """ Formatted LaTeX text representing observable.
         """
-        if self._operator in {"E0p","E0n","E00","E01","E0"}:
+        if self._label_text is not None:
+            observable_text = self._label_text[0]
+        elif self._operator in {"E0p","E0n","E00","E01","E0"}:
             ## observable_text = r"Q_{{2{}}}".format(self._operator[2:])
             observable_text = r"E0_{{{}}}".format(self._operator[2:])
+            observable_text = r"\mathcal{{M}}({})".format(observable_text)
         level_pair_text = self._level_pair[0].label_text, self._level_pair[1].label_text
-        label = r"\langle {} \vert \mathcal{{M}}({}) \vert {} \rangle".format(level_pair_text[0],observable_text,level_pair_text[1])  # <f|O|i> = i->f
+        label = r"\langle {} \vert {} \vert {} \rangle".format(level_pair_text[0],observable_text,level_pair_text[1])  # <f|O|i> = i->f
         return label
 
     @property
     def axis_label_text(self):
         """ Formatted LaTeX text representing axis label.
         """
-        if self._operator in {"E0p","E0n","E00","E01","E0"}:
+        if self._label_text is not None:
+            observable_text = self._label_text[1][0]
+            units_text = self._label_text[1][1]
+        elif self._operator in {"E0p","E0n","E00","E01","E0"}:
             ## observable_text = r"\langle Q_2 \rangle"
             observable_text = r"\langle \mathcal{{M}}(E0) \rangle"
             units_text = r"e\,\mathrm{fm}^{2}"
         return observable_text, units_text
-    
+
 ################################################################
 # observable: RTP
 ################################################################
@@ -1383,7 +1399,7 @@ class RTP(Observable):
     """
 
     # TODO restore E1 functionality; consider combining E0/E1/E2 implementation
-    
+
     def __init__(self, nuclide, operator, levelf, leveli):
         """Initialize with given parameters.
 
@@ -1407,7 +1423,7 @@ class RTP(Observable):
         # fix up "dipole term" names to standard multipole notation
         if self._operator in DIPOLE_ALIASES:
             self._operator = self._operator[self._operator]
-                              
+
     def value(self, results_data):
         """ Extract observable.
         """
@@ -1454,6 +1470,3 @@ class RTP(Observable):
             observable_text = r"B(E0)"
             units_text = r"e^2\,\mathrm{fm}^{4}"
         return observable_text, units_text
-
-    
-
