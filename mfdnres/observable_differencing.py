@@ -4,7 +4,8 @@
     University of Notre Dame
 
     - 07/07/23 (mac): Created.  Refactor differencing code from natorb_obs.
-    - 07/08/23 (mac): Created.  Add RelativeDifference observable.
+    - 07/08/23 (mac): Add RelativeDifference observable.
+    - 03/04/24 (mac): Add ExponentialExtrapolation observable.
 """
 
 
@@ -25,7 +26,7 @@ def Nmax_shifted(observable_data,shift):
 
     Example:
 
-        last_step_data = Nmax_shifted(observable_data,0)-Nmax_shifted(observable_data,-2)
+        Delta_data = Nmax_shifted(observable_data, 0) - Nmax_shifted(observable_data, -2)
 
     Arguments:
         observable_data (pd.DataFrame): data multi-indexed by (Nmax,hw)
@@ -376,3 +377,115 @@ class LogOfDifference(mfdnres.observable.Observable):
         # Note: Could divide out unit inside log.
         return r"\log \vert \Delta [{}] \vert".format(axis_label_text[0]), None
     
+################################################################
+# deduced observable: ExponentialExtrapolation
+################################################################
+
+def Nmax_extrapolation_exp3(observable_data):
+    """Obtain three-point exponential extrapolation for observable.
+
+    Uses "generalized Zeno's paradox" formula...
+
+        X_infinity = X(N) - eta(N)/[eta(N)-1]*Delta(N)
+
+        Delta(N) = X(N) - X(N-2)
+
+        eta(N) = Delta(N)/Delta(N-2)
+
+
+    Arguments:
+        observable_data (pd.DataFrame): data multi-indexed by (Nmax,hw)
+
+    Returns:
+        extrapolated_data (pd.DataFrame): extrapolated data multi-indexed by (Nmax,hw)
+
+    """
+
+    Delta_data = Nmax_shifted(observable_data, 0) - Nmax_shifted(observable_data, -2)
+    eta_data = Delta_data / Nmax_shifted(Delta_data, -2)
+    extrapolated_data = observable_data - eta_data / (eta_data - 1) * Delta_data
+    
+    # drop nan values
+    extrapolated_data = mfdnres.data.hw_scan_drop_nan(extrapolated_data)
+    return extrapolated_data
+
+
+class ExponentialExtrapolation(mfdnres.observable.Observable):
+    """Observable extractor for 3-point eponential extrapolation of
+    observable w.r.t. Nmax.
+
+    """
+
+    def __init__(self, observable1, observable_label_delimiters=None):
+        """ Initialize with given parameters.
+
+        Arguments:
+
+            observable1 (Observable): observable to be extrapolated
+
+            observable_label_delimiters (tuple, optional): left/right delimiter
+            pairs to put around the labels for the observable
+            appearing in the power, e.g., ("[","]")
+
+        """
+        super().__init__()
+        self._argument = observable1
+        self._observable_label_delimiters = observable_label_delimiters
+        if len(self.nuclide_set) == 1:
+            self._nuclide = self.nuclide_set.pop()
+
+    def data(self, mesh_data, key_descriptor, verbose=False):
+        """ Extract data frame of observable values over mesh.
+        """
+        observable_value_mesh = self._argument.data(mesh_data, key_descriptor, verbose=verbose)
+        return Nmax_extrapolation_exp3(observable_value_mesh)
+
+    @property
+    def descriptor_str(self):
+        """ Text string describing observable.
+        """
+        arithmetic_operation = "extrapolation-exp3"
+
+        # for single-nuclide observable, include nuclide at start of descriptor
+        try:
+            arithmetic_operation = "-".join([mfdnres.data.nuclide_str(self._nuclide), arithmetic_operation])
+        except AttributeError:
+            pass
+
+        return r"{}_{}".format(
+            arithmetic_operation,
+            self._argument.descriptor_str,
+        )
+
+    @property
+    def nuclide_label_text(self):
+        """Formatted LaTeX text representing nuclide.
+        """
+        return self._argument.nuclide_label_text
+
+    @property
+    def nuclide_set(self):
+        """Set of nuclides entering calculation of observable.
+        """
+        return self._argument.nuclide_set
+    
+    @property
+    def observable_label_text(self):
+        """ Formatted LaTeX text representing observable.
+        """
+        observable_label_text = self._argument.observable_label_text
+        observable_label_delimiters = self._observable_label_delimiters
+        if observable_label_delimiters is None:
+            observable_label_delimiters = ("[","]")
+        return r"{}{}{} \mathrm{{exp-3}}".format(
+            observable_label_delimiters[0],
+            observable_label_text,
+            observable_label_delimiters[1],
+        )
+
+    @property
+    def axis_label_text(self):
+        """ Formatted LaTeX text representing axis label.
+        """
+        axis_label_text = self._argument.axis_label_text
+        return axis_label_text
