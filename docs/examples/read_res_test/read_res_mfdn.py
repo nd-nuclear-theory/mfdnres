@@ -20,7 +20,7 @@
     - 05/10/21 (mac): Update example file.
     - 05/18/22 (mac): Update example file.
     - 11/26/23 (mac): Add Nex decomposition.
-
+    - 03/13/24 (mac): Illustrate selection of mesh point by parameters.
 """
 
 import os
@@ -42,16 +42,17 @@ def read_data():
         data_dir,
         res_format="mfdn_v15",
         filename_format="mfdn_format_7_ho",
-        glob_pattern="runmfdn13-mfdn15-*-Mj1.0-*.res",  # pick just one input file for this simple test
-        ## glob_pattern="runmfdn13gpu-mfdn15-*-Mj1.0-*.res",  # pick just one input file for this simple test
+        glob_pattern="runmfdn13-mfdn15-*.res",
+        ## glob_pattern="runmfdn13gpu-mfdn15-*-Mj1.0-*.res",  # inspect gpu runs
         verbose=True
     )
     print()
     
-    # diagnostic output -- FOR ILLUSTRATION ONLY
+    # summarize mesh (diagnostic output)
     print("Raw mesh (params)")
     for results_data in mesh_data:
         print(mfdnres.analysis.dict_items(results_data.params))
+        print()
     print()
     
     return mesh_data
@@ -64,6 +65,13 @@ def explore_point(results_data):
     """Examine mfdn_results_data members and results of accessors.
 
     """
+
+    print("Inspecting mesh point")
+    print()
+    
+    # parameters
+    print("Params")
+    print(mfdnres.analysis.dict_items(results_data.params))
 
     # examine data attributes
     print("Data attributes...")
@@ -95,4 +103,14 @@ def explore_point(results_data):
 
 # read data
 mesh_data = read_data()
-explore_point(mesh_data[0])
+
+# select single mesh point to explore
+#
+# Note that some of these parameters are superfluous for the present data but
+# are included for illustration (e.g., the example data only contain results for
+# 6Li, so "nuclide" is superfluous).
+results_data = mfdnres.analysis.selected_mesh_point(
+    mesh_data,
+    {"nuclide": (3,3), "interaction": "Daejeon16", "Nmax": 2, "hw": 15.0, "M": 1.0},
+)
+explore_point(results_data)
