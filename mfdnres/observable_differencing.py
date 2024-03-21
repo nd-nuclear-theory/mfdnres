@@ -6,6 +6,7 @@
     - 07/07/23 (mac): Created.  Refactor differencing code from natorb_obs.
     - 07/08/23 (mac): Add RelativeDifference observable.
     - 03/04/24 (mac): Add ExponentialExtrapolation observable.
+    - 03/21/24 (mac): Extract Nmax_shifted() utility to observable.py.
 """
 
 
@@ -14,33 +15,6 @@ import pandas as pd
 
 import mfdnres.data
 import mfdnres.observable
-
-################################################################
-# Nmax shifting utility
-################################################################
-
-def Nmax_shifted(observable_data,shift):
-    """ Shift Nmax values in observable_data.
-
-    Data now found "at Nmax" was previously "at Nmax+shift".
-
-    Example:
-
-        Delta_data = Nmax_shifted(observable_data, 0) - Nmax_shifted(observable_data, -2)
-
-    Arguments:
-        observable_data (pd.DataFrame): data multi-indexed by (Nmax,hw)
-
-        shift (int): displacement to Nmax index
-
-    Returns:
-        (pd.DataFrame): shifted data multi-indexed by (Nmax,hw)
-    """
-    table = observable_data.reset_index()
-    table["Nmax"] -= shift
-    shifted_observable_data = pd.DataFrame(table).set_index(["Nmax","hw"])
-    return shifted_observable_data
-
 
 ################################################################
 # deduced observable: DifferenceRatio
@@ -61,9 +35,9 @@ def Nmax_difference_ratio(observable_data):
     """
 
     Nmax_difference_ratio_data = (
-        (Nmax_shifted(observable_data,0)-Nmax_shifted(observable_data,-2))
+        (mfdnres.observable.Nmax_shifted(observable_data,0)-mfdnres.observable.Nmax_shifted(observable_data,-2))
         /
-        (Nmax_shifted(observable_data,-2)-Nmax_shifted(observable_data,-4))
+        (mfdnres.observable.Nmax_shifted(observable_data,-2)-mfdnres.observable.Nmax_shifted(observable_data,-4))
     )
     # drop nan values
     Nmax_difference_ratio_data = mfdnres.data.hw_scan_drop_nan(Nmax_difference_ratio_data)
@@ -167,9 +141,9 @@ def Nmax_relative_difference(observable_data):
     """
 
     Nmax_relative_difference_data = (
-        (Nmax_shifted(observable_data,0)-Nmax_shifted(observable_data,-2))
+        (mfdnres.observable.Nmax_shifted(observable_data,0)-mfdnres.observable.Nmax_shifted(observable_data,-2))
         /
-        ((Nmax_shifted(observable_data,0)+Nmax_shifted(observable_data,-2)) / 2)
+        ((mfdnres.observable.Nmax_shifted(observable_data,0)+mfdnres.observable.Nmax_shifted(observable_data,-2)) / 2)
     )
     # drop nan values
     Nmax_relative_difference_data = mfdnres.data.hw_scan_drop_nan(Nmax_relative_difference_data)
@@ -286,11 +260,11 @@ def Nmax_log_of_difference(observable_data):
     # Prevoiusly: Log was taken of *negative* of step, so value is defined if observable is
     # *decreasing* with Nmax.
     ## Nmax_log_of_difference_data = np.log(
-    ##     -(Nmax_shifted(observable_data,0)-Nmax_shifted(observable_data,-2))
+    ##     -(mfdnres.observable.Nmax_shifted(observable_data,0)-mfdnres.observable.Nmax_shifted(observable_data,-2))
     ## )
 
     Nmax_log_of_difference_data = np.log(
-        np.fabs(Nmax_shifted(observable_data,0)-Nmax_shifted(observable_data,-2))
+        np.fabs(mfdnres.observable.Nmax_shifted(observable_data,0)-mfdnres.observable.Nmax_shifted(observable_data,-2))
     )
     # drop nan values
     Nmax_log_of_difference_data = mfdnres.data.hw_scan_drop_nan(Nmax_log_of_difference_data)
@@ -401,8 +375,8 @@ def Nmax_extrapolation_exp3(observable_data):
 
     """
 
-    Delta_data = Nmax_shifted(observable_data, 0) - Nmax_shifted(observable_data, -2)
-    eta_data = Delta_data / Nmax_shifted(Delta_data, -2)
+    Delta_data = mfdnres.observable.Nmax_shifted(observable_data, 0) - mfdnres.observable.Nmax_shifted(observable_data, -2)
+    eta_data = Delta_data / mfdnres.observable.Nmax_shifted(Delta_data, -2)
     extrapolated_data = observable_data - eta_data / (eta_data - 1) * Delta_data
     
     # drop nan values

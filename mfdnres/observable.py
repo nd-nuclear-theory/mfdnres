@@ -10,7 +10,8 @@
     - 08/15/23 (mac): Simplify secondary axis labels for dimensionless ratio observables to omit power.
     - 09/07/23 (mac): Provide conversion dictionaries for matter/proton/neutron observable tag.
     - 09/16/23 (mac): Refactor dimensionless ratio observables to observable_ratio.py.
-    - 01/16/23 (zz): Add support for other scalars with user defined label text in ME.
+    - 01/16/24 (zz): Add support for other scalars with user defined label text in ME.
+    - 03/21/24 (mac): Add option Nmax_shift to ExcitationEnergy for cross-parity energy differencing.
 """
 
 
@@ -64,6 +65,33 @@ def nucleon_number_by_observable_tag(nuclide):
         "n": N,
     }
     return nucleon_number_by_observable_tag
+
+
+################################################################
+# Nmax shifting utility
+################################################################
+
+def Nmax_shifted(observable_data,shift):
+    """ Shift Nmax values in observable_data.
+
+    Data now found "at Nmax" was previously "at Nmax+shift".
+
+    Example:
+
+        Delta_data = Nmax_shifted(observable_data, 0) - Nmax_shifted(observable_data, -2)
+
+    Arguments:
+        observable_data (pd.DataFrame): data multi-indexed by (Nmax,hw)
+
+        shift (int): displacement to Nmax index
+
+    Returns:
+        (pd.DataFrame): shifted data multi-indexed by (Nmax,hw)
+    """
+    table = observable_data.reset_index()
+    table["Nmax"] -= shift
+    shifted_observable_data = pd.DataFrame(table).set_index(["Nmax","hw"])
+    return shifted_observable_data
 
 
 ###############################################################
@@ -787,14 +815,19 @@ class Energy(Observable):
 class ExcitationEnergy(Observable):
     """Observable extractor for difference of energies in single nucleus, labeled as "excitation energy".
 
-    Note that the excitation energy may also be obtained as a Difference of two
-    Energies, but then the descriptor text and automatic labeling (as delta E) is more
-    generic, and not necessarily as desired for a simple presentation of the excitation energy.
+    Note that a difference of energies may alternatively be obtained as a
+    Difference of two Energy observables.  But then the descriptor text (used in
+    data filenames) is that for a generic difference, as is automatic labeling
+    (which will appear as delta E), while the labeling for ExcitationEnergy is
+    likely more appropriate for presentation of the excitation energy.
+
+    For an energy difference between levels of different parity, the Nmax_shift
+    option may be used.
 
     """
 
-    def __init__(self, nuclide, level, reference_level, label_as_difference=False):
-        """ Initialize with given parameters.
+    def __init__(self, nuclide, level, reference_level, *, Nmax_shift=0, label_as_difference=False):
+        """Initialize with given parameters.
 
         Arguments:
 
@@ -804,6 +837,11 @@ class ExcitationEnergy(Observable):
 
             reference_level (LevelSelector): reference ("ground state") level for energy difference
 
+            Nmax_shift (int, optional): shift in Nmax to apply to excited level,
+            for cross-parity excitation energies (e.g., Nmax_shift=1 to
+            calculated "Nmax+1" excited level energy relative to "Nmax"
+            reference level energy, reported at "Nmax")
+
             label_as_difference (bool, optional): whether or not to show reference level in observable label
 
         """
@@ -812,15 +850,24 @@ class ExcitationEnergy(Observable):
         self._nuclide = nuclide
         self._level = level
         self._reference_level = reference_level
+        self._Nmax_shift = Nmax_shift
         self._label_as_difference = label_as_difference
 
-    def value(self, results_data):
-        """ Extract observable.
-        """
-        qn = self._level.select_level(results_data)
-        reference_qn = self._reference_level.select_level(results_data)
-        return results_data.get_energy(qn) - results_data.get_energy(reference_qn)
+    ## def value(self, results_data):
+    ##     """ Extract observable.
+    ##     """
+    ##     qn = self._level.select_level(results_data)
+    ##     reference_qn = self._reference_level.select_level(results_data)
+    ##     return results_data.get_energy(qn) - results_data.get_energy(reference_qn)
 
+    def data(self, mesh_data, key_descriptor, verbose=False):
+        """ Extract data frame of observable values over mesh.
+        """
+        level_energy_value_mesh = Energy(self._nuclide, self._level).data(mesh_data, key_descriptor, verbose=verbose)
+        level_energy_value_mesh = Nmax_shifted(level_energy_value_mesh, self._Nmax_shift)
+        reference_level_energy_value_mesh = Energy(self._nuclide, self._reference_level).data(mesh_data, key_descriptor, verbose=verbose)
+        return level_energy_value_mesh - reference_level_energy_value_mesh
+    
     @property
     def descriptor_str(self):
         """ Text string describing observable.
