@@ -12,6 +12,7 @@
     - 09/16/23 (mac): Refactor dimensionless ratio observables to observable_ratio.py.
     - 01/16/24 (zz): Add support for other scalars with user defined label text in ME.
     - 03/21/24 (mac): Add option Nmax_shift to ExcitationEnergy for cross-parity energy differencing.
+    - 05/09/24 (mac/zz): Return np.nan for observable value if level is missing (instead of crashing).
 """
 
 
@@ -778,6 +779,8 @@ class Energy(Observable):
         """ Extract observable.
         """
         qn = self._level.select_level(results_data)
+        if qn is None:
+            return np.nan
         return results_data.get_energy(qn)
 
     @property
@@ -935,6 +938,8 @@ class Isospin(Observable):
         """ Extract observable.
         """
         qn = self._level.select_level(results_data)
+        if qn is None:
+            return np.nan
         return results_data.get_isospin(qn)
 
     @property
@@ -994,6 +999,8 @@ class LevelIndex(Observable):
         """ Extract observable.
         """
         qn = self._level.select_level(results_data)
+        if qn is None:
+            return np.nan
         J, g, n = qn
         return n
 
@@ -1063,6 +1070,8 @@ class Radius(Observable):
         """ Extract observable.
         """
         qn = self._level.select_level(results_data)
+        if qn is None:
+            return np.nan
         return results_data.get_radius(self._operator, qn)
 
     @property
@@ -1214,6 +1223,8 @@ class Moment(Observable):
         """ Extract observable.
         """
         qn = self._level.select_level(results_data)
+        if qn is None:
+            return np.nan
         return results_data.get_moment(self._operator, qn)
 
     @property
@@ -1308,6 +1319,8 @@ class RME(Observable):
         """ Extract observable.
         """
         qn_pair = self._level_pair[0].select_level(results_data), self._level_pair[1].select_level(results_data)
+        if (qn_pair[0] is None) or (qn_pair[1] is None):
+            return np.nan
         return results_data.get_rme(self._operator, qn_pair)
 
     @property
@@ -1398,6 +1411,8 @@ class ME(Observable):
         """ Extract observable.
         """
         qn_pair = self._level_pair[0].select_level(results_data), self._level_pair[1].select_level(results_data)
+        if (qn_pair[0] is None) or (qn_pair[1] is None):
+            return np.nan
         # assert(self._operator in {"E0p","E0n","E00","E01","E0"})
         if self._label_text is None:
             assert(self._operator in {"E0p","E0n","E00","E01","E0"})
@@ -1481,6 +1496,8 @@ class RTP(Observable):
         """ Extract observable.
         """
         qn_pair = self._level_pair[0].select_level(results_data), self._level_pair[1].select_level(results_data)
+        if (qn_pair[0] is None) or (qn_pair[1] is None):
+            return np.nan
         return results_data.get_rtp(self._operator, qn_pair)
 
     @property
