@@ -50,7 +50,7 @@ def level_test_0hw(results_data, qn, verbose=False):
     selected = (len(Nex_decomposition)==1) or (Nex_decomposition[0]>=Nex_decomposition[1])
     return selected
 
-def level_test_T_excited(results_data,verbose=False):
+def level_test_T_excited(results_data,qn,verbose=False):
     """Test if level has excited isospin, i.e., a deduced T > Tz.
 
     The threshold on deduced T is Tz+0.5.
@@ -570,7 +570,6 @@ def select_network_transitions(
         Transition strength, or level providing self-transition strength, or
         tuple of two levels (level_f,level_i) providing transition strength, or None to use
         largest transition strength
-        each J
 
         reference_results_data (mfdnres.ResultsData, optional): Results data for
         use in extracting reference strength
