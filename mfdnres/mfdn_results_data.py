@@ -626,6 +626,9 @@ class MFDnResultsData(results_data.ResultsData):
 
            - MFDn two-body expectation value
 
+        Important: To retrieve the matrix element of a two-body operator, you
+        must specify rank="tb".
+
         Note that MFDn two-body operator expectation values are computed based
         on input TBMEs, and thus do not assume an oscillator basis.
 
@@ -911,7 +914,7 @@ class MFDnResultsData(results_data.ResultsData):
         Resulting matrix may be useful either for diagnostic purposes (to review
         available transitions) or in block calculations with RMEs.
 
-        See get_rme for conventions regarding RME itself.
+        See get_rme for a detailed discussion of how the RMEs themselves are deduced.
 
         Example:
             >>> mesh_point.get_rme_matrix("E2p",((2,0),(2,0)),(4,4),verbose=True)
@@ -969,6 +972,8 @@ class MFDnResultsData(results_data.ResultsData):
         "hat" factor in the RME, which we have under Edmonds's Wigner-Eckart
         convention.
 
+        See get_rme for a detailed discussion of how the underlying RME is deduced.
+
         Arguments:
 
             observable (str): operator type ("E0p", ...) accepted by get_rme
@@ -1009,6 +1014,7 @@ class MFDnResultsData(results_data.ResultsData):
     ):
         """ Retrieve reduced transition probability (RTP).
 
+        See get_rme for a detailed discussion of how the underlying RME is deduced.
 
         Arguments:
 
@@ -1048,6 +1054,8 @@ class MFDnResultsData(results_data.ResultsData):
             default=np.nan, verbose=False
     ):
         """ Retrieve expectation value (deduced from RME).
+
+        See get_rme for a detailed discussion of how the underlying RME is deduced.
 
         Arguments:
 
