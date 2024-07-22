@@ -1,6 +1,6 @@
 """read_res_mfdn_lanczos.py
 
-    Provides simple example of reading MFDn Lanczos decomposition data filenames.
+    Provides simple example of reading MFDn Lanczos decomposition data files.
 
     Required test data:
 
