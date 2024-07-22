@@ -1,9 +1,13 @@
 """Observables for two-state mixing, as diagnosed by the transition matrix element.
 
+    For mixing angle relations, see, e.g., McCoy et al., PLB, DOI:
+    10.1016/j.physletb.2024.138870.
+
     Mark A. Caprio
     University of Notre Dame
 
     - 10/18/23 (mac): Created, extracting code from 10be-shape_obs.py.
+    - 07/21/24 (mac): Add extraction of mixing angle from fragmentation.
 
 """
 
@@ -13,16 +17,17 @@ import mfdnres.data
 import mfdnres.level
 import mfdnres.observable
 
+
 ################################################################
-# E0 (or E2) mixing analysis
+# mixing angle calculation
 ################################################################
 
 def mixing_angle_from_trans(results_data, operator, qn_pair):
-    """Extract magnitude of mixing angle from E0 (or E2) between states.
+    """Mixing angle extracted from transition between states.
 
     Assumes vanishing E0 (or E2) between the unmixed states, which yields
 
-        tan(2*theta) = 2 M'_12 / (M'_22 - M'_11)
+        tan(2*theta) = 2 * M'_12 / (M'_22 - M'_11)
 
     Arguments:
 
@@ -34,7 +39,7 @@ def mixing_angle_from_trans(results_data, operator, qn_pair):
 
     Returns:
 
-        theta (float): magnitue of mixing angle in degree
+        theta (float): magnitue of mixing angle in degrees
 
     """
 
@@ -47,14 +52,78 @@ def mixing_angle_from_trans(results_data, operator, qn_pair):
     return theta
 
 
-class MixingObservable(mfdnres.observable.Observable):
-    """Observable extractor interface class.
+def mixing_angle_from_fragmentation(results_data, operator, qn_pair, qn_i):
+    """Mixing angle extracted from fragmentation of transition over states.
 
-    Provides common __init__ method for E0 mixing problem.
+    Assumes vanishing transition to the unmixed second state, which yields
+
+        tan(theta) = abs(M'_2 / M'_1)
+
+    Arguments:
+
+        results_data (MFDnResultsData): results data
+
+        operator (str): operator type ("E0p", "E0n", "E00", "E2p", "E2n", "E20")
+
+        qn_pair (tuple): pair (qn_1, qn_2) of (J,g,n) quantum numbers for states
+
+        qn_i (tuple): (J,g,n) for initial state
+
+    Returns:
+
+        theta (float): magnitue of mixing angle in degrees
 
     """
 
-    def __init__(self, nuclide, operator, subspace):
+    qn_1, qn_2 = qn_pair
+    M1 = results_data.get_rme(operator, (qn_1, qn_i))
+    M2 = results_data.get_rme(operator, (qn_2, qn_i))
+
+    theta = np.abs(np.arctan(M2/M1))
+    return theta
+
+
+def mixing_angle(results_data, operator, qn_pair, qn_i):
+    """Mixing angle dispatch function.
+
+    Returns mixing angle either from transition between states or from
+    fragmentation of transition to states, according to value of argument qn_i.
+
+    Arguments:
+
+        results_data (MFDnResultsData): results data
+
+        operator (str): operator type ("E0p", "E0n", "E00", "E2p", "E2n", "E20")
+
+        qn_pair (tuple): pair (qn_1, qn_2) of (J,g,n) quantum numbers for states
+
+        qn_i (tuple, optional): (J,g,n) for initial state
+
+    Returns:
+
+        theta (float): magnitue of mixing angle in degree
+
+    """
+    if qn_i is None:
+        theta = mixing_angle_from_trans(results_data, operator, qn_pair)
+    else:
+        theta = mixing_angle_from_fragmentation(results_data, operator, qn_pair, qn_i)
+    return theta
+
+################################################################
+# mixing observables
+################################################################
+
+
+class MixingObservable(mfdnres.observable.Observable):
+
+    """Observable extractor interface class.
+
+    Provides common __init__ method for mixing problem.
+
+    """
+
+    def __init__(self, nuclide, operator, subspace, qn_i=None):
         """ Initialize with given parameters.
 
         Arguments:
@@ -65,9 +134,10 @@ class MixingObservable(mfdnres.observable.Observable):
 
             subspace (tuple): (J,g) quantum numbers
 
+            qn_i (tuple, optional): (J,g,n) for initial state (for branching analysis)
+
         """
         super().__init__()
-
 
         if operator not in {"E0p", "E0n", "E00", "E2p", "E2n", "E20"}:
             raise ValueError("inappropriate operator code for mixing calculation")
@@ -78,6 +148,7 @@ class MixingObservable(mfdnres.observable.Observable):
         self._operator_flavor = operator[-1]  # "p", "n", or "0"
         self._J, self._g = subspace
         self._qn_pair = ((*subspace, 1), (*subspace, 2))
+        self._qn_i = qn_i
        
         
 class MixingAngle(MixingObservable):
@@ -88,7 +159,7 @@ class MixingAngle(MixingObservable):
     def value(self, results_data):
         """ Extract observable.
         """
-        theta = mixing_angle_from_trans(results_data, self._operator, self._qn_pair)
+        theta = mixing_angle(results_data, self._operator, self._qn_pair, self._qn_i)
         theta_deg = theta*180/np.pi
         return theta_deg
 
@@ -127,7 +198,7 @@ class MixingAdmixture(MixingObservable):
     def value(self, results_data):
         """ Extract observable.
         """
-        theta = mixing_angle_from_trans(results_data, self._operator, self._qn_pair)
+        theta = mixing_angle(results_data, self._operator, self._qn_pair, self._qn_i)
         admixture = np.sin(theta)**2
         return admixture
 
@@ -168,7 +239,7 @@ class MixingMatrixElement(MixingObservable):
     def value(self, results_data):
         """ Extract observable.
         """
-        theta = mixing_angle_from_trans(results_data, self._operator, self._qn_pair)
+        theta = mixing_angle(results_data, self._operator, self._qn_pair, self._qn_i)
         r = 1/2*np.tan(2*theta)
         qn_1, qn_2 = self._qn_pair
         energy_difference = results_data.get_energy(qn_2) - results_data.get_energy(qn_1)
@@ -239,7 +310,9 @@ class MixingEnergyDifference(mfdnres.observable.ExcitationEnergy):
             "J{:1.0f}".format(self._J),
         ])
     
-    
+
+
+
 ################################################################
 # main
 ################################################################
