@@ -11,6 +11,7 @@
     - 11/28/23 (mac):
       + Change draw_expt_levels() to handle empty energy list gracefully.
       + Provide half-integer J labels in set_up_network_axes().
+    - 07/22/24 (mac): Fix plotting of band fit with Coriolis.
 
 """
 
@@ -427,6 +428,7 @@ def band_fit(
         selected_levels = [
             qn
             for qn in selected_levels
+            if qn is not None
             if qn[0] in J_values_for_fit
             ]
     J_list = [
@@ -499,7 +501,7 @@ def draw_band_fit(
 
         J_values_for_fit (list of float, optional): J values for band members to use in fit
 
-        with_coriolis (bool, optional): Whether or not to allot Coriolis contribution
+        with_coriolis (bool, optional): Whether or not to allow Coriolis contribution
         (for K=1/2)
 
         J_range (tuple of float, optional): Range of J values to plot; currently
@@ -524,7 +526,7 @@ def draw_band_fit(
             [
                 J*(J+1),
                 parameters[0]*1+parameters[1]*J*(J+1)+
-                (parameters[2]*(-1)**(J+1/2)*(J+1/2) if with_coriolis else 0)  # suppress noninteger J+1/2
+                (parameters[1]*parameters[2]*(-1)**(J+1/2)*(J+1/2) if with_coriolis else 0)  # suppress noninteger J+1/2
             ]
             for J in np.linspace(*J_range,num=int(J_range[1]-J_range[0])+1)
     ])
