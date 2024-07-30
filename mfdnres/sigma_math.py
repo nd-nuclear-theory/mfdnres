@@ -8,6 +8,7 @@
     University of Notre Dame
 
     - 10/07/21 (mac): Created, inspired by old HP48S RPL routines SIGMAMATH.
+    - 07/30/24 (mac): Force uncertainties to be positive.
 
 """
 
@@ -55,7 +56,7 @@ def mul(x_sigma,y_sigma):
 
     z = x*y
 
-    dz = z* np.sqrt((dx/x)**2+(dy/y)**2)
+    dz = abs(z*np.sqrt((dx/x)**2+(dy/y)**2))
 
     return (z,dz)
 
@@ -77,7 +78,7 @@ def pow(x_sigma,p):
 
     z = x**p
 
-    dz = z*p*(dx/x)
+    dz = abs(z*p*(dx/x))
 
     return (z,dz)
 
