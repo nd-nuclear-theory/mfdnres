@@ -32,7 +32,7 @@ def parser(filename):
         r"\-(?P<descriptor>"
         # descriptor contents
         r"Z(?P<Z>\d+)\-N(?P<N>\d+)"
-        r"\-(?P<interaction>.+)"
+        r"\-(?P<interaction>[^-]+)"  # allow no dashes, so as not to absorb -Mj, etc.
         r"(\-Mj(?P<M>-?[\d\.]+))?"
         r"(\-lan(?P<lanczos>\d+))?"
         r"(\-tol(?P<tolerance>\d+\.\d+[eE][+-]\d+))?"
