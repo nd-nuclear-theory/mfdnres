@@ -166,7 +166,7 @@ def extract_key(key_fields,results_data):
         (tuple): values of given parameters
 
     """
-    key = tuple([results_data.params[key] for key in key_fields])
+    key = tuple([results_data.params.get(key) for key in key_fields])
     return key
 
 def make_key_function(key_descriptor):
