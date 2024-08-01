@@ -29,6 +29,7 @@
         - Provide more informative error output on parsing failure, indicating which input file section yields parsing error.
         - Update handling of angular momenta for mfdn GPU version.
     10/05/23 (mac): Update handling of ambiguous radius observables.
+    08/01/24 (mac): Support empty radii section.
 """
 
 from __future__ import annotations
@@ -378,6 +379,11 @@ def parse_angular_momenta(self:MFDnResultsData,tokenized_lines):
 def parse_radii(self:MFDnResultsData,tokenized_lines):
     """Parse radii.
     """
+
+    # trap empty radii section (e.g., if no TBOs calculated)
+    if len(tokenized_lines)==0:
+        return
+
     # Originally, there were just three radius columns:
     #
     #     ["rp", "rn", "r"]
