@@ -7,7 +7,7 @@
     05/31/19 (mac): Created.
     07/12/19 (mac): Add augment_params_with_parity().
     06/20/23 (mac): Pull in oscillator length functions from mcscript-ncci/utils.py.
-
+    08/01/24 (mac): Add augment_params_with_Nmax().
 """
 
 ################################################################
@@ -80,6 +80,18 @@ def N0_for_nuclide(nuclide):
 
     return N0
 
+def augment_params_with_Nmax(results_data):
+    """Postprocess mesh point to add Nmax as parameter, with default value 0.
+
+    Meant for traditional shell model runs in a harmonic oscillator valence shell.
+
+    Arguments:
+
+        results_data (ResultsData): results data object to augment
+
+    """
+    results_data.params.setdefault("Nmax", 0)
+
 def augment_params_with_parity(results_data):
     """Postprocess mesh point to add parity as parameter, based on Nmax and nuclide.
 
@@ -94,6 +106,7 @@ def augment_params_with_parity(results_data):
         g = mfdnres.am.parity_grade(results_data.params["parity"])
 
     Arguments:
+
         results_data (ResultsData): results data object to augment
 
     """
