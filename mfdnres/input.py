@@ -104,7 +104,7 @@ def res_file_directory(
 # global registration variables
 filename_format_parser = {}
 
-def register_filename_format(format_name,parser):
+def register_filename_format(format_name, parser):
     """Register information for parsing filename.
 
     Args:
@@ -154,11 +154,16 @@ def parse_filename(filename, filename_format="ALL"):
         "nuclide" : (4,3)
 
     Args:
+
         filename (str): filename to parse
-        filename_format (str, optional): filename format to match
+
+        filename_format (str, optional): filename format to match, or "ALL" try
+        try multiple formats until one matches
 
     Returns: (dict) : dictionary with keys for parameters ("run",
+
         "descriptor", "Z", "N", ...) parsed from filename, plus
+
         "nuclide" as a tuple of int
 
     """
@@ -257,8 +262,8 @@ def read_file(filename, *, res_format=None, filename_format=None, params=None, v
         res_format (str, optional): identifier string for the results file
             parser to use
 
-        filename_format (str, optional): identifier string for the results
-            filename parser to use
+        filename_format (str, optional): filename format to match, or "ALL" try
+           try multiple formats until one matches
 
         params (dict, optional): supplementary parameters to append to params attribute
 
@@ -324,16 +329,22 @@ def slurp_res_files(
     each mesh point within the results file.
 
     Arguments:
+
         directory_list (str or list of str): directory or list of directories
             containing files to import
+
         res_format (str, optional): identifier string for the results file parser to use
-        filename_format (str,optional): identifier string for the results
-            filename parser to use
+
+        filename_format (str, optional): filename format to match, or "ALL" try
+            try multiple formats until one matches
+
         glob_pattern (str,optional): glob pattern for results filenames to read
             within each directory
+
         verbose (bool,optional): enable debugging output
 
     Returns:
+
         (list of ResultsData): list of mesh point data objects
 
     """
