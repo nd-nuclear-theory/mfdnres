@@ -628,7 +628,7 @@ def select_network_transitions(
     else:
         s0 = reference_strength
     if verbose:
-        print("Reference stregth {}".format(s0))
+        print("Reference strength {} {} -> {}".format(operator, qn_pair, s0))
     network_transitions = [
         (qn_pair, strength/s0)
         for qn_pair, strength in transition_strengths
