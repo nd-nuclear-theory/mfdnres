@@ -13,6 +13,7 @@
     - 01/16/24 (zz): Add support for other scalars with user defined label text in ME.
     - 03/21/24 (mac): Add option Nmax_shift to ExcitationEnergy for cross-parity energy differencing.
     - 05/09/24 (mac/zz): Return np.nan for observable value if level is missing (instead of crashing).
+    - 08/23/24 (mac): Add wrapper observable OverrideLabels.
 """
 
 
@@ -227,6 +228,74 @@ class Observable(object):
         observable_str = r""
         units_str = None
         return observable_str, units_str
+
+
+################################################################
+# deduced observable: OverrideLabels
+################################################################
+
+class OverrideLabels(Observable):
+    """ Override axis label text
+
+    """
+
+    def __init__(self, observable, observable_label_text=None, axis_label_text=None):
+        """Initialize with given parameters.
+
+        Arguments:
+
+            observable (Observable): observable providing value
+
+            observable_label_text (str, optional): observable label text
+
+            axis_label_text (tuple, optional): axis label text
+
+        """
+        super().__init__()
+        self._observable = observable
+        self._observable_label_text = observable_label_text
+        self._axis_label_text = axis_label_text
+
+    def data(self, mesh_data, key_descriptor, verbose=False):
+        """ Extract data frame of observable values over mesh.
+        """
+        return self._observable.data(mesh_data, key_descriptor, verbose=verbose)
+
+    @property
+    def descriptor_str(self):
+        """ Text string describing observable.
+        """
+        return self._observable.descriptor_str
+
+    @property
+    def nuclide_label_text(self):
+        """Formatted LaTeX text representing nuclide.
+        """
+        return self._observable.nuclide_label_text
+
+    @property
+    def nuclide_set(self):
+        """Set of nuclides entering calculation of observable.
+        """
+        return self._observable.nuclide_set
+
+    @property
+    def observable_label_text(self):
+        """ Formatted LaTeX text representing observable.
+        """
+        observable_label_text = self._observable_label_text
+        if observable_label_text is None:
+            observable_label_text = self._observable.observable_label_text
+        return observable_label_text
+
+    @property
+    def axis_label_text(self):
+        """ Formatted LaTeX text representing axis label.
+        """
+        axis_label_text = self._axis_label_text
+        if axis_label_text is None:
+            axis_label_text = self._observable.axis_label_text
+        return axis_label_text
 
 
 ################################################################
