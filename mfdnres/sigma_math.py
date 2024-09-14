@@ -9,6 +9,7 @@
 
     - 10/07/21 (mac): Created, inspired by old HP48S RPL routines SIGMAMATH.
     - 07/30/24 (mac): Force uncertainties to be positive.
+    - 09/14/24 (mac): Support asymmetric error bars in scale().
 
 """
 
@@ -89,7 +90,7 @@ def scale(x_sigma,c):
 
     Arguments:
 
-       x_sigma (tuple): (x,dx)
+       x_sigma (tuple): (x,dx) or (x,(dx_plus,dx_minus))
 
        c (float): scale
 
@@ -98,6 +99,12 @@ def scale(x_sigma,c):
         (tuple): (z,dz)
     """
 
+    # ad hoc treatment of asymmetric error bars
+    x, dx = x_sigma
+    if isinstance(dx, tuple):
+        dx_plus, dx_minus = dx
+        return (c*x, (abs(c)*dx_plus, abs(c)*dx_minus))
+    
     return mul(x_sigma,(c,0))
 
 def sub(x_sigma,y_sigma):
