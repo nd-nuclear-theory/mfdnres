@@ -7,6 +7,7 @@
         observable.py.
     - 11/26/23 (mac): Remove species subscript from beta axis label in BetaFromRatioQr2.
     - 12/31/23 (mac): Add observable BetaFromRatioBE2r4.
+    - 08/12/24 (mac): Provide strict option in ratio observables.
 """
 
 import numpy as np
@@ -23,7 +24,7 @@ class RatioBE2Q2(mfdnres.observable.Ratio):
 
     """
 
-    def __init__(self, observable1, observable2, observable_label_delimiters=(("",""),("[e^2","]"))):
+    def __init__(self, observable1, observable2, observable_label_delimiters=(("",""),("[e^2","]")), strict=True):
         """Initialize with given parameters.
 
         Arguments:
@@ -35,7 +36,7 @@ class RatioBE2Q2(mfdnres.observable.Ratio):
             appearing in the ratio, e.g., (("[","]"),("[","]"))
 
         """
-        if not (isinstance(observable1, mfdnres.observable.RTP) and isinstance(observable2, mfdnres.observable.Moment)):
+        if strict and not (isinstance(observable1, mfdnres.observable.RTP) and isinstance(observable2, mfdnres.observable.Moment)):
             raise ValueError("Unexpected observable types in RatioBE2Q2 (found {} and {})".format(observable1, observable2))
         super().__init__(observable1, mfdnres.observable.Power(observable2, 2), observable_label_delimiters)
 
@@ -66,7 +67,7 @@ class RatioBE2r4(mfdnres.observable.Ratio):
 
     """
 
-    def __init__(self, observable1, observable2, observable_label_delimiters=(("",""),("[e^2","]"))):
+    def __init__(self, observable1, observable2, observable_label_delimiters=(("",""),("[e^2","]")), strict=True):
         """Initialize with given parameters.
 
         Arguments:
@@ -78,7 +79,7 @@ class RatioBE2r4(mfdnres.observable.Ratio):
             appearing in the ratio, e.g., (("[","]"),("[","]"))
 
         """
-        if not (isinstance(observable1, mfdnres.observable.RTP) and isinstance(observable2, mfdnres.observable.Radius)):
+        if strict and not (isinstance(observable1, mfdnres.observable.RTP) and isinstance(observable2, mfdnres.observable.Radius)):
             raise ValueError("Unexpected observable types in RatioBE2r4 (found {} and {})".format(observable1, observable2))
         super().__init__(observable1, mfdnres.observable.Power(observable2, 4), observable_label_delimiters)
 
@@ -111,7 +112,7 @@ class RatioQr2(mfdnres.observable.Ratio):
 
     """
 
-    def __init__(self, observable1, observable2, observable_label_delimiters=None):
+    def __init__(self, observable1, observable2, observable_label_delimiters=None, strict=True):
         """Initialize with given parameters.
 
         Arguments:
@@ -123,7 +124,7 @@ class RatioQr2(mfdnres.observable.Ratio):
             appearing in the ratio, e.g., (("[","]"),("[","]"))
 
         """
-        if not (
+        if strict and not (
                 isinstance(observable1, mfdnres.observable.Moment)
                 and isinstance(observable2, mfdnres.observable.Radius)
         ):
@@ -156,7 +157,7 @@ class RatiorQ12(mfdnres.observable.Ratio):
 
     """
 
-    def __init__(self, observable1, observable2, observable_label_delimiters=None):
+    def __init__(self, observable1, observable2, observable_label_delimiters=None, strict=True):
         """Initialize with given parameters.
 
         Caution: Arguments are still given in the order (Q, r), even with the
@@ -171,7 +172,7 @@ class RatiorQ12(mfdnres.observable.Ratio):
             appearing in the ratio, e.g., (("[","]"),("[","]"))
 
         """
-        if not (isinstance(observable1, mfdnres.observable.Moment) and isinstance(observable2, mfdnres.observable.Radius)):
+        if strict and not (isinstance(observable1, mfdnres.observable.Moment) and isinstance(observable2, mfdnres.observable.Radius)):
             raise ValueError("Unexpected observable types in RatiorQ12 (found {} and {})".format(observable1, observable2))
         super().__init__(observable2, mfdnres.observable.Power(observable1, 1/2), observable_label_delimiters)
 
