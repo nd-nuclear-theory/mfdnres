@@ -59,6 +59,7 @@
         + Provide label_text option for add_hw_scan_plot_Nmax_labels().
         + Change add_hw_scan_plot_Nmax_labels() option legend_index default to None.
     - 12/29/23 (mac): Provide zorder and linestyle options for add_expt_marker_band().
+    - 09/01/24 (mac): Support (J,g, [n]) quantum numbers in qn_text(). 
 """
 
 import collections
@@ -536,7 +537,7 @@ def qn_text(qn,show_parity=True,show_index=True):
 
     Arguments:
 
-        qn (tuple): (J,g,n) quantum numbers
+        qn (tuple): (J,g) or (J,g,n) quantum numbers
 
         show_parity (bool, optional): whether or not to show parity (subscript)
 
@@ -547,7 +548,13 @@ def qn_text(qn,show_parity=True,show_index=True):
         label (str): label string, to be interpreted in math mode
     """
 
-    J, g, n = qn
+    if len(qn)==3:
+        J, g, n = qn
+    elif len(qn)==2:
+        J, g = qn
+        n = None
+    else:
+        raise ValueError("Unexpected form for quantum numbers: {}".format(qn))
 
     # am.HalfInt.Str() is missing in Python
     ## J = am.HalfInt(int(2*qn[0]),2)
@@ -557,7 +564,7 @@ def qn_text(qn,show_parity=True,show_index=True):
         P_str = "+" if g==0 else "-"
     else:
         P_str = ""
-    if show_index:
+    if show_index and (n is not None):
         n_str = "{:d}".format(n)
     else:
         n_str = ""
