@@ -9,7 +9,8 @@
 import numpy as np
 
 from . import (
-    data
+    data,
+    tools,
 )
 
 
@@ -135,6 +136,8 @@ class LevelQNT(Level):
         super().__init__()
         self._qnT = qnT
         self._debug = debug
+        if self._debug:
+            print("Debug mode set for qnT {}".format(qnT))
 
     def select_level(self, results_data):
         """ Retrieve level.
@@ -142,16 +145,18 @@ class LevelQNT(Level):
 
         # recover quantum numbers for sought level
         J, g, n_for_T, T = self._qnT
+        if self._debug:
+            print("Searching for qnT {}".format(self._qnT))
 
         # set up binning
         T_lower = T-1
         T_upper = T+1
-        if T_lower < 0. :
+        if T_lower < 0.:
             T_bound_lower = 0.  # assumes inclusive lower bound and positive definite result for comparison
         else:
             T_bound_lower = tools.effective_am((T_lower*(T_lower+1)+T*(T+1))/2)
         T_bound_upper = tools.effective_am((T_upper*(T_upper+1)+T*(T+1))/2)
-
+            
         # scan for sought level
         current_n = 0
         current_n_for_T = 0
