@@ -8,9 +8,9 @@
     07/12/19 (mac): Add augment_params_with_parity().
     06/20/23 (mac): Pull in oscillator length functions from mcscript-ncci/utils.py.
     08/01/24 (mac): Add augment_params_with_Nmax().
-    09/18/24 (mac): Fix missing constants from mcscript-ncci/constants.py.
 
 """
+import math
 
 ################################################################
 # oscillator length calculations
