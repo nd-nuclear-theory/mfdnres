@@ -8,11 +8,20 @@
     07/12/19 (mac): Add augment_params_with_parity().
     06/20/23 (mac): Pull in oscillator length functions from mcscript-ncci/utils.py.
     08/01/24 (mac): Add augment_params_with_Nmax().
+    09/18/24 (mac): Fix missing constants from mcscript-ncci/constants.py.
+
 """
 
 ################################################################
 # oscillator length calculations
 ################################################################
+
+# Taken from mcscript-ncci/utils.py and mcscript-ncci/constants.py.
+
+k_hbar_c  = 197.326_980_4     # (hbar c) in MeV fm [1,2]
+k_mp_csqr = 938.272_088_16    # proton mass in MeV/c^2 [1,2]
+k_mn_csqr = 939.565_420_52    # neutron mass in MeV/c^2 [1,2]
+k_mN_csqr = (k_mp_csqr+k_mn_csqr)/2  # (m_N c^2) in MeV [1]
 
 def oscillator_length(hw):
     """Calculate oscillator length for given oscillator frequency.
@@ -25,7 +34,7 @@ def oscillator_length(hw):
     Returns:
         (float): b in fm
     """
-    return constants.k_hbar_c/math.sqrt(constants.k_mN_csqr*hw)
+    return k_hbar_c/math.sqrt(k_mN_csqr*hw)
 
 
 def hw_from_oscillator_length(b):
@@ -39,7 +48,7 @@ def hw_from_oscillator_length(b):
     Returns:
         (float): hbar omega in MeV
     """
-    return constants.k_hbar_c**2/(constants.k_mN_csqr*b**2)
+    return k_hbar_c**2/(k_mN_csqr*b**2)
 
 
 ################################################################

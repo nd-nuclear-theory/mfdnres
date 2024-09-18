@@ -615,7 +615,7 @@ def resolve_qn(results_data, level_selector, verbose=False):
             resolved_qn = level_selector.select_level(results_data)
         except Exception as err:
             print("level_selector.select_level failed with exception: {}".format(err))
-            traceback.print_exception(etype=type(err), value=err, tb=err.__traceback__)
+            traceback.print_exception(type(err), value=err, tb=err.__traceback__)
             ##traceback.print_tb(err.__traceback__)
             raise
     else:
