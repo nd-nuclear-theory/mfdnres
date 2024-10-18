@@ -8,6 +8,7 @@
 
     - 07/24/22 (mac): Created, as q_invariant_intr.py.
     - 10/19/22 (mac): Upgrade from observable tuple to observable object.
+    - 09/27/24 (mac): Remove legacy tuple observable support.
 
 """
 
@@ -112,7 +113,7 @@ def get_Q0_intr(results_data,observable_operator,qn):
     return Q0_obs
 
 ################################################################
-# Deformation deduced from QxQ_0
+# deformation deduced from QxQ_0
 ################################################################
 
 def get_beta_intr(results_data,observable_operator,qn):
@@ -143,81 +144,6 @@ def get_beta_intr(results_data,observable_operator,qn):
     beta = Q0/(np.sqrt(5/np.pi)*nucleon_number*(radius**2))
     return beta
 
-################################################################
-# intrinsic Q0 and beta "observables" -- LEGACY tuple observable
-################################################################
-
-# Q0-intr (intrinsic quadrupole moment derived from lab-frame QxQ_0 with CM correction)
-
-def expectation_Q0_intr_extractor(nuclide,observable_operator,observable_qn_list):
-
-    def extractor(results_data):
-        # extract qn
-        ##print("extractor {}".format([nuclide,observable_operator,observable_qn_list]))
-        try:
-            resolved_qn_list = tuple([mfdnres.data.resolve_qn(results_data, qn) for qn in observable_qn_list])
-            qn, = resolved_qn_list
-            if qn is None:
-                return np.nan
-            value = get_Q0_intr(results_data,observable_operator,qn)
-        except Exception as err:
-            print("expectation_Q0_intr_extractor for {} {} {} encounters exception {}".format(nuclide,observable_operator,observable_qn_list,err))
-            
-        return value
-    
-    return extractor
-
-def expectation_Q0_intr_observable_label(nuclide,observable_operator,observable_qn_list):
-    observable_str = r"Q_{{0,{}}}".format(observable_operator[2:])
-    qn_str = mfdnres.data.resolve_qn_text(observable_qn_list[0])
-    label = r"{}({})".format(observable_str,qn_str)
-    return label
-
-def expectation_Q0_intr_axis_label(nuclide,observable_operator,observable_qn_list):
-    observable_str = r"Q_0"
-    units_str = r"e\,\mathrm{fm}^{2}"
-    return observable_str, units_str
-
-mfdnres.data.register_observable(
-    "Q0-intr",
-    mfdnres.data.Observable(expectation_Q0_intr_extractor, expectation_Q0_intr_observable_label, expectation_Q0_intr_axis_label)
-)
-
-# beta-intr (deformation derived from lab-frame QxQ_0 with CM correction)
-
-def expectation_beta_intr_extractor(nuclide,observable_operator,observable_qn_list):
-
-    def extractor(results_data):
-        ##print("extractor {}".format([nuclide,observable_operator,observable_qn_list]))
-        try:
-            # extract qn
-            resolved_qn_list = tuple([mfdnres.data.resolve_qn(results_data, qn) for qn in observable_qn_list])
-            qn, = resolved_qn_list
-            if qn is None:
-                return np.nan
-            value = get_beta_intr(results_data,observable_operator,qn)
-        except Exception as err:
-            print("expectation_beta_intr_extractor for {} {} {} encounters exception {}".format(nuclide,observable_operator,observable_qn_list,err))
-    
-        return value
-    
-    return extractor
-
-def expectation_beta_intr_observable_label(nuclide,observable_operator,observable_qn_list):
-    observable_str = r"\beta_{{{}}}".format(observable_operator[2:])
-    qn_str = mfdnres.data.resolve_qn_text(observable_qn_list[0])
-    label = r"{}({})".format(observable_str,qn_str)
-    return label
-
-def expectation_beta_intr_axis_label(nuclide,observable_operator,observable_qn_list):
-    observable_str = r"\beta"
-    units_str = None
-    return observable_str, units_str
-
-mfdnres.data.register_observable(
-    "beta-intr",
-    mfdnres.data.Observable(expectation_beta_intr_extractor, expectation_beta_intr_observable_label, expectation_beta_intr_axis_label)
-)
 
 ################################################################
 # intrinsic Q0 and beta observables
