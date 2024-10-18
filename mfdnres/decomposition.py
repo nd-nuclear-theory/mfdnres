@@ -24,6 +24,7 @@ University of Notre Dame
         + Add canonical sorting (of labels within degenerate set, and of bins by
         their label sets) to rebinned_decomposition().
         + Add filter_decomposition().
+    - 10/18/23 (mac): Add label formatting for simple label types (SLabels, etc.).
 
 """
 
@@ -589,6 +590,21 @@ LABEL_CLASS_BY_DECOMPOSITION_TYPE = {
 
 # string formatting
 
+def format_int_label(self):
+    x, = self
+    label_text = "{:d}".format(x)
+    return label_text
+
+NexLabels.__str__ = format_int_label
+LLabels.__str__ = format_int_label
+
+def format_s_label(self):
+    S, = self
+    label_text = "{:s}".format(ticks.half_int_str(S))
+    return label_text
+
+SLabels.__str__ = format_s_label
+
 def format_u3_label(self):
     N, lam, mu = self
     label_text = "{:d}({:d},{:d})".format(int(N), int(lam), int(mu))
@@ -598,7 +614,6 @@ U3Labels.__str__ = format_u3_label
 Sp3RLabels.__str__ = format_u3_label
 
 def format_u3s_label(self):
-    # TODO 10/28/23 (mac): upgrade spin formatting from float to solidus fraction
     N, lam, mu, S = self
     label_text = "{:d}({:d},{:d}){:s}".format(int(N), int(lam), int(mu), ticks.half_int_str(S))
     return label_text
@@ -607,7 +622,6 @@ U3SLabels.__str__ = format_u3s_label
 Sp3RLabels.__str__ = format_u3s_label
 
 def format_u3sss_label(self):
-    # TODO 10/28/23 (mac): upgrade spin formatting from float to solidus fraction
     N, lam, mu, Sp, Sn, S = self
     label_text = "{:d}({:d},{:d}){:s},{:s},{:s}".format(int(N), int(lam), int(mu), ticks.half_int_str(Sp), ticks.half_int_str(Sn), ticks.half_int_str(S))
     return label_text
