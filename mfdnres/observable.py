@@ -14,6 +14,7 @@
     - 03/21/24 (mac): Add option Nmax_shift to ExcitationEnergy for cross-parity energy differencing.
     - 05/09/24 (mac/zz): Return np.nan for observable value if level is missing (instead of crashing).
     - 08/23/24 (mac): Add wrapper observable OverrideLabels.
+    - 09/27/24 (mac): Extend Nmax_shifted() to work with generic index sets.
 """
 
 
@@ -73,8 +74,8 @@ def nucleon_number_by_observable_tag(nuclide):
 # Nmax shifting utility
 ################################################################
 
-def Nmax_shifted(observable_data,shift):
-    """ Shift Nmax values in observable_data.
+def Nmax_shifted(observable_data, shift, *, shift_index_name="Nmax"):
+    """Shift Nmax values in observable_data.
 
     Data now found "at Nmax" was previously "at Nmax+shift".
 
@@ -87,12 +88,17 @@ def Nmax_shifted(observable_data,shift):
 
         shift (int): displacement to Nmax index
 
+        shift_index_name (str, optional): name of multiindex component to shift
+        (defaults to "Nmax")
+
     Returns:
         (pd.DataFrame): shifted data multi-indexed by (Nmax,hw)
+
     """
+    index_names = observable_data.index.names
     table = observable_data.reset_index()
-    table["Nmax"] -= shift
-    shifted_observable_data = pd.DataFrame(table).set_index(["Nmax","hw"])
+    table[shift_index_name] -= shift
+    shifted_observable_data = pd.DataFrame(table).set_index(index_names)
     return shifted_observable_data
 
 
@@ -936,8 +942,11 @@ class ExcitationEnergy(Observable):
         """ Extract data frame of observable values over mesh.
         """
         level_energy_value_mesh = Energy(self._nuclide, self._level).data(mesh_data, key_descriptor, verbose=verbose)
+        print("E unshifted {}".format(level_energy_value_mesh))
         level_energy_value_mesh = Nmax_shifted(level_energy_value_mesh, self._Nmax_shift)
+        print("E shifted {}".format(level_energy_value_mesh))
         reference_level_energy_value_mesh = Energy(self._nuclide, self._reference_level).data(mesh_data, key_descriptor, verbose=verbose)
+        print("Eref {}".format(reference_level_energy_value_mesh))
         return level_energy_value_mesh - reference_level_energy_value_mesh
     
     @property
