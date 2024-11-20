@@ -10,6 +10,7 @@
     - 10/07/21 (mac): Created, inspired by old HP48S RPL routines SIGMAMATH.
     - 07/30/24 (mac): Force uncertainties to be positive.
     - 09/14/24 (mac): Support asymmetric error bars in scale().
+    - 11/19/24 (mac): Support vanishing central value in scale().
 
 """
 
@@ -86,8 +87,6 @@ def pow(x_sigma,p):
 def scale(x_sigma,c):
     """ Scale number (i.e., multiply by scalar) with uncertainty.
 
-    Derived operation.
-
     Arguments:
 
        x_sigma (tuple): (x,dx) or (x,(dx_plus,dx_minus))
@@ -99,13 +98,16 @@ def scale(x_sigma,c):
         (tuple): (z,dz)
     """
 
-    # ad hoc treatment of asymmetric error bars
+    # Note: Naive implementation as mul(x_sigma,(c,0)) fails with divide-by-zero
+    # if central value x vanishes.
+
     x, dx = x_sigma
     if isinstance(dx, tuple):
+        # ad hoc treatment of asymmetric error bars
         dx_plus, dx_minus = dx
         return (c*x, (abs(c)*dx_plus, abs(c)*dx_minus))
-    
-    return mul(x_sigma,(c,0))
+    else:
+        return (c*x, abs(c)*dx)
 
 def sub(x_sigma,y_sigma):
     """ Subtract numbers with uncertainties.
