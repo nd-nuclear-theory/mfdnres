@@ -6,8 +6,8 @@
     - 09/07/23 (mac): Created.  Refactor dimensionless ratio observables from
         observable.py.
     - 11/26/23 (mac): Remove species subscript from beta axis label in BetaFromRatioQr2.
-    - 12/31/23 (mac): Add observable BetaFromRatioBE2r4.
     - 08/12/24 (mac): Provide strict option in ratio observables.
+    - 12/15/24 (mac): Add observable BetaFromRatioBE2r4.
 """
 
 import numpy as np
@@ -319,8 +319,12 @@ class BetaFromRatioBE2r4(mfdnres.observable.Observable):
 
     """
 
-    def __init__(self, nuclide, observable_tag, levelf, leveli, level, J, K, axis_label_has_observable_tag=True):
+    def __init__(self, nuclide, observable_tag, levelf, leveli, level, Jf, Ji, K, *, clebsch_gordan=None, axis_label_has_observable_tag=True):
         """Initialize with given parameters.
+
+        Requires user to provide Clebsch-Gordan coefficient.  May implement
+        calculation of Clebsch-Gordan internally in the future, but this would
+        introduce a dependency on, e.g., am.
 
         Arguments:
 
@@ -328,14 +332,30 @@ class BetaFromRatioBE2r4(mfdnres.observable.Observable):
 
             observable_tag (str): identifier tag for beta observable ("p", "n", or "m")
 
-            levelf, leveli, level (LevelSelector): levels for transition (final
-            and initial) and for radius, respectively
+            levelf (LevelSelector): final level for transition
 
-            J (float): J quantum number for level (assumed unique across mesh)
+            leveli (LevelSelector): initial level for transition
 
-            K (float): K quantum number for level (assumed unique across mesh)
+            level (LevelSelector): level for radius (typically same as final
+            level for transition)
 
-            axis_label_has_observable_tag (bool): whether to include subscript
+            Jf (float): J quantum number for final level (assumed unique across
+            mesh); ignored until such time as Clebsch-Gordan coefficient is
+            calculated internally
+
+            Ji (float): J quantum number for initial level (assumed unique
+            across mesh); ignored until such time as Clebsch-Gordan coefficient
+            is calculated internally
+
+            K (float): K quantum number for level (assumed unique across mesh);
+            ignored until such time as Clebsch-Gordan coefficient is calculated
+            internally
+
+            clebsch_gordan (float, optional): numerical value for Clebsch-Gordan
+            coefficient (Ji,K,2,0|Jf,K); mandatory "optional" argument until
+            such time as Clebsch-Gordan coefficient is calculated internally
+
+            axis_label_has_observable_tag (bool, optional): whether to include subscript
                 on axis label (as beta_{m,p,n})
 
         """
@@ -345,8 +365,10 @@ class BetaFromRatioBE2r4(mfdnres.observable.Observable):
         self._levelf = levelf
         self._leveli = leveli
         self._level = level
-        self._J = J
+        self._Jf = Jf
+        self._Ji = Ji
         self._K = K
+        self._clebsch_gordan = clebsch_gordan
         self._axis_label_has_observable_tag = axis_label_has_observable_tag
 
     def data(self, mesh_data, key_descriptor, verbose=False):
@@ -357,7 +379,7 @@ class BetaFromRatioBE2r4(mfdnres.observable.Observable):
         observable_tag = self._observable_tag
         levelf = self._levelf
         leveli = self._leveli
-        J = self._J
+        level = self._level
         K = self._K
         
         # retrieve nucleon number
@@ -374,15 +396,17 @@ class BetaFromRatioBE2r4(mfdnres.observable.Observable):
         radius_observable = mfdnres.observable.Radius(nuclide, radius_operator, level)
 
         # deduce ratio
-        ratio_observable = RatioBE2r42(rtp_observable, radius_observable)
+        ratio_observable = RatioBE2r4(rtp_observable, radius_observable)
 
         # calculate mesh
         ratio_mesh = ratio_observable.data(mesh_data, key_descriptor, verbose=verbose)
         
         # convert to beta
-        assert(False)  # WIP
-        prefactor = (J+1)*(2*J+3)/(3*K**2-J*(J+1)) * np.sqrt(np.pi/5)/nucleon_number
-        beta_mesh = prefactor * ratio_mesh
+        clebsch_gordan = self._clebsch_gordan
+        if clebsch_gordan is None:
+            raise ValueError("BetaFromRatioBE2r4 requires user-provided clebsch_gordan")
+        prefactor = 1 / clebsch_gordan**2 * (4*np.pi/5)**2 / nucleon_number**2
+        beta_mesh = np.sqrt(prefactor * ratio_mesh)
 
         print("ratio_mesh {}".format(ratio_mesh))
         print("beta_mesh {}".format(beta_mesh))
