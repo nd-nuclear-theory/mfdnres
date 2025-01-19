@@ -64,6 +64,8 @@
         + Remove support for legacy "tuple" observables.
         + Add support for generic key tuples in make_hw_scan_data().
     - 10/17/24 (mac): Provide legend_xy option for add_hw_scan_plot_Nmax_labels().
+    - 01/18/25 (mac): Rename arguments and update docstrings to reflect 
+        removal of support for legacy "tuple" observables.
 """
 
 import collections
@@ -560,19 +562,19 @@ def resolve_qn_text(level_selector):
     return label
 
 
-def make_observable_axis_label_text(nuclide_observable):
-    """ Generate axis label (with units) for observable, given nuclide_observable.
+def make_observable_axis_label_text(observable_object):
+    """ Generate axis label (with units) for observable, given observable_object.
 
     Arguments:
 
-        nuclide_observable (tuple): standard nuclide/observable pair or compound
+        observable_object (observable.Observable): observable object
 
     Returns:
 
         label (str): label string, to be interpreted in math mode
     """
 
-    observable_str, units_str = nuclide_observable.axis_label_text
+    observable_str, units_str = observable_object.axis_label_text
         
     if units_str is None:
         label = observable_str
@@ -867,7 +869,7 @@ def hw_plot_style(
 ################################################################
 
 
-def hw_scan_descriptor(interaction_coulomb, nuclide_observable, verbose=False):
+def hw_scan_descriptor(interaction_coulomb, observable_object, verbose=False):
     """Generate standard descriptor string for a (nuclide,observable) pair.
 
     Arguments:
@@ -876,7 +878,7 @@ def hw_scan_descriptor(interaction_coulomb, nuclide_observable, verbose=False):
         or may simply be given as an interaction string (in which case
         use_coulomb defaults to False)
 
-        nuclide_observable (tuple): standard nuclide/observable pair or compound
+        observable_object (observable.Observable): observable object
 
     Returns:
         descriptor (str): descriptor string
@@ -884,7 +886,7 @@ def hw_scan_descriptor(interaction_coulomb, nuclide_observable, verbose=False):
     """
 
     if verbose:
-        print("Generating hw_scan_descriptor: {} {}".format(interaction_coulomb,nuclide_observable))
+        print("Generating hw_scan_descriptor: {} {}".format(interaction_coulomb,observable_object))
 
     # trap interaction only (no use_coulomb)
     if isinstance(interaction_coulomb, tuple):
@@ -892,7 +894,7 @@ def hw_scan_descriptor(interaction_coulomb, nuclide_observable, verbose=False):
     else:
         interaction, use_coulomb = interaction_coulomb, False
         
-    observable_descriptor = nuclide_observable.descriptor_str
+    observable_descriptor = observable_object.descriptor_str
     
     descriptor="hw-scan_{interaction:s}-{use_coulomb:1d}_{observable_descriptor}".format(
         interaction=interaction, use_coulomb=use_coulomb,
@@ -1016,7 +1018,7 @@ def write_hw_scan_data(descriptor,observable_data,directory="data",format_str_ob
         out_file.write(output_str)
 
 def set_up_hw_scan_axes(
-        ax, nuclide_observable, hw_range, observable_range,
+        ax, observable_object, hw_range, observable_range,
         hw_range_extension=(0.05,0.05), observable_range_extension=(0.05,0.05),
         observable_scale=None,
         observable_axis_label_text=None,
@@ -1031,7 +1033,7 @@ def set_up_hw_scan_axes(
 
         ax (mpl.axes.Axes): axes object
 
-        nuclide_observable (tuple): standard nuclide/observable pair or compound
+        observable_object (observable.Observable): observable object
 
         hw_range (tuple of float): x range, before extension
 
@@ -1078,7 +1080,7 @@ def set_up_hw_scan_axes(
     # set axis labels
     ax.set_xlabel(HW_AXIS_LABEL_TEXT, labelpad=hw_labelpad)
     if observable_axis_label_text is None:
-        observable_axis_label_text = make_observable_axis_label_text(nuclide_observable)
+        observable_axis_label_text = make_observable_axis_label_text(observable_object)
     ax.set_ylabel(
         r"${}$".format(observable_axis_label_text),
         labelpad=observable_labelpad,
@@ -1157,7 +1159,7 @@ def set_up_hw_scan_secondary_axis(
     return ax_secondary_y
     
 def set_up_Nmax_scan_axes(
-        ax, nuclide_observable, Nmax_range, observable_range,
+        ax, observable_object, Nmax_range, observable_range,
         Nmax_range_extension=(0.05,0.05),
         observable_range_extension=(0.05,0.05),
         observable_scale=None,
@@ -1173,7 +1175,7 @@ def set_up_Nmax_scan_axes(
 
         ax (mpl.axes.Axes): axes object
 
-        nuclide_observable (tuple): standard nuclide/observable pair or compound
+        observable_object (observable.Observable): observable object
 
         Nmax_range (tuple of int): x range, before extension
 
@@ -1220,14 +1222,14 @@ def set_up_Nmax_scan_axes(
     # set axis labels
     ax.set_xlabel(NMAX_AXIS_LABEL_TEXT, labelpad=Nmax_labelpad)
     if observable_axis_label_text is None:
-        observable_axis_label_text = make_observable_axis_label_text(nuclide_observable)
+        observable_axis_label_text = make_observable_axis_label_text(observable_object)
     ax.set_ylabel(
         r"${}$".format(observable_axis_label_text),
         labelpad=observable_labelpad,
     )
         
 
-def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**kwargs):
+def add_observable_panel_label(ax,interaction_coulomb,observable_object,**kwargs):
     """ Add observable panel label to plot.
 
     Standardized label provides: nuclide, observable, interaction
@@ -1238,20 +1240,15 @@ def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**kwarg
 
         interaction_coulomb (tuple): interaction/coulomb specifier
 
-        nuclide_observable (tuple): standard nuclide/observable pair or compound
+        observable_object (observable.Observable): observable object
 
         **kwargs: pass-through keyword arguments to ax.annotate
 
     """
 
     # panel label
-    if isinstance(nuclide_observable, tuple):
-        nuclide_text = make_nuclide_text(nuclide_observable)
-        observable_text = make_observable_text(nuclide_observable)
-    else:
-        ##if isinstance(nuclide_observable, observable.Observable):
-        nuclide_text = nuclide_observable.nuclide_label_text
-        observable_text = nuclide_observable.observable_label_text
+    nuclide_text = observable_object.nuclide_label_text
+    observable_text = observable_object.observable_label_text
 
     interaction_text = make_interaction_text(interaction_coulomb)
 
@@ -1487,7 +1484,7 @@ def add_Nmax_scan_plot(
 
 def write_hw_scan_plot(
         descriptor,
-        interaction_coulomb,nuclide_observable,
+        interaction_coulomb,observable_object,
         observable_data,
         hw_range,observable_range,Nmax_max,
         hw_range_extension=(0.02,0.02),
@@ -1511,7 +1508,7 @@ def write_hw_scan_plot(
 
         interaction_coulomb (tuple): interaction/coulomb specifier
 
-        nuclide_observable (tuple): standard nuclide/observable pair or compound
+        observable_object (observable.Observable): observable object
 
         observable_data (pd.DataFrame): data multi-indexed by (Nmax,hw)
 
@@ -1538,7 +1535,7 @@ def write_hw_scan_plot(
     # provide axis labeling
     set_up_hw_scan_axes(
         ax,
-        nuclide_observable,
+        observable_object,
         hw_range,
         observable_range,
         hw_range_extension=hw_range_extension,
@@ -1546,7 +1543,7 @@ def write_hw_scan_plot(
     )
 
     # make panel label
-    add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**panel_label_kwargs)
+    add_observable_panel_label(ax,interaction_coulomb,observable_object,**panel_label_kwargs)
 
     # make Nmax label
     ax.annotate(
