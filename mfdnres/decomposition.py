@@ -466,7 +466,7 @@ def labeled_decomposition(label_list, decomposition):
 
 # transformation functions to extract coarse-grained labeling from fine-grained labeling
 
-# DEPRECATED in favor of using label_subsetting_function factory function
+# DEPRECATED in favor of using factory function namedtuple_subsetting_function
 
 def label_transformation_u3spsns_to_nex(labels):
     """
