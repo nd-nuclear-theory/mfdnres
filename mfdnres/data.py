@@ -288,6 +288,12 @@ ELEMENT_SYMBOLS = [
 def element_symbol(Z):
     """Generate text label component for element symbol.
 
+    Example:
+
+        >>> mfdnres.data.element_symbol(66)
+
+        '\\mathrm{Dy}'
+
     Arguments:
 
         Z (int): Z for element
@@ -325,6 +331,20 @@ def isotope(nuclide, format = None, as_tuple = False):
     """Generate text label component for nuclide.
     
     Name inspired by eponymous commend from LaTeX isotope package.
+
+    Example:
+
+        >>> mfdnres.data.isotope((66,90))
+
+        '^{156}\\mathrm{Dy}'
+
+        >>> mfdnres.data.isotope((66,90), format="AZSN")
+
+        '^{156}_{66}\\mathrm{Dy}^{}_{90}'
+
+        >>> mfdnres.data.isotope((66,90), format="tuple")
+        
+        '(66,90)'
 
     Arguments:
 
@@ -367,6 +387,12 @@ def nuclide_str(nuclide):
 
     Implements special case of isotope_str for format="ZN".
 
+    Example:
+
+        >>> mfdnres.data.nuclide_str((66,90))
+
+        'Z66-N90'
+
     Arguments:
 
         nuclide (tuple): (Z,N)
@@ -382,6 +408,17 @@ def nuclide_str(nuclide):
 
 def isotope_str(nuclide, format = None, lower = False):
     """Generate simple string for isotope symbol, for use in filenames, e.g., "156Dy".
+
+    Example:
+
+        >>> mfdnres.data.isotope_str((66,90))
+        '156Dy'
+
+        >>> mfdnres.data.isotope_str((66,90), format="As")
+        '156dy'
+
+        >>> mfdnres.data.isotope_str((66,90), format="ZN")
+        'Z66-N90'
 
     Arguments:
 
@@ -419,6 +456,12 @@ def parse_isotope_str(label):
     This is the inverse of isotope_str(). Note that this function is *almost*
     case insensitive; "n" (neutron) is distinguished from "N" (nitrogen). This
     is the only instance where the case is relevant.
+
+    Example:
+
+        >>> mfdnres.data.parse_isotope_str("156Dy")
+
+        (66, 90)
 
     Arguments:
         label (str): simple string representation of nuclide
