@@ -25,7 +25,9 @@ University of Notre Dame
         their label sets) to rebinned_decomposition().
         + Add filter_decomposition().
     - 10/18/23 (mac): Add label formatting for simple label types (SLabels, etc.).
-
+    - 02/16/25 (mac):
+        + Add decomposition_type option for read_eigenvalues(), to remove spectator quantum numbers.
+        + Add namedtuple support for LS and U3LS decompositions.
 """
 
 import collections
@@ -314,19 +316,26 @@ def decomposition_eigenvalue_filename(
 
     return qualified_filename
 
-def read_eigenvalues(filename, swap=False, verbose=False):
+def read_eigenvalues(filename, decomposition_type=None, swap_sp_sn=False, verbose=False):
     """Read table mapping irrep labels to Casimir eigenvalues.
 
     Eigenvalue degeneracies are allowed.
 
     File format:
+
         label1 label2 ... eigenvalue
 
     Arguments:
+
         filename (str): Input filename
+
+        decomposition_type (str, optional): Decomposition type (used to remove
+        spectator quantum numbers from labels stored in eigenvalue file and
+        recast label to namedtuple)
 
     Returns:
         (dict): Mapping from eigenvalue to list of degenerate labels
+
     """
 
     # read data
@@ -338,7 +347,11 @@ def read_eigenvalues(filename, swap=False, verbose=False):
     # collect labels by eigenvalue
     eigenvalue_label_dict = {}
     for row in table:
-        if swap:
+        if swap_sp_sn:
+            # TODO (mac): This swaps Sp and Sn, as needed to use eigenvalues for
+            # mirror nuclide.  However, it would be more robust (against future
+            # definitions of label sets) to swap Sp and Sn labels by name,
+            # after casting labels to namedtuple.
             label = tuple(list(row[:3])+list(row[4:2:-1])+list(row[5:-1])) # swap row[3] and row[4]
         else:
             label = tuple(row[:-1])
@@ -346,11 +359,20 @@ def read_eigenvalues(filename, swap=False, verbose=False):
         eigenvalue_label_dict.setdefault(eigenvalue,[])
         eigenvalue_label_dict[eigenvalue].append(label)
 
-    # convert list of labels to tuples
+    # convert list of labels to tuples and remove spectator quantum numbers
     #
     # This is necessary so that they can be used as an immutable binning key.
-    for eigenvalue in eigenvalue_label_dict:
-        eigenvalue_label_dict[eigenvalue] = tuple(eigenvalue_label_dict[eigenvalue])
+    if decomposition_type is None:
+        subsetting_function = lambda x: x
+    else:
+        old_label_type = SOURCE_LABEL_CLASS_BY_DECOMPOSITION_TYPE[decomposition_type]
+        new_label_type = LABEL_CLASS_BY_DECOMPOSITION_TYPE[decomposition_type]
+        subsetting_function = namedtuple_subsetting_function(old_label_type, new_label_type)
+        
+    for eigenvalue, label_list in eigenvalue_label_dict.items():
+        new_label_set = set(map(subsetting_function, label_list))  # downsample and remove redundancies (with set)
+        new_label_list = tuple(sorted(tuple(new_label_set)))   # canonicalize order of labels
+        eigenvalue_label_dict[eigenvalue] = new_label_list
 
     # diagnostic output
     if (verbose):
@@ -560,12 +582,14 @@ def label_transformation_baby_spncci_to_sp3rs(labels):
 NexLabels = collections.namedtuple("NexLabels", ["N_omega"])
 SLabels = collections.namedtuple("SLabels", ["S"])
 LLabels = collections.namedtuple("LLabels", ["L"])
+LSLabels = collections.namedtuple("LLabels", ["S", "L"])
 
 # U(3) but non-Sp(3,R) labels
 U3Labels = collections.namedtuple("U3Labels", ["N_omega", "lambda_omega", "mu_omega"])
 U3SLabels = collections.namedtuple("U3SLabels", ["N_omega", "lambda_omega", "mu_omega", "S"])
-U3LSpSnSLabels = collections.namedtuple("U3LSpSnSLabels", ["N_omega", "lambda_omega", "mu_omega", "Sp", "Sn", "S", "L"])
 U3SpSnSLabels = collections.namedtuple("U3SpSnSLabels", ["N_omega", "lambda_omega", "mu_omega", "Sp", "Sn", "S"])
+U3LSLabels = collections.namedtuple("U3LSLabels", ["N_omega", "lambda_omega", "mu_omega", "S", "L"])
+U3LSpSnSLabels = collections.namedtuple("U3LSpSnSLabels", ["N_omega", "lambda_omega", "mu_omega", "Sp", "Sn", "S", "L"])
 
 # Sp(3,R) labels
 Sp3RLabels = collections.namedtuple("Sp3RLabels", ["N_sigma", "lambda_sigma", "mu_sigma"])
@@ -578,14 +602,25 @@ LABEL_CLASS_BY_DECOMPOSITION_TYPE = {
     "Nex": NexLabels,
     "S": SLabels,
     "L": LLabels,
+    "LS": LSLabels,
     "U3": U3Labels,
     "U3S": U3SLabels,
-    "U3LSpSnS": U3LSpSnSLabels,
     "U3SpSnS": U3SpSnSLabels,
+    "U3LS": U3LSLabels,
+    "U3LSpSnS": U3LSpSnSLabels,
     "Sp3R": Sp3RLabels,
     "Sp3RS": Sp3RSLabels,
     "Sp3RSpSnS": Sp3RSpSnSLabels,
     "BabySpNCCI": BabySpNCCILabels,
+}
+SOURCE_LABEL_CLASS_BY_DECOMPOSITION_TYPE = {
+    # Eigenvalue files contain full irrep labels (N, lambda, mu, Sp, Sn, S,
+    # [L]), even if degeneracies are not resolved for given decomposition type.
+    "U3S": U3SpSnSLabels,
+    "U3SpSnS": U3SpSnSLabels,
+    "U3LS": U3LSpSnSLabels,
+    "U3LSpSnS": U3LSpSnSLabels,
+    "Sp3RSpSnS": Sp3RSpSnSLabels,
 }
 
 # string formatting
@@ -605,6 +640,13 @@ def format_s_label(self):
 
 SLabels.__str__ = format_s_label
 
+def format_ls_label(self):
+    S, L = self
+    label_text = "{:s}:{:d}".format(ticks.half_int_str(S), int(S))
+    return label_text
+
+LSLabels.__str__ = format_ls_label
+
 def format_u3_label(self):
     N, lam, mu = self
     label_text = "{:d}({:d},{:d})".format(int(N), int(lam), int(mu))
@@ -621,6 +663,13 @@ def format_u3s_label(self):
 U3SLabels.__str__ = format_u3s_label
 Sp3RLabels.__str__ = format_u3s_label
 
+def format_u3ls_label(self):
+    N, lam, mu, S, L = self
+    label_text = "{:d}({:d},{:d}){:s}:{:d}".format(int(N), int(lam), int(mu), ticks.half_int_str(S), int(L))
+    return label_text
+
+U3LSLabels.__str__ = format_u3ls_label
+
 def format_u3sss_label(self):
     N, lam, mu, Sp, Sn, S = self
     label_text = "{:d}({:d},{:d}){:s},{:s},{:s}".format(int(N), int(lam), int(mu), ticks.half_int_str(Sp), ticks.half_int_str(Sn), ticks.half_int_str(S))
@@ -628,6 +677,13 @@ def format_u3sss_label(self):
 
 U3SpSnSLabels.__str__ = format_u3sss_label
 Sp3RSpSnSLabels.__str__ = format_u3sss_label
+
+def format_u3lsss_label(self):
+    N, lam, mu, Sp, Sn, S, L = self
+    label_text = "{:d}({:d},{:d}){:s},{:s},{:s}:{:d}".format(int(N), int(lam), int(mu), ticks.half_int_str(Sp), ticks.half_int_str(Sn), ticks.half_int_str(S), int(L))
+    return label_text
+
+U3LSpSnSLabels.__str__ = format_u3lsss_label
 
 ################################################################
 # decomposition rebinning -- label subsetting
@@ -689,8 +745,6 @@ def namedtuple_subsetting_function(long_labels_type, short_labels_type):
 
 def rebinned_decomposition(decomposition, subsetting_specifier, verbose=False):
     """Rebin decomposition according to new labeling.
-
-    
 
     E.g., may by used to rebin "U3S" to S, by transformation
     label_transformation_U3S_to_S.
@@ -760,9 +814,13 @@ def filter_decomposition(condition, decomposition, verbose=False):
 
 
 def Nex_filter(Nex_max):
-    """ Generate filter condition to select by Nex of first decomposition label.
+    """Generate filter condition to select by Nex of first decomposition label.
+
+    Precondition: Label tuple must be of a type where the first quantum number
+    represents Nex.
 
     For use with filter_decomposition().
+
     """
     
     return lambda decomposition_item : decomposition_item[0][0][0]<=Nex_max
