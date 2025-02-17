@@ -416,6 +416,16 @@ def slurp_res_files(
 
     return mesh_data
 
+ND_DIRECTORY_BY_USER = {
+    "mac": "mcaprio",
+    "aem": "amccoy",
+    "pjf": "pfasano",
+    "pm": "pmaris",
+    "slv": "svittal",
+    "src": "scarmichael",
+    "zz": "zzhou",
+    "seb": "sbaker",
+}
 
 def read_runs(
         run_list, *,
