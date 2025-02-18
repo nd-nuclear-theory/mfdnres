@@ -25,9 +25,12 @@ University of Notre Dame
         their label sets) to rebinned_decomposition().
         + Add filter_decomposition().
     - 10/18/23 (mac): Add label formatting for simple label types (SLabels, etc.).
-    - 02/16/25 (mac):
-        + Add decomposition_type option for read_eigenvalues(), to remove spectator quantum numbers.
-        + Add namedtuple support for LS and U3LS decompositions.
+    - 02/16/25 (mac): Add namedtuple support for LS and U3LS decompositions.
+    - 02/18/25 (mac):
+        + Add break_irrep_group_label option to set_up_decomposition_axes().
+        + Provide decomposition_type option to generate_decomposition().
+        + Redefine decomposition_type argument (previously subsetting_specifier)
+          to rebinned_decomposition().
 """
 
 import collections
@@ -178,19 +181,44 @@ def generate_raw_decomposition(alpha_beta, lanczos_iterations=None):
 # decomposition binning
 ################################################################
 
-def generate_decomposition(alpha_beta, eigenvalue_label_dict, lanczos_iterations=None, verbose=False):
+def generate_decomposition(alpha_beta, eigenvalue_label_dict, decomposition_type=None, *, lanczos_iterations=None, verbose=False):
     """Generate decomposition from Lanczos alpha-beta matrix and expected eigenvalues.
 
+    When the decomposition_type is provided, this improves handling of the irrep
+    labels:
+    
+        + Irrep labels are recast to namedtuples (providing "pretty" output
+          formatting).
+
+        + Degenerate (unresolved) spectator quantum numbers are removed from
+          irrep labels (e.g., in the raw decomposition, Sp and Sn labels are
+          enumerated, since they are stored in the underlying eigenvalue file
+          for a U3S decomposition, even though they are unresolved).
+
+        + Any resulting redundancies in the group of irrep labels for each bin
+          are eliminated (e.g., irreps differing only in aforementioned
+          spectator labels).
+
     Arguments:
+
         alpha_beta (tuple): (alpha,beta)
+
             alpha (np.array of float): alpha matrix elements
+
             beta (np.array of float): beta matrix elements
+
         eigenvalue_label_dict (dict): mapping of eigenvalue to labels (may be tuple of degenerate labels)
+
             eigenvalue (float)
+
             labels (int, tuple, etc.)
+
+        decomposition_type (str, optional): Decomposition type identifier
+
         lanczos_iterations (int, optional): number of effective Lanczos iterations to which to truncate
 
     Returns:
+
         decomposition (dict): probabilities binned by label (given as tuple of degenerate labels)
 
     """
@@ -207,9 +235,19 @@ def generate_decomposition(alpha_beta, eigenvalue_label_dict, lanczos_iterations
         print("Expected eigenvalue -> label group")
         for eigenvalue in expected_eigenvalues:
             print("{:+8.3f} -> {}".format(eigenvalue, eigenvalue_label_dict[eigenvalue]))
+    if decomposition_type is None:
+        print("DEPRECATED: Call to mfdnres.decomposition.generate_decomposition() without decomposition_type argument is deprecated.")
+        subsetting_function = lambda x: x
+    else:
+        raw_label_type = SOURCE_LABEL_CLASS_BY_DECOMPOSITION_TYPE[decomposition_type]
+        label_type = LABEL_CLASS_BY_DECOMPOSITION_TYPE[decomposition_type]
+        subsetting_function = labels_subsetting_function(label_type, source_labels_type=raw_label_type)
     label_groups = []
     for eigenvalue in expected_eigenvalues:
-        label_groups.append(eigenvalue_label_dict[eigenvalue])
+        raw_label_group = eigenvalue_label_dict[eigenvalue]
+        label_group = map(subsetting_function, raw_label_group)  # remove spectator quantum numbers
+        pruned_and_sorted_label_group = tuple(sorted(tuple(set(label_group))))   # remove redundancies (with set) and canonicalize order of labels
+        label_groups.append(pruned_and_sorted_label_group)
     bins = histogram.BinMapping.create_bisection_bins(expected_eigenvalues)
     binned_decomposition = histogram.BinMapping(keys=label_groups, bins=bins)
     for eigenvalue, probability in raw_decomposition:
@@ -221,6 +259,11 @@ def generate_decomposition(alpha_beta, eigenvalue_label_dict, lanczos_iterations
 
     # convert to dict for well-behaved access using label (rather than eigenvalue) as key
     decomposition = binned_decomposition.as_dict()
+
+    if (verbose):
+        print("Decomposition (by labels)")
+        for label_group, probability in decomposition.items():
+            print("{} : {:8.6f}".format(label_group, probability))
 
     return decomposition
 
@@ -316,7 +359,7 @@ def decomposition_eigenvalue_filename(
 
     return qualified_filename
 
-def read_eigenvalues(filename, decomposition_type=None, swap_sp_sn=False, verbose=False):
+def read_eigenvalues(filename, swap_sp_sn=False, verbose=False):
     """Read table mapping irrep labels to Casimir eigenvalues.
 
     Eigenvalue degeneracies are allowed.
@@ -328,10 +371,6 @@ def read_eigenvalues(filename, decomposition_type=None, swap_sp_sn=False, verbos
     Arguments:
 
         filename (str): Input filename
-
-        decomposition_type (str, optional): Decomposition type (used to remove
-        spectator quantum numbers from labels stored in eigenvalue file and
-        recast label to namedtuple)
 
     Returns:
         (dict): Mapping from eigenvalue to list of degenerate labels
@@ -352,27 +391,18 @@ def read_eigenvalues(filename, decomposition_type=None, swap_sp_sn=False, verbos
             # mirror nuclide.  However, it would be more robust (against future
             # definitions of label sets) to swap Sp and Sn labels by name,
             # after casting labels to namedtuple.
-            label = tuple(list(row[:3])+list(row[4:2:-1])+list(row[5:-1])) # swap row[3] and row[4]
+            label = tuple(list(row[:3])+list(row[4:2:-1])+list(row[5:-1]))  # swap row[3] and row[4]
         else:
             label = tuple(row[:-1])
         eigenvalue = row[-1]
         eigenvalue_label_dict.setdefault(eigenvalue,[])
         eigenvalue_label_dict[eigenvalue].append(label)
 
-    # convert list of labels to tuples and remove spectator quantum numbers
+    # convert list of labels to tuples
     #
     # This is necessary so that they can be used as an immutable binning key.
-    if decomposition_type is None:
-        subsetting_function = lambda x: x
-    else:
-        old_label_type = SOURCE_LABEL_CLASS_BY_DECOMPOSITION_TYPE[decomposition_type]
-        new_label_type = LABEL_CLASS_BY_DECOMPOSITION_TYPE[decomposition_type]
-        subsetting_function = namedtuple_subsetting_function(old_label_type, new_label_type)
-        
     for eigenvalue, label_list in eigenvalue_label_dict.items():
-        new_label_set = set(map(subsetting_function, label_list))  # downsample and remove redundancies (with set)
-        new_label_list = tuple(sorted(tuple(new_label_set)))   # canonicalize order of labels
-        eigenvalue_label_dict[eigenvalue] = new_label_list
+        eigenvalue_label_dict[eigenvalue] = tuple(label_list)
 
     # diagnostic output
     if (verbose):
@@ -431,8 +461,8 @@ def print_decomposition(decomposition, label_format="", probability_format="8.6f
 def labeled_decomposition(label_list, decomposition):
     """Digest natively-calculated decomposition into dictionary.
 
-    This function repackaged decompositions provided in the results from the
-    many-body code (e.g., the decomposition by Nex from mfdn).
+    This function repackages decompositions provided "natively" in the results
+    from the many-body code (e.g., the decomposition by Nex from mfdn).
 
     Dictionary is of form:
 
@@ -689,10 +719,13 @@ U3LSpSnSLabels.__str__ = format_u3lsss_label
 # decomposition rebinning -- label subsetting
 ################################################################
 
-def namedtuple_subsetting_function(long_labels_type, short_labels_type):
+def labels_subsetting_function(target_labels_type, *, source_labels_type=None):
     """Factory function to provide subsetting function between namedtuple types.
 
-    Assumes fields in short_labels_type are subset of those in long_labels_type.
+    Only needs to know source_labels_type to be able to take raw tuple as input
+    and properly cast it.
+
+    Assumes fields in target_labels_type are subset of those in source_labels_type.
     Otherwise, use of resulting subsetting function will result in a TypeError
     exception.
 
@@ -704,61 +737,77 @@ def namedtuple_subsetting_function(long_labels_type, short_labels_type):
     Example:
 
         >>> import collections
+        >>> import mfdnres.decomposition 
         >>> LongLabels = collections.namedtuple("LongLabels", ["a", "b", "c"])
         >>> ShortLabels = collections.namedtuple("ShortLabels", ["a", "c"])
-        >>> long_labels = LongLabels(1,2,3)
-        >>> f = mfdnres.decomposition.namedtuple_subsetting_function(LongLabels, ShortLabels)
-        >>> short_labels = f(long_labels)
-        >>> print("{} -> {}".format(long_labels, short_labels))
-        
+        >>> source_labels = LongLabels(1,2,3)
+        >>> f = mfdnres.decomposition.labels_subsetting_function(ShortLabels, source_labels_type=LongLabels)
+        >>> target_labels = f(source_labels)
+        >>> print("{} -> {}".format(source_labels, target_labels))
+        >>> plain_tuple = (4, 5, 6)        
+        >>> target_labels = f(plain_tuple)
+        >>> print("{} -> {}".format(plain_tuple, target_labels))
+
         LongLabels(a=1, b=2, c=3) -> ShortLabels(a=1, c=3)
+        (4, 5, 6) -> ShortLabels(a=4, c=6)
 
     Arguments:
 
-        long_labels_type (collections.namedtuple): long label tuple type
+        target_labels_type (collections.namedtuple): target namedtuple type
 
-        short_labels_type (collections.namedtuple): short label tuple type
+        source_labels_type (collections.namedtuple, optional): source namedtuple type
+
 
     Return:
 
-        (callable): subsetting function (tuple or long_labels_type -> short_labels_type)
+        (callable): subsetting function (tuple or source_labels_type -> short_labels_type)
 
     """
 
-    def the_subsetting_function(long_labels):
-        # cast argument (which might just be plain tuple) to long_labels_type namedtuple
-        long_labels = long_labels_type(*long_labels)
+    def the_subsetting_function(source_labels):
+        # cast argument (which might just be plain tuple) to source_labels_type namedtuple
+        if source_labels_type is not None:
+            source_labels = source_labels_type(*source_labels)
 
-        # subset the key-value pairs from long_labels to those supported by short_labels_type
+        # subset the key-value pairs from source_labels to those supported by short_labels_type
         filtered_dict = {
             k: v
-            for k, v in long_labels._asdict().items()
-            if k in short_labels_type._fields
+            for k, v in source_labels._asdict().items()
+            if k in target_labels_type._fields
         }
 
         # cast result to short_labels_type namedtuple
-        short_labels = short_labels_type(**filtered_dict)
+        target_labels = target_labels_type(**filtered_dict)
         
-        return short_labels
+        return target_labels
     
     return the_subsetting_function
 
-def rebinned_decomposition(decomposition, subsetting_specifier, verbose=False):
+
+def rebinned_decomposition(decomposition, decomposition_type, verbose=False):
     """Rebin decomposition according to new labeling.
 
     E.g., may by used to rebin "U3S" to S, by transformation
     label_transformation_U3S_to_S.
 
+    If decomposition_type is given as simply the target decomposition type
+    (simplest and therefore recommended), the source decomposition should
+    already be labeled by namedtuples.  This is accomplished by providing a
+    decomposition_type argument to mfdnres.decomposition.generate_decomposition.
+
     TODO 10/28/23 (mac): Merge overlapping label lists.
 
     Arguments:
 
-        decomposition (dict): mapping from tuple of degenerate labels label (typically int or tuple) to probability
+        decomposition (dict): source decomposition (before rebinning), as
+        mapping from tuple of degenerate labels label (typically int or tuple)
+        to probability
 
-        subsetting_specifier (tuple[str]): tuple (old_decomposition_type,
-            new_decomposition_type) defining old (longer) and new (shorter)
-            label types; for legacy support, may instead be a callable
-            (function) mapping old label to new label
+        decomposition_type (str): identifier string for target decomposition
+            type (after rebinning); for legacy support, may instead be a tuple
+            (old_decomposition_type, new_decomposition_type) defining old
+            (longer) and new (shorter) label types; for legacy support, may
+            instead be a callable (function) mapping old label to new label
 
     Returns
         (dict): rebinned decomposition
@@ -766,19 +815,24 @@ def rebinned_decomposition(decomposition, subsetting_specifier, verbose=False):
     """
 
     # construct label subsetting function
-    if type(subsetting_specifier) is tuple:
-        old_decomposition_type, new_decomposition_type = subsetting_specifier
+    if type(decomposition_type) is str:
+        label_type = LABEL_CLASS_BY_DECOMPOSITION_TYPE[decomposition_type]
+        subsetting_function = labels_subsetting_function(label_type)
+    elif type(decomposition_type) is tuple:
+        # DEPRECATED
+        print("DEPRECATED: Call to mfdnres.decomposition.rebinned_decomposition() with old format for decomposition_type argument.")
+        old_decomposition_type, new_decomposition_type = decomposition_type
         old_label_type = LABEL_CLASS_BY_DECOMPOSITION_TYPE[old_decomposition_type]
         new_label_type = LABEL_CLASS_BY_DECOMPOSITION_TYPE[new_decomposition_type]
-        subsetting_function = namedtuple_subsetting_function(old_label_type, new_label_type)
+        subsetting_function = labels_subsetting_function(new_label_type, source_labels_type=old_label_type)
     else:
-        subsetting_function = subsetting_specifier
+        # DEPRECATED
+        print("DEPRECATED: Call to mfdnres.decomposition.rebinned_decomposition() with old format for decomposition_type argument.")
+        subsetting_function = decomposition_type
 
     # rebin decomposition
     new_decomposition = {}
     for (label_list, probability) in decomposition.items():
-        if (verbose):
-            print(subsetting_function, label_list, probability)
         new_label_set = set(map(subsetting_function, label_list))  # downsample and remove redundancies (with set)
         new_label_list = tuple(sorted(tuple(new_label_set)))   # canonicalize order of labels
         new_decomposition[new_label_list] = new_decomposition.get(new_label_list, 0) + probability
@@ -786,6 +840,12 @@ def rebinned_decomposition(decomposition, subsetting_specifier, verbose=False):
     # sort new decomposition canonically by label sets
     new_decomposition = dict(sorted(new_decomposition.items()))
 
+    if (verbose):
+        print("Decomposition (by labels)")
+        for label_group, probability in new_decomposition.items():
+            print("{} : {:8.6f}".format(label_group, probability))
+
+    
     return new_decomposition
 
 
@@ -831,6 +891,7 @@ def Nex_filter(Nex_max):
 
 def set_up_decomposition_axes(
         ax, decomposition, *,
+        break_irrep_group_label = False,
         decomposition_range_extension=(0.02,0.02),
         decomposition_axis_label_text=None,
         probability_range=(0.00,1.00),
@@ -850,6 +911,9 @@ def set_up_decomposition_axes(
         ax (mpl.axes.Axes): axes object
 
         decomposition (dict): decomposition dictionary (with label sets as keys)
+
+        break_irrep_group_label (bool, optional): whether or not to break labels for compound groups 
+          of irreps with a newline at the slash
  
         decomposition_axis_label_text (str, optional): override for decomposition axis label text
 
@@ -875,7 +939,15 @@ def set_up_decomposition_axes(
 
     # construct labels
     def format_label_set(label_set):
-        label_text = " / ".join(map(str, label_set))
+        if break_irrep_group_label and len(label_set)>1:
+            prefix = "  "  # hack to approximately right-flush the first line of the label
+        else:
+            prefix = ""
+        if break_irrep_group_label:
+            separator = "\n/ "
+        else:
+            separator = " / "
+        label_text = prefix + separator.join(map(str, label_set))
         return label_text
     decomposition_labels = list(map(format_label_set, decomposition.keys()))
     num_labels = len(decomposition_labels)
