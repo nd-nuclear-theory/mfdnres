@@ -608,7 +608,7 @@ def label_transformation_baby_spncci_to_sp3rs(labels):
 # decomposition label classes
 ################################################################
 
-# singlet labels
+# non-U(3) labels
 NexLabels = collections.namedtuple("NexLabels", ["N_omega"])
 SLabels = collections.namedtuple("SLabels", ["S"])
 LLabels = collections.namedtuple("LLabels", ["L"])
@@ -626,6 +626,9 @@ Sp3RLabels = collections.namedtuple("Sp3RLabels", ["N_sigma", "lambda_sigma", "m
 Sp3RSLabels = collections.namedtuple("Sp3RSLabels", ["N_sigma", "lambda_sigma", "mu_sigma", "S"])
 Sp3RSpSnSLabels = collections.namedtuple("Sp3RSLabels", ["N_sigma", "lambda_sigma", "mu_sigma", "Sp", "Sn", "S"])
 BabySpNCCILabels = collections.namedtuple("BabySpNCCILabels", ["N_sigma", "lambda_sigma", "mu_sigma", "N_omega", "lambda_omega", "mu_omega", "Sp", "Sn", "S"])
+
+# special labels
+SU3Labels = collections.namedtuple("SU3Labels", ["lambda_omega", "mu_omega"])
 
 # lookup table for decomosition label classes
 LABEL_CLASS_BY_DECOMPOSITION_TYPE = {
@@ -714,6 +717,13 @@ def format_u3lsss_label(self):
     return label_text
 
 U3LSpSnSLabels.__str__ = format_u3lsss_label
+
+def format_su3_label(self):
+    lam, mu = self
+    label_text = "({:d},{:d})".format(int(lam), int(mu))
+    return label_text
+
+SU3Labels.__str__ = format_su3_label
 
 ################################################################
 # decomposition rebinning -- label subsetting
