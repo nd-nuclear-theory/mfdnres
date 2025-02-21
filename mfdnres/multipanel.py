@@ -15,6 +15,7 @@
     - 05/25/21 (mac): Move in suppress_interior_labels() from data.py.
     - 12/26/21 (mac): Add support for secondary axes in suppress_interior_labels().
     - 08/19/23 (mac): Add option show_primary for suppress_interior_labels().
+    - 02/21/25 (mac): Add option row_sense for panel_index().
 
 """
 
@@ -28,18 +29,21 @@ import matplotlib.pyplot as plt
 # helper functions
 ################################################################
 
-def panel_index(dimensions,panel_indices,direction="horizontal",shift=0):
+def panel_index(dimensions, panel_indices, direction="horizontal", row_sense="down", shift=0):
     """ Recover counting index for panel.
 
     Arguments:
 
-        dimensions (tuple of int): array dimensions (num_rows,num_cols) of multipanel grid
+        dimensions (tuple of int): Array dimensions (num_rows,num_cols) of multipanel grid.
 
-        panel_indices (tuple of int): array indices (row,col) in multipanel grid
+        panel_indices (tuple of int): Array indices (row,col) in multipanel grid.
 
-        direction (str, optional): most-rapidly varying index ("horizontal" or "vertical") for iteration
+        direction (str, optional): Most-rapidly varying index ("horizontal" or "vertical")
+            for iteration.
 
-        shift (int, optional): shift to panel indexing
+        row_sense (str, optional): Direction ("up" or "down") in which rows are filled.
+
+        shift (int, optional): Shift to panel indexing.
 
     Returns:
 
@@ -47,6 +51,12 @@ def panel_index(dimensions,panel_indices,direction="horizontal",shift=0):
 
     """
     row, col = panel_indices
+    if row_sense=="down":
+        pass
+    elif row_sense=="up":
+        row = dimensions[0] - row - 1
+    else:
+        raise(ValueError("unrecognized row sense {}".format(row_sense)))
     if direction=="horizontal":
         panel_index = row*dimensions[1]+col
     elif direction=="vertical":
