@@ -39,6 +39,7 @@
     10/24/24 (mac):
         - Add results_type option for res_file_directory().
         - Add read_runs().
+    02/22/24 (mac): Add results_postprocessors option to read_runs().
 
 """
 
@@ -431,33 +432,41 @@ def read_runs(
         run_list, *,
         directory_by_user={}, code="mfdn", results_type="res",
         slurp_function=slurp_res_files,
+        results_postprocessors=[],
+        verbose=False,
         **slurp_function_kw,
 ):
     """Slurp results file for multiple runs, assuming standard results directory tree.
 
     Arguments:
 
-        run_list (list of str): List of run names (without "run" prefix)
+        run_list (list of str): List of run names (without "run" prefix).
 
         directory_by_user (dict, optional): Mapping from initials in run name to
-        user subdirectory name (e.g., {"mac": "mcaprio"})
+        user subdirectory name (e.g., {"mac": "mcaprio"}).
 
-        code (str): Code name (e.g., "spncci")
+        code (str): Code name (e.g., "spncci").
 
         results_type (str, optional): Name of sub-subdirectory for given
         type of results file (e.g., "res", "lanczos", ...), within results
-        subdirectory
+        subdirectory.
 
         slurp_function (callable): Function to slurp contents of single
         directory (e.g., mfdnres.input.slurp_res_files,
-        mfdnres.decomposition.slurp_lanczos_files)
+        mfdnres.decomposition.slurp_lanczos_files).
+
+        results_postprocessors (list[callable], optional): Postprocessing
+        functions to call (in sequence) on each results_data object.
 
         **slurp_function_kw (dict, optional): Keyword arguments for slurp function,
         e.g., verbose=True.
 
     """
 
-    run_list = sorted(list(set(run_list)))  # remove redundancies
+    # remove redundancies
+    run_list = sorted(list(set(run_list)))
+
+    # slurp run directories
     mesh_data = []
     for run in run_list:
         user = run[:3].strip("0123456789")
@@ -467,6 +476,11 @@ def read_runs(
             results_type=results_type,
         )
         mesh_data += slurp_function(data_dir, **slurp_function_kw)
+
+    # postprocess results
+    for results_data in mesh_data:
+        for results_postprocessor in results_postprocessors:
+            results_postprocessor(results_data)
         
     return mesh_data
 
