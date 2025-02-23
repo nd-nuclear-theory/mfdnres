@@ -31,12 +31,15 @@ University of Notre Dame
         + Provide decomposition_type option to generate_decomposition().
         + Redefine decomposition_type argument (previously subsetting_specifier)
           to rebinned_decomposition().
-    - 02/23/25 (mac): Provide default behavior for labels_subsetting_function, to 
+    - 02/23/25 (mac):
+        + Change default behavior for labels_subsetting_function, to 
         cast plain tuples to target_labels_type.
+        + Add merge_decomposition() and merge option to rebinned_decomposition().
 """
 
 import collections
 import glob
+import itertools
 import os
 
 import numpy as np
@@ -179,6 +182,7 @@ def generate_raw_decomposition(alpha_beta, lanczos_iterations=None):
 
     return raw_decomposition
 
+
 ################################################################
 # decomposition binning
 ################################################################
@@ -268,6 +272,7 @@ def generate_decomposition(alpha_beta, eigenvalue_label_dict, decomposition_type
             print("{} : {:8.6f}".format(label_group, probability))
 
     return decomposition
+
 
 ################################################################
 # decomposition eigenvalues
@@ -439,6 +444,7 @@ def mean_am_sqr(decomposition):
         mean_am2+=am*(am+1)*decomposition[am]
     return mean_am2
 
+
 def print_decomposition(decomposition, label_format="", probability_format="8.6f"):
     """Print diagnostic output of decomposition, sorted by labels.
 
@@ -605,6 +611,7 @@ def label_transformation_baby_spncci_to_sp3rs(labels):
     """
     (N_sigma,lambda_sigma,mu_sigma,N_omega,lambda_omega,mu_omega,Sp,Sn,S) = labels
     return (N_sigma,lambda_sigma,mu_sigma,S)
+
 
 ################################################################
 # decomposition label classes
@@ -811,32 +818,41 @@ def labels_subsetting_function(target_labels_type, *, source_labels_type=None):
     return the_subsetting_function
 
 
-def rebinned_decomposition(decomposition, decomposition_type, verbose=False):
+def rebinned_decomposition(
+        decomposition, decomposition_type, *, merge=True, verbose=False,
+):
     """Rebin decomposition according to new labeling.
 
-    E.g., may by used to rebin "U3S" to S, by transformation
-    label_transformation_U3S_to_S.
+    TODO (mac): Rename to rebin_decomposition() for consistency with other
+    functions in module, and provide deprecated alias with old name?
 
     If decomposition_type is given as simply the target decomposition type
     (simplest and therefore recommended), the source decomposition should
     already be labeled by namedtuples.  This is accomplished by providing a
     decomposition_type argument to mfdnres.decomposition.generate_decomposition.
 
-    TODO 10/28/23 (mac): Merge overlapping label lists.
+    The resulting degenerate label sets may not be disjoint, if some
+    degeneracies are partially resolved by the discarded labels (e.g., the
+    discarded Sp and Sn labels may help to distinguish between two degenerate U3
+    irreps, for some but not all of the U3SpSnS subspaces involving those
+    degenerate U3 labels).  While there may be useful information in these
+    partially resolved degeneracies, they are a pain for plotting.  This
+    information can be discarded by then "mergeing" the decomposition, to
+    merge overlapping label lists.
 
     Arguments:
 
-        decomposition (dict): source decomposition (before rebinning), as
-        mapping from tuple of degenerate labels label (typically int or tuple)
-        to probability
+        decomposition (dict): Source decomposition (before rebinning), as
+        mapping from tuple of degenerate labels to probability.
 
-        decomposition_type (str): identifier string for target decomposition
+        decomposition_type (str): Identifier string for target decomposition
             type (after rebinning); for legacy support, may instead be a tuple
             (old_decomposition_type, new_decomposition_type) defining old
             (longer) and new (shorter) label types; for legacy support, may
-            instead be a callable (function) mapping old label to new label
+            instead be a callable (function) mapping old label to new label.
 
-    Returns
+    Returns:
+
         (dict): rebinned decomposition
 
     """
@@ -863,6 +879,10 @@ def rebinned_decomposition(decomposition, decomposition_type, verbose=False):
         new_label_list = tuple(sorted(tuple(new_label_set)))   # canonicalize order of labels
         new_decomposition[new_label_list] = new_decomposition.get(new_label_list, 0) + probability
 
+    # merge overlapping label sets
+    if merge:
+        new_decomposition = merge_decomposition(new_decomposition)
+        
     # sort new decomposition canonically by label sets
     new_decomposition = dict(sorted(new_decomposition.items()))
 
@@ -874,6 +894,49 @@ def rebinned_decomposition(decomposition, decomposition_type, verbose=False):
     
     return new_decomposition
 
+
+def merge_decomposition(
+        decomposition,
+        verbose=False,
+        ):
+    """ Merge overlapping label lists in a decomposition.
+
+    See docstring to rebinned_decomposition for the standard use case.
+
+    Arguments:
+
+        decomposition (dict): Source decomposition (before rebinning), as
+        mapping from tuple of degenerate labels to probability.
+
+    Returns:
+
+        (dict): rebinned decomposition
+
+    """
+
+    # re-key decomposition by frozensets (rather than tubles)
+    decomposition = {
+        frozenset(group): probability
+        for group, probability in decomposition.items()
+    }
+    if verbose:
+        print("  Mergeing: {}".format(decomposition))
+
+    # merge
+    merged = False
+    while not merged:
+        for group1, group2 in itertools.combinations(decomposition, 2):
+            if not group1.isdisjoint(group2):
+                if verbose:
+                    print("  Merging: {} {}".format(group1, group2))
+                group = frozenset(group1 | group2)
+                probability = decomposition.pop(group1) + decomposition.pop(group2)
+                decomposition[group] = probability
+                continue
+        merged = True
+
+    return decomposition
+        
 
 def filter_decomposition(condition, decomposition, verbose=False):
     """Filter decomposition (by labels or value).
