@@ -31,6 +31,8 @@ University of Notre Dame
         + Provide decomposition_type option to generate_decomposition().
         + Redefine decomposition_type argument (previously subsetting_specifier)
           to rebinned_decomposition().
+    - 02/23/25 (mac): Provide default behavior for labels_subsetting_function, to 
+        cast plain tuples to target_labels_type.
 """
 
 import collections
@@ -732,12 +734,12 @@ SU3Labels.__str__ = format_su3_label
 def labels_subsetting_function(target_labels_type, *, source_labels_type=None):
     """Factory function to provide subsetting function between namedtuple types.
 
-    Only needs to know source_labels_type to be able to take raw tuple as input
-    and properly cast it.
+    Assumes fields in target_labels_type are subset of those in any given source
+    labels namedtuple.  Otherwise, use of resulting subsetting function will result in a
+    TypeError exception.
 
-    Assumes fields in target_labels_type are subset of those in source_labels_type.
-    Otherwise, use of resulting subsetting function will result in a TypeError
-    exception.
+    Also accepts bare tuples, which will first be cast to the
+    target_labels_type, or to source_labels_type if given.
 
     The subsetting function produced here is based on dictionary operations.  It
     could perhaps be made much more efficient if the mapping between long and
@@ -761,12 +763,22 @@ def labels_subsetting_function(target_labels_type, *, source_labels_type=None):
         LongLabels(a=1, b=2, c=3) -> ShortLabels(a=1, c=3)
         (4, 5, 6) -> ShortLabels(a=4, c=6)
 
+
+        >>> import mfdnres.decomposition
+        >>> cast_to_su3 = mfdnres.decomposition.labels_subsetting_function(mfdnres.decomposition.SU3Labels)
+        >>> for x in [mfdnres.decomposition.U3Labels(0,4,0), mfdnres.decomposition.SU3Labels(4,0), (4,0)]:
+        >>>     print("  {:6} -> {}  {}".format(str(x), cast_to_su3(x), type(x)))
+        
+          0(4,0) -> (4,0)  <class 'mfdnres.decomposition.U3Labels'>
+          (4,0)  -> (4,0)  <class 'mfdnres.decomposition.SU3Labels'>
+          (4, 0) -> (4,0)  <class 'tuple'>
+
     Arguments:
 
-        target_labels_type (collections.namedtuple): target namedtuple type
+        target_labels_type (collections.namedtuple): Target namedtuple type.
 
-        source_labels_type (collections.namedtuple, optional): source namedtuple type
-
+        source_labels_type (collections.namedtuple, optional): Type to which to
+        cast plain tuple labels.  Defaults to target label type.
 
     Return:
 
@@ -775,9 +787,14 @@ def labels_subsetting_function(target_labels_type, *, source_labels_type=None):
     """
 
     def the_subsetting_function(source_labels):
-        # cast argument (which might just be plain tuple) to source_labels_type namedtuple
-        if source_labels_type is not None:
-            source_labels = source_labels_type(*source_labels)
+        
+        # cast plain tuple to source_labels_type namedtuple
+        if source_labels_type is None:
+            cast_labels_type = target_labels_type
+        else:
+            cast_labels_type = source_labels_type
+        if type(source_labels)==tuple:
+            source_labels = cast_labels_type(*source_labels)
 
         # subset the key-value pairs from source_labels to those supported by short_labels_type
         filtered_dict = {
@@ -786,7 +803,7 @@ def labels_subsetting_function(target_labels_type, *, source_labels_type=None):
             if k in target_labels_type._fields
         }
 
-        # cast result to short_labels_type namedtuple
+        # cast result to target_labels_type namedtuple
         target_labels = target_labels_type(**filtered_dict)
         
         return target_labels
@@ -836,8 +853,7 @@ def rebinned_decomposition(decomposition, decomposition_type, verbose=False):
         new_label_type = LABEL_CLASS_BY_DECOMPOSITION_TYPE[new_decomposition_type]
         subsetting_function = labels_subsetting_function(new_label_type, source_labels_type=old_label_type)
     else:
-        # DEPRECATED
-        print("DEPRECATED: Call to mfdnres.decomposition.rebinned_decomposition() with old format for decomposition_type argument.")
+        # assume argument to be a callable that subsets the old labels to yield the new labels
         subsetting_function = decomposition_type
 
     # rebin decomposition
@@ -1029,5 +1045,3 @@ def add_decomposition_plot(
         decomposition.values(), 
         **kw_full,
     )
-
-    
