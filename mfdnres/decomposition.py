@@ -35,6 +35,7 @@ University of Notre Dame
         + Change default behavior for labels_subsetting_function, to 
         cast plain tuples to target_labels_type.
         + Add merge_decomposition() and merge option to rebinned_decomposition().
+    - 02/25/25 (mac): Provide Nex_min option to Nex_filter().
 """
 
 import collections
@@ -819,7 +820,7 @@ def labels_subsetting_function(target_labels_type, *, source_labels_type=None):
 
 
 def rebinned_decomposition(
-        decomposition, decomposition_type, *, merge=True, verbose=False,
+        decomposition, decomposition_type, *, merge=False, verbose=False,
 ):
     """Rebin decomposition according to new labeling.
 
@@ -850,6 +851,9 @@ def rebinned_decomposition(
             (old_decomposition_type, new_decomposition_type) defining old
             (longer) and new (shorter) label types; for legacy support, may
             instead be a callable (function) mapping old label to new label.
+
+        merge (bool, optional): Whether or not to merge probabilities for
+        decomposition bins with overlapping label groups.
 
     Returns:
 
@@ -952,7 +956,7 @@ def filter_decomposition(condition, decomposition, verbose=False):
         decomposition (dict): mapping from tuple of degenerate labels label
             (typically int or tuple) to probability
 
-    Returns
+    Returns:
         (dict): filtered decomposition
 
     """
@@ -962,7 +966,7 @@ def filter_decomposition(condition, decomposition, verbose=False):
     return decomposition
 
 
-def Nex_filter(Nex_max):
+def Nex_filter(Nex_max, *, Nex_min=0):
     """Generate filter condition to select by Nex of first decomposition label.
 
     Precondition: Label tuple must be of a type where the first quantum number
@@ -970,9 +974,19 @@ def Nex_filter(Nex_max):
 
     For use with filter_decomposition().
 
+    Arguments:
+        
+        Nex_max (int): Maximum Nex
+
+        Nex_min (int, optional): Minimum Nex
+
+    Returns:
+
+        (callable): Filter function
+
     """
     
-    return lambda decomposition_item : decomposition_item[0][0][0]<=Nex_max
+    return lambda decomposition_item : Nex_min <= decomposition_item[0][0][0]<=Nex_max
 
 ################################################################
 # decomposition plotting
