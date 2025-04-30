@@ -557,7 +557,7 @@ class ExcitationEnergyExponentialExtrapolationSeparate(mfdnres.observable.Observ
         else:
             observable_text = r"E_x"
             label = r"{}({})".format(observable_text,level_text)
-        observable_text = "{} \mathrm{{exp3'}".format(observable_text)
+        observable_text = "{} \mathrm{{exp3'}}".format(observable_text)
         return label
 
     @property
