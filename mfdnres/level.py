@@ -10,6 +10,7 @@
 import numpy as np
 
 from . import (
+    analysis,
     data,
     ticks,
     tools,
@@ -242,7 +243,7 @@ class LevelQNNex(Level):
         if not Nex in [0,2]:
             raise ValueError("Unexpected Nex ({})".format(Nex))
         if self._debug:
-            print("Searching for qnNex {}".format(self._qnNex))
+            print("  Searching for qnNex {}".format(self._qnNex))
 
         # scan for sought level
         current_n = 0
@@ -256,9 +257,11 @@ class LevelQNNex(Level):
             Nex_ratio = decomposition[0]/decomposition[1]
             current_Nex = 0 if Nex_ratio>1 else 2
             if self._debug:
-                print("Nex_ratio {}: Nex {}".format(Nex_ratio, current_Nex))
+                print("  Nex_ratio {}: Nex {}".format(Nex_ratio, current_Nex))
             if current_Nex == Nex:
                 current_n_for_Nex += 1
+        if self._debug:
+            print("  Selected: {}".format(current_qn))
         return current_qn
 
     @property
@@ -328,15 +331,19 @@ class LevelOverride(Level):
         """
 
         if self._verbose:
-            print("Mesh point {}".format(results_data.params))
+            print("  Mesh point {}".format(results_data.params))
 
         # recover quantum numbers for sought level
         key = analysis.extract_key(self._key_fields, results_data)
         if key in self._qn_by_key:
             qn = self._qn_by_key[key]
+            if self._verbose:
+                print("  Override {}".format(qn))
         else:
             qn = self._base_level_selector.select_level(results_data)
-
+            if self._verbose:
+                print("  Pass through {}".format(qn))
+        
         # validate as existing level
         if qn not in results_data.levels:
             qn = None
