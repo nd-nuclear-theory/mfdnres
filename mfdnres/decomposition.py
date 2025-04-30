@@ -35,12 +35,18 @@ University of Notre Dame
         + Change default behavior for labels_subsetting_function, to 
         cast plain tuples to target_labels_type.
         + Add merge_decomposition() and merge option to rebinned_decomposition().
-    - 02/25/25 (mac): Provide Nex_min option to Nex_filter().
+    - 02/25/25 (mac): Provide option Nex_min to Nex_filter().
+    - 04/29/25 (mac):
+      + Provide option Nex to Nex_filter().
+      + Fix labeling for Sp3R.
+      + Fix filter_decomposition algorithm and return key type.
 """
 
 import collections
+import functools
 import glob
 import itertools
+import operator
 import os
 
 import numpy as np
@@ -231,6 +237,9 @@ def generate_decomposition(alpha_beta, eigenvalue_label_dict, decomposition_type
     """
 
     # generate Lanczos decomposition
+    if (verbose):
+        if alpha_beta is None:
+            print("WARNING: Missing alpha_beta coefficients")
     raw_decomposition = generate_raw_decomposition(alpha_beta, lanczos_iterations=lanczos_iterations)
     if (verbose):
         print("Raw decomposition")
@@ -704,7 +713,7 @@ def format_u3s_label(self):
     return label_text
 
 U3SLabels.__str__ = format_u3s_label
-Sp3RLabels.__str__ = format_u3s_label
+Sp3RSLabels.__str__ = format_u3s_label
 
 def format_u3ls_label(self):
     N, lam, mu, S, L = self
@@ -885,7 +894,7 @@ def rebinned_decomposition(
 
     # merge overlapping label sets
     if merge:
-        new_decomposition = merge_decomposition(new_decomposition)
+        new_decomposition = merge_decomposition(new_decomposition, verbose=verbose)
         
     # sort new decomposition canonically by label sets
     new_decomposition = dict(sorted(new_decomposition.items()))
@@ -918,17 +927,18 @@ def merge_decomposition(
 
     """
 
-    # re-key decomposition by frozensets (rather than tubles)
+    # re-key decomposition by frozensets (rather than tuples)
     decomposition = {
         frozenset(group): probability
         for group, probability in decomposition.items()
     }
     if verbose:
-        print("  Mergeing: {}".format(decomposition))
+        print("  Mergeing decomposition: {}".format(decomposition))
 
     # merge
-    merged = False
-    while not merged:
+    merge_completed = False
+    while not merge_completed:
+        found_nondijoint_pair = False
         for group1, group2 in itertools.combinations(decomposition, 2):
             if not group1.isdisjoint(group2):
                 if verbose:
@@ -936,9 +946,19 @@ def merge_decomposition(
                 group = frozenset(group1 | group2)
                 probability = decomposition.pop(group1) + decomposition.pop(group2)
                 decomposition[group] = probability
-                continue
-        merged = True
+                found_nondijoint_pair = True
+                break
+        merge_completed = not found_nondijoint_pair
 
+    # re-key decomposition by tuples (rather than frozensets)
+    decomposition = {
+        tuple(group): probability
+        for group, probability in decomposition.items()
+    }
+        
+    if verbose:
+        print("  Merged decomposition: {}".format(decomposition))
+        
     return decomposition
         
 
@@ -961,13 +981,25 @@ def filter_decomposition(condition, decomposition, verbose=False):
 
     """
 
-    decomposition = dict(filter(condition, decomposition.items()))
+    def condition_supporting_group(key):
+        if verbose:
+            print("Filtering key {} of type {}".format(key, type(key)))
+        if isinstance(key, frozenset):
+            print("Got here")
+            return functools.reduce(operator.and_, map(condition, key))
+        else:
+            return condition(key)
+    decomposition = dict(filter(condition_supporting_group, decomposition.items()))
     
     return decomposition
 
 
-def Nex_filter(Nex_max, *, Nex_min=0):
+def Nex_filter(Nex_max=None, *, Nex_min=0, Nex=None):
     """Generate filter condition to select by Nex of first decomposition label.
+
+    Can filter by specific Nex, maximal Nex, or Nex range.
+
+    Historically, took a single positional argument providing Nex_max.
 
     Precondition: Label tuple must be of a type where the first quantum number
     represents Nex.
@@ -980,11 +1012,19 @@ def Nex_filter(Nex_max, *, Nex_min=0):
 
         Nex_min (int, optional): Minimum Nex
 
+        Nex (int, optional): Specific Nex
+
     Returns:
 
         (callable): Filter function
 
     """
+
+    if (Nex is not None):
+        Nex_min = Nex_max = Nex
+    else:
+        if (Nex_max is None):
+            raise ValueError("Neither Nex nor Nex_max has been specified.")
     
     return lambda decomposition_item : Nex_min <= decomposition_item[0][0][0]<=Nex_max
 
