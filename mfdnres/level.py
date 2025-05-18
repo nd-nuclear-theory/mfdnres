@@ -101,7 +101,7 @@ class LevelQN(Level):
     def descriptor_str(self):
         """ Provide text string for use in descriptors.
         """
-        text = data.qn_str(self._qn)
+        text = tools.qn_str(self._qn)
         ## text = "{:04.1f}-{:1d}-{:02d}".format(*self._qn)  # manual without reference to submodule data
         return text
 

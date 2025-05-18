@@ -19,6 +19,7 @@ import mfdnres.am
 import mfdnres.data
 import mfdnres.ncci
 import mfdnres.observable
+import mfdnres.tools
 
 ################################################################
 # Q-invariant c.m. correction
@@ -192,7 +193,7 @@ class IntrinsicQuadrupoleMoment(mfdnres.observable.Observable):
         """ Text string describing observable.
         """
         return "-".join([
-            mfdnres.data.nuclide_str(self._nuclide),
+            mfdnres.tools.nuclide_str(self._nuclide),
             "Q0",
             self._operator,
             self._level.descriptor_str,
@@ -253,7 +254,7 @@ class IntrinsicBeta(mfdnres.observable.Observable):
         """ Text string describing observable.
         """
         return "-".join([
-            mfdnres.data.nuclide_str(self._nuclide),
+            mfdnres.tools.nuclide_str(self._nuclide),
             "beta",
             self._operator,
             self._level.descriptor_str,

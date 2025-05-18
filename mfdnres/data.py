@@ -66,6 +66,7 @@
     - 10/17/24 (mac): Provide legend_xy option for add_hw_scan_plot_Nmax_labels().
     - 01/18/25 (mac): Rename arguments and update docstrings to reflect 
         removal of support for legacy "tuple" observables.
+    - 05/18/25 (mac): Remove nuclide_str() and qn_str() in favor of implementation in tools.
 """
 
 import collections
@@ -381,31 +382,6 @@ def isotope(nuclide, format = None, as_tuple = False):
     
     return label
 
-
-def nuclide_str(nuclide):
-    """Generate simple string for nuclide code, for use in filenames, e.g., "Z03-N03".
-
-    Implements special case of isotope_str for format="ZN".
-
-    Example:
-
-        >>> mfdnres.data.nuclide_str((66,90))
-
-        'Z66-N90'
-
-    Arguments:
-
-        nuclide (tuple): (Z,N)
-
-    Returns:
-
-        (str): simple string representation of nuclide
-
-    """
-    (Z,N) = nuclide
-    label = "Z{nuclide[0]:02d}-N{nuclide[1]:02d}".format(nuclide=nuclide)
-    return label
-
 def isotope_str(nuclide, format = None, lower = False):
     """Generate simple string for isotope symbol, for use in filenames, e.g., "156Dy".
 
@@ -425,7 +401,8 @@ def isotope_str(nuclide, format = None, lower = False):
         nuclide (tuple): (Z,N)
 
         format (str, optional): format code for label ("AS"=A+Symbol,
-        "As"=A+symbol, "ZN"=Zxx-Nxx); if None, defaults to "AS"
+        "As"=A+symbol); also supports formatting as in filenames via
+        tools.qn_str ("ZN"=Zxx-Nxx); if None, defaults to "AS"
 
         lower (bool, optional, deprecated): force lowercase (redundant to format
         option value "As")
@@ -443,7 +420,7 @@ def isotope_str(nuclide, format = None, lower = False):
         A = sum(nuclide)
         label = "{}{}".format(A, element_symbol)
     elif format == "ZN":
-        label = nuclide_str(nuclide)
+        label = tools.nuclide_str(nuclide)
     else:
         raise ValueError("unrecognized format option".format(format))
     return label
@@ -528,20 +505,6 @@ def qn_text(qn,show_parity=True,show_index=True):
     label = r"{{{}}}^{{{}}}_{{{}}}".format(J_str,P_str,n_str)
     return label
 
-def qn_str(qn):
-    """Generate simple string for (J,g,n) quantum numbers, for use in filenames, e.g., "00.0-0-1".
-
-    Arguments:
-
-        qn (tuple): (J,g,n) quantum numbers
-
-    Returns:
-
-        (str): simple string representation of qn
-
-    """
-    label = "{:04.1f}-{:1d}-{:02d}".format(*qn)
-    return label
 
 HW_AXIS_LABEL_TEXT = r"$\hbar\omega~(\mathrm{MeV})$"
 NMAX_AXIS_LABEL_TEXT = r"$N_{\mathrm{max}}$"

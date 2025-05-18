@@ -25,6 +25,7 @@ from . import (
     am,
     analysis,
     data,
+    tools,
 )
 
 ################################################################
@@ -374,7 +375,7 @@ class Difference(Observable):
         arithmetic_operation = "diff"
         # for single-nuclide observable, include nuclide at start of descriptor
         try:
-            arithmetic_operation = "-".join([data.nuclide_str(self._nuclide), arithmetic_operation])
+            arithmetic_operation = "-".join([tools.nuclide_str(self._nuclide), arithmetic_operation])
         except AttributeError:
             pass
         return r"{}_{}_{}".format(
@@ -476,7 +477,7 @@ class Sum(Observable):
         arithmetic_operation = "sum"
         # for single-nuclide observable, include nuclide at start of descriptor
         try:
-            arithmetic_operation = "-".join([data.nuclide_str(self._nuclide), arithmetic_operation])
+            arithmetic_operation = "-".join([tools.nuclide_str(self._nuclide), arithmetic_operation])
         except AttributeError:
             pass
         return r"{}_{}_{}".format(
@@ -580,7 +581,7 @@ class Ratio(Observable):
 
         # for single-nuclide observable, include nuclide at start of descriptor
         try:
-            arithmetic_operation = "-".join([data.nuclide_str(self._nuclide), arithmetic_operation])
+            arithmetic_operation = "-".join([tools.nuclide_str(self._nuclide), arithmetic_operation])
         except AttributeError:
             pass
 
@@ -690,7 +691,7 @@ class Power(Observable):
 
         # for single-nuclide observable, include nuclide at start of descriptor
         try:
-            arithmetic_operation = "-".join([data.nuclide_str(self._nuclide), arithmetic_operation])
+            arithmetic_operation = "-".join([tools.nuclide_str(self._nuclide), arithmetic_operation])
         except AttributeError:
             pass
 
@@ -863,7 +864,7 @@ class Energy(Observable):
         """ Text string describing observable.
         """
         return "-".join([
-            data.nuclide_str(self._nuclide),
+            tools.nuclide_str(self._nuclide),
             "energy",
             self._level.descriptor_str,
         ])
@@ -954,7 +955,7 @@ class ExcitationEnergy(Observable):
         """ Text string describing observable.
         """
         return "-".join([
-            data.nuclide_str(self._nuclide),
+            tools.nuclide_str(self._nuclide),
             "energy-ex",
             self._level.descriptor_str,
             self._reference_level.descriptor_str,
@@ -1025,7 +1026,7 @@ class Isospin(Observable):
         """ Text string describing observable.
         """
         return "-".join([
-            data.nuclide_str(self._nuclide),
+            tools.nuclide_str(self._nuclide),
             "isospin",
             self._level.descriptor_str,
         ])
@@ -1087,7 +1088,7 @@ class LevelIndex(Observable):
         """ Text string describing observable.
         """
         return "-".join([
-            data.nuclide_str(self._nuclide),
+            tools.nuclide_str(self._nuclide),
             "n",
             self._level.descriptor_str,
         ])
@@ -1157,7 +1158,7 @@ class Radius(Observable):
         """ Text string describing observable.
         """
         return "-".join([
-            data.nuclide_str(self._nuclide),
+            tools.nuclide_str(self._nuclide),
             "radius",
             self._operator,
             self._level.descriptor_str,
@@ -1234,7 +1235,7 @@ class Radius(Observable):
 ##         """ Text string describing observable.
 ##         """
 ##         return "-".join([
-##             data.nuclide_str(self._nuclide),
+##             tools.nuclide_str(self._nuclide),
 ##             "radius-pow{:d}".format(self._power),
 ##             self._operator,
 ##             self._level.descriptor_str,
@@ -1310,7 +1311,7 @@ class Moment(Observable):
         """ Text string describing observable.
         """
         return "-".join([
-            data.nuclide_str(self._nuclide),
+            tools.nuclide_str(self._nuclide),
             "moment",
             self._operator,
             self._level.descriptor_str,
@@ -1406,7 +1407,7 @@ class RME(Observable):
         """ Text string describing observable.
         """
         return "-".join([
-            data.nuclide_str(self._nuclide),
+            tools.nuclide_str(self._nuclide),
             "rme",
             self._operator,
             self._level_pair[0].descriptor_str,
@@ -1501,7 +1502,7 @@ class ME(Observable):
         """ Text string describing observable.
         """
         return "-".join([
-            data.nuclide_str(self._nuclide),
+            tools.nuclide_str(self._nuclide),
             "me",
             self._operator,
             self._level_pair[0].descriptor_str,
@@ -1583,7 +1584,7 @@ class RTP(Observable):
         """ Text string describing observable.
         """
         return "-".join([
-            data.nuclide_str(self._nuclide),
+            tools.nuclide_str(self._nuclide),
             "rtp",
             self._operator,
             self._level_pair[0].descriptor_str,

@@ -14,6 +14,7 @@ import numpy as np
 
 import mfdnres.data
 import mfdnres.observable
+import mfdnres.tools
 
 ################################################################
 # deduced observable: RatioBE2Q2
@@ -245,12 +246,6 @@ class BetaFromRatioQr2(mfdnres.observable.Observable):
         J = self._J
         K = self._K
         
-        # retrieve nucleon number
-        A = sum(nuclide)
-        Z, N = nuclide
-        nucleon_number = mfdnres.observable.nucleon_number_by_observable_tag(nuclide)[observable_tag]
-
-
         # select E2 moment
         e2_operator = mfdnres.observable.E2_OPERATOR_BY_OBSERVABLE_TAG[observable_tag]
         moment_observable = mfdnres.observable.Moment(nuclide, e2_operator, level)
@@ -279,7 +274,7 @@ class BetaFromRatioQr2(mfdnres.observable.Observable):
         """ Text string describing observable.
         """
         return "-".join([
-            mfdnres.data.nuclide_str(self._nuclide),
+            mfdnres.tools.nuclide_str(self._nuclide),
             "beta-from-ratio-q-rsqr",
             self._observable_tag,
             self._level.descriptor_str,
@@ -383,8 +378,6 @@ class BetaFromRatioBE2r4(mfdnres.observable.Observable):
         K = self._K
         
         # retrieve nucleon number
-        A = sum(nuclide)
-        Z, N = nuclide
         nucleon_number = mfdnres.observable.nucleon_number_by_observable_tag(nuclide)[observable_tag]
 
         # select E2 RTP
@@ -418,7 +411,7 @@ class BetaFromRatioBE2r4(mfdnres.observable.Observable):
         """ Text string describing observable.
         """
         return "-".join([
-            mfdnres.data.nuclide_str(self._nuclide),
+            mfdnres.tools.nuclide_str(self._nuclide),
             "beta-from-ratio-q-rsqr",
             self._observable_tag,
             self._level.descriptor_str,

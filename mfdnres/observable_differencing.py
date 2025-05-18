@@ -16,6 +16,7 @@ import pandas as pd
 
 import mfdnres.data
 import mfdnres.observable
+import mfdnres.tools
 
 ################################################################
 # deduced observable: DifferenceRatio
@@ -82,7 +83,7 @@ class DifferenceRatio(mfdnres.observable.Observable):
 
         # for single-nuclide observable, include nuclide at start of descriptor
         try:
-            arithmetic_operation = "-".join([mfdnres.data.nuclide_str(self._nuclide), arithmetic_operation])
+            arithmetic_operation = "-".join([mfdnres.tools.nuclide_str(self._nuclide), arithmetic_operation])
         except AttributeError:
             pass
 
@@ -189,7 +190,7 @@ class RelativeDifference(mfdnres.observable.Observable):
 
         # for single-nuclide observable, include nuclide at start of descriptor
         try:
-            arithmetic_operation = "-".join([mfdnres.data.nuclide_str(self._nuclide), arithmetic_operation])
+            arithmetic_operation = "-".join([mfdnres.tools.nuclide_str(self._nuclide), arithmetic_operation])
         except AttributeError:
             pass
 
@@ -309,7 +310,7 @@ class LogOfDifference(mfdnres.observable.Observable):
 
         # for single-nuclide observable, include nuclide at start of descriptor
         try:
-            arithmetic_operation = "-".join([mfdnres.data.nuclide_str(self._nuclide), arithmetic_operation])
+            arithmetic_operation = "-".join([mfdnres.tools.nuclide_str(self._nuclide), arithmetic_operation])
         except AttributeError:
             pass
 
@@ -423,7 +424,7 @@ class ExponentialExtrapolation(mfdnres.observable.Observable):
 
         # for single-nuclide observable, include nuclide at start of descriptor
         try:
-            arithmetic_operation = "-".join([mfdnres.data.nuclide_str(self._nuclide), arithmetic_operation])
+            arithmetic_operation = "-".join([mfdnres.tools.nuclide_str(self._nuclide), arithmetic_operation])
         except AttributeError:
             pass
 
@@ -534,7 +535,7 @@ class ExcitationEnergyExponentialExtrapolationSeparate(mfdnres.observable.Observ
         arithmetic_operation = "extrapolation-exp3-sep"  # flag that extrapolation is separate for each level's energy
 
         descriptor_str = "-".join([
-            mfdnres.data.nuclide_str(self._nuclide),
+            mfdnres.tools.nuclide_str(self._nuclide),
             "energy-ex",
             self._level.descriptor_str,
             self._reference_level.descriptor_str,
