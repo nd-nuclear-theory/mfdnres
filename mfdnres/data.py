@@ -66,6 +66,8 @@
     - 10/17/24 (mac): Provide legend_xy option for add_hw_scan_plot_Nmax_labels().
     - 01/18/25 (mac): Rename arguments and update docstrings to reflect 
         removal of support for legacy "tuple" observables.
+    - 05/10/25 (mac): Make observable argument to set_up_hw_scan_axes and set_up_Nmax_scan_axes
+        optional if observable_axis_label_text provided.
     - 05/18/25 (mac): Remove nuclide_str() and qn_str() in favor of implementation in tools.
 """
 
@@ -573,19 +575,24 @@ def make_observable_axis_label_text(observable_object):
 
     Arguments:
 
-        observable_object (observable.Observable): observable object
+        observable_object (observable.Observable): observable object, or 
+        tuple (observable_str,units_ str)
 
     Returns:
 
         label (str): label string, to be interpreted in math mode
     """
 
-    observable_str, units_str = observable_object.axis_label_text
+    if type(observable_object) is tuple:
+        # tuple overrride
+        observable_str, units_str = observable_object
+    else:
+        observable_str, units_str = observable_object.axis_label_text
         
     if units_str is None:
         label = observable_str
     else:
-        label = r"{}~({})".format(observable_str,units_str)
+        label = r"{}~({})".format(observable_str, units_str)
 
     return label
 
@@ -964,7 +971,7 @@ def make_hw_scan_data(
         mesh parameters, which have meanings as specified by key_descriptor
 
     Returns:
-        observable_data (np.array): scan data, with rows (Nmax,hw,value)
+        observable_data (pd.DataFrame): scan data, with rows (Nmax,hw,value)
 
     """
 
@@ -1023,8 +1030,9 @@ def write_hw_scan_data(descriptor,observable_data,directory="data",format_str_ob
     with open(output_file_name, 'wt') as out_file:
         out_file.write(output_str)
 
+        
 def set_up_hw_scan_axes(
-        ax, observable_object, hw_range, observable_range,
+        ax, observable_object=None, hw_range=None, observable_range=None, *,
         hw_range_extension=(0.05,0.05), observable_range_extension=(0.05,0.05),
         observable_scale=None,
         observable_axis_label_text=None,
@@ -1033,35 +1041,53 @@ def set_up_hw_scan_axes(
         hw_tick_specifier=None,
         observable_tick_specifier=None,
 ):
-    """ Set up axis ranges, labels, and ticks for hw scan plot.
+    """Set up axis ranges, labels, and ticks for hw scan plot.
+
+    Traditional syntax had four positional arguments:
+
+        ax, observable_object, hw_range, observable_range
+
+    But it is helpful to be able to leave observable_object unspecified, and instead specify
+    observable_axis_label_text.
 
     Arguments:
 
         ax (mpl.axes.Axes): axes object
 
-        observable_object (observable.Observable): observable object
+        observable_object (observable.Observable, optional): observable object (may be
+        given as None, if observable_axis_label_text is specified)
 
-        hw_range (tuple of float): x range, before extension
+        hw_range (tuple of float, optional): x range, before extension
+        (nominally optional, but mandatory)
 
-        observable_range (tuple of float): y range, or None for matplotlib auto
+        observable_range (tuple of float, optional): y range, or None for matplotlib auto
 
-        observable_scale (str): y scale ("linear" or "log")
+        observable_scale (str, optional): y scale ("linear" or "log")
 
-        observable_axis_label_text (str, optional): override for observable axis label text
+        observable_axis_label_text (str, optional): override for observable axis
+        label text
 
-        hw_range_extension (tuple of float, optional): x range relative extension
+        hw_range_extension (tuple of float, optional): x range relative
+        extension
 
-        observable_range_extension (tuple of float, optional): y range relative extension
+        observable_range_extension (tuple of float, optional): y range relative
+        extension
 
         hw_labelpad (scalar, optional): pass-though labelpad option for xlabel
 
-        observable_labelpad (scalar, optional): pass-though labelpad option for ylabel
+        observable_labelpad (scalar, optional): pass-though labelpad option for
+        ylabel
 
-        hw_tick_specifier (tuple, optional): tick specification (min,max,step,num_subdivision) for hw ticks
+        hw_tick_specifier (tuple, optional): tick specification
+        (min,max,step,num_subdivision) for hw ticks
 
-        observable_tick_specifier (tuple, optional): tick specification (min,max,step,num_subdivision) for observable ticks
+        observable_tick_specifier (tuple, optional): tick specification
+        (min,max,step,num_subdivision) for observable ticks
 
     """
+
+    if hw_range is None:
+        raise(ValueError("hw_range must be specified"))
 
     # set ticks
     #
@@ -1075,18 +1101,21 @@ def set_up_hw_scan_axes(
         ticks.set_ticks(ax,"y",y_ticks)
 
     # set limits
-    ax.set_xlim(*extend_interval_relative(hw_range,hw_range_extension))
+    ax.set_xlim(*extend_interval_relative(hw_range, hw_range_extension))
     if observable_scale=="log":
         # Note: Override any range extension for log scale
         observable_range_extension=(0.,0.)
         ax.set_yscale("log")
     if (observable_range is not None) and np.isfinite(observable_range[0]).all():
-        ax.set_ylim(*extend_interval_relative(observable_range,observable_range_extension))
+        ax.set_ylim(*extend_interval_relative(observable_range, observable_range_extension))
         
     # set axis labels
     ax.set_xlabel(HW_AXIS_LABEL_TEXT, labelpad=hw_labelpad)
     if observable_axis_label_text is None:
-        observable_axis_label_text = make_observable_axis_label_text(observable_object)
+        if observable_object is not None:
+            observable_axis_label_text = make_observable_axis_label_text(observable_object)
+        else:
+            observable_axis_label_text = ""
     ax.set_ylabel(
         r"${}$".format(observable_axis_label_text),
         labelpad=observable_labelpad,
@@ -1165,7 +1194,7 @@ def set_up_hw_scan_secondary_axis(
     return ax_secondary_y
     
 def set_up_Nmax_scan_axes(
-        ax, observable_object, Nmax_range, observable_range,
+        ax, observable_object=None, Nmax_range=None, observable_range=None, *,
         Nmax_range_extension=(0.05,0.05),
         observable_range_extension=(0.05,0.05),
         observable_scale=None,
@@ -1175,33 +1204,49 @@ def set_up_Nmax_scan_axes(
         Nmax_tick_specifier=None,
         observable_tick_specifier=None,
 ):
-    """ Set up axes.
+    """Set up axis ranges, labels, and ticks for Nmax scan plot.
+
+    Traditional syntax had four positional arguments:
+
+        ax, observable_object, hw_range, observable_range
+
+    But it is helpful to be able to leave observable_object unspecified, and instead specify
+    observable_axis_label_text.
 
     Arguments:
 
         ax (mpl.axes.Axes): axes object
 
-        observable_object (observable.Observable): observable object
+        observable_object (observable.Observable, optional): observable object (may be
+        given as None, if observable_axis_label_text is specified)
 
-        Nmax_range (tuple of int): x range, before extension
+        Nmax_range (tuple of int, optional): x range, before extension
+        (nominally optional, but mandatory)
 
-        observable_range (tuple of float): y range, or None for matplotlib auto
+        observable_range (tuple of float, optional): y range, or None for
+        matplotlib auto
 
-        observable_scale (str): y scale ("linear" or "log")
+        observable_scale (str, optional): y scale ("linear" or "log")
 
-        observable_axis_label_text (str, optional): override for observable axis label text
+        observable_axis_label_text (str, optional): override for observable axis
+        label text
 
-        Nmax_range_extension (tuple of float, optional): x range relative extension
+        Nmax_range_extension (tuple of float, optional): x range relative
+        extension
 
-        observable_range_extension (tuple of float, optional): y range relative extension
+        observable_range_extension (tuple of float, optional): y range relative
+        extension
 
         Nmax_labelpad (scalar, optional): pass-though labelpad option for xlabel
 
-        observable_labelpad (scalar, optional): pass-though labelpad option for ylabel
+        observable_labelpad (scalar, optional): pass-though labelpad option for
+        ylabel
 
-        Nmax_tick_specifier (tuple, optional): tick specification (min,max,step,num_subdivision) for Nmax ticks
+        Nmax_tick_specifier (tuple, optional): tick specification
+        (min,max,step,num_subdivision) for Nmax ticks
 
-        observable_tick_specifier (tuple, optional): tick specification (min,max,step,num_subdivision) for observable ticks
+        observable_tick_specifier (tuple, optional): tick specification
+        (min,max,step,num_subdivision) for observable ticks
 
     """
 
@@ -1217,18 +1262,21 @@ def set_up_Nmax_scan_axes(
         ticks.set_ticks(ax,"y",y_ticks)
 
     # set limits
-    ax.set_xlim(*extend_interval_relative(Nmax_range,Nmax_range_extension))
+    ax.set_xlim(*extend_interval_relative(Nmax_range, Nmax_range_extension))
     if observable_scale=="log":
         # Note: Override any range extension for log scale
         observable_range_extension=(0.,0.)
         ax.set_yscale("log")
     if (observable_range is not None) and np.isfinite(observable_range[0]).all():
-        ax.set_ylim(*extend_interval_relative(observable_range,observable_range_extension))
+        ax.set_ylim(*extend_interval_relative(observable_range, observable_range_extension))
         
     # set axis labels
     ax.set_xlabel(NMAX_AXIS_LABEL_TEXT, labelpad=Nmax_labelpad)
     if observable_axis_label_text is None:
-        observable_axis_label_text = make_observable_axis_label_text(observable_object)
+        if observable_object is not None:
+            observable_axis_label_text = make_observable_axis_label_text(observable_object)
+        else:
+            observable_axis_label_text = ""
     ax.set_ylabel(
         r"${}$".format(observable_axis_label_text),
         labelpad=observable_labelpad,
@@ -1282,6 +1330,7 @@ def add_hw_scan_plot(
         ax,observable_data,Nmax_max,
         Nmax_plot_style=Nmax_plot_style,
         Nmax_plot_style_kw={},
+        verbose=False,
         **kwargs,
 ):
     """Add hw scan plot to axes.
@@ -1320,6 +1369,11 @@ def add_hw_scan_plot(
     Nmax_groups = observable_data.reset_index().groupby("Nmax")
     for Nmax, group in Nmax_groups:
 
+        if verbose:
+            print("Nmax {}".format(Nmax))
+            print(group)
+            print(Nmax_max)
+            
         # combine styling options (last takes precedence)
         kw_full = {
             **kw_defaults,
@@ -1341,10 +1395,15 @@ def add_hw_scan_plot_Nmax_labels(
         data_point_index=None,
         text_displacement=None,
         legend_position="bottom",
+        legend_text="N_{\mathrm{max}}",
         legend_xy=None,
         label_text=None,
+        fontsize="x-small",
 ):
     """Add Nmax curve labels to previously drawn hw scan plot.
+
+    May equivalently be used to add hw curve labels to previously drawn Nmax
+    scan plot, with appropriate override of legend_text.
 
     Arguments:
 
@@ -1381,6 +1440,8 @@ def add_hw_scan_plot_Nmax_labels(
         string to the value of Nmax), default "{}"; may be used to provide an arbitrary text label for hw
         scan curves
 
+        fontsize (str, optional): fontsize argument for annotate
+
     """
 
     # TODO (mac, 03/19/23): add in generalizations for call-out lines
@@ -1412,7 +1473,7 @@ def add_hw_scan_plot_Nmax_labels(
                 ##r"${}$".format(Nmax),
                 xy=endpoint, xycoords="data",
                 xytext=text_displacement, textcoords="offset points",
-                fontsize="x-small",
+                fontsize=fontsize,
                 horizontalalignment="right", verticalalignment="center",
                 ##arrowprops=dict(arrowstyle="-", linewidth=0.5, shrinkA=1, shrinkB=3),
                 ##bbox=dict(boxstyle="square", visible=False, pad=0.),  # to clip call-out line under text
@@ -1433,9 +1494,9 @@ def add_hw_scan_plot_Nmax_labels(
                     legend_xy = (1,1)
                 verticalalignment = "bottom"
             ax.annotate(
-                r"$N_{\mathrm{max}}$",
+                r"${}$".format(legend_text),
                 xy=legend_xy, xycoords=Nmax_label,
-                fontsize="x-small",
+                fontsize=fontsize,
                 horizontalalignment="right", verticalalignment=verticalalignment,
             )
 
@@ -1464,14 +1525,21 @@ def add_Nmax_scan_plot(
         kwargs (Line2D properties, optional): kwargs are used to specify plot
         properties (e.g., marker, markersize) not otherwise fixed by the prior arguments
 
+    Returns:
+
+       hw_groups (pd.DataFrameGroupBy): curve data grouped by hw (for
+           possible use in subsequent calls to labeling functions)
+
+
     """
 
     kw_defaults = {
         "markersize": 6,
         "marker": ".",
     }
-    
-    for hw, group in observable_data.reset_index().groupby("hw"):
+
+    hw_groups = observable_data.reset_index().groupby("hw")
+    for hw, group in hw_groups:
         if verbose:
             print("hw {}\n {}".format(hw,group))
 
@@ -1487,6 +1555,8 @@ def add_Nmax_scan_plot(
             group["Nmax"],group["value"],
             **kw_full,
         )
+
+    return hw_groups
 
 def write_hw_scan_plot(
         descriptor,
