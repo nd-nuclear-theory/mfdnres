@@ -549,9 +549,9 @@ section_handlers = {
     "Angular momenta" : parse_angular_momenta,
     "Relative radii" : parse_radii,
     "Other 2-body observables" : parse_other_tbo,
+    ## "Occupation probabilities" : None,
     "Transitions": parse_mfdn_ob_rmes,
     "Transition one-body observables": parse_postprocessor_ob_rmes_legacy,
-    ## "Transition one-body observables": parse_one_body_static_properties,  # WRONG?
     "One-body observable": parse_postprocessor_ob_rmes,
     "Two-body observable": parse_postprocessor_tb_rmes,
 }
