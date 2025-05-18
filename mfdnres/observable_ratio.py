@@ -8,6 +8,7 @@
     - 11/26/23 (mac): Remove species subscript from beta axis label in BetaFromRatioQr2.
     - 08/12/24 (mac): Provide strict option in ratio observables.
     - 12/15/24 (mac): Add observable BetaFromRatioBE2r4.
+    - 05/10/25 (mac): Provide alternate interface to RatioQr2 via option observable_tag.
 """
 
 import numpy as np
@@ -113,18 +114,53 @@ class RatioQr2(mfdnres.observable.Ratio):
 
     """
 
-    def __init__(self, observable1, observable2, observable_label_delimiters=None, strict=True):
+    def __init__(
+            self, observable1=None, observable2=None, *,
+            nuclide=None, level=None, observable_tag=None,
+            observable_label_delimiters=None, strict=True,
+    ):
         """Initialize with given parameters.
+
+        Legacy syntax:
+
+           RatioQr2(observable1, observable2)
 
         Arguments:
 
-            observable1, observable2 (Observable): first and second terms
+            observable1, observable2 (Observable): E2 and radius observables
+
+            nuclide (tuple, optional): (Z, N)
+
+            observable_tag (str, optional): identifier tag for beta observable ("p", "n", or "m")
+
+            level (LevelSelector, optional): level
 
             observable_label_delimiters (tuple, optional): left/right delimiter
             pairs to put around the labels for the first/second observable
             appearing in the ratio, e.g., (("[","]"),("[","]"))
 
+            strict (bool, optional): Whether or not to enforce expected observable types.
+
         """
+
+        if observable1 is None and observable2 is None:
+            # automatically determine correct observables from observable_tag
+            if nuclide is None:
+                raise ValueError("Must specify nuclide if observable arguments are given as None")
+            if level is None:
+                raise ValueError("Must specify level if observable arguments are given as None")
+            if observable_tag is None:
+                raise ValueError("Must specify observable_tag if observable arguments are given as None")
+            
+            # select E2 moment
+            e2_operator = mfdnres.observable.E2_OPERATOR_BY_OBSERVABLE_TAG[observable_tag]
+            observable1 = mfdnres.observable.Moment(nuclide, e2_operator, level)
+        
+            # select radius
+            radius_operator = mfdnres.observable.RADIUS_OPERATOR_BY_OBSERVABLE_TAG[observable_tag]
+            observable2 = mfdnres.observable.Radius(nuclide, radius_operator, level)
+            
+            
         if strict and not (
                 isinstance(observable1, mfdnres.observable.Moment)
                 and isinstance(observable2, mfdnres.observable.Radius)
@@ -200,6 +236,27 @@ class RatiorQ12(mfdnres.observable.Ratio):
 # deduced observable: BetaFromRatioQr2
 ################################################################
 
+def beta_from_ratio_qr2_prefactor(nuclide, observable_tag, J, K):
+    """ Prefector relating beta to Q/r^2.
+
+    See (13) of emnorm2-part1 [arXiv:2409.03926].
+
+    Arguments:
+
+        nuclide (tuple): (Z, N)
+
+        observable_tag (str): identifier tag for beta observable ("p", "n", or "m")
+
+        J (float): J quantum number for level (assumed unique across mesh)
+
+        K (float): K quantum number for level (assumed unique across mesh)
+    """
+
+    nucleon_number = mfdnres.observable.nucleon_number_by_observable_tag(nuclide)[observable_tag]
+    prefactor = (J+1)*(2*J+3)/(3*K**2-J*(J+1)) * np.sqrt(np.pi/5)/nucleon_number
+    return prefactor
+    
+
 class BetaFromRatioQr2(mfdnres.observable.Observable):
     """ Observable extractor for beta deformation.
 
@@ -261,7 +318,7 @@ class BetaFromRatioQr2(mfdnres.observable.Observable):
         ratio_mesh = ratio_observable.data(mesh_data, key_descriptor, verbose=verbose)
         
         # convert to beta
-        prefactor = (J+1)*(2*J+3)/(3*K**2-J*(J+1)) * np.sqrt(np.pi/5)/nucleon_number
+        prefactor = beta_from_ratio_qr2_prefactor(nuclide, observable_tag, J, K)
         beta_mesh = prefactor * ratio_mesh
 
         if self._force_beta_positive:
