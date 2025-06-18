@@ -45,7 +45,7 @@ def parser(filename):
     regex = re.compile(
         # prolog
         r"run(?P<run>\w+)"
-        r"\-(?P<code_name>((mfdn)|(obscalc-ob)|(transitions-ob)|(transitions-tb))[^\-]*)"
+        r"\-(?P<code_name>((mfdn)|(obscalc-ob)|(transitions-ob)|(transitions-tb)|(transitions-spamp))[^\-]*)"
         r"\-(?P<descriptor>"
         # descriptor contents
         r"Z(?P<Z>\d+)\-N(?P<N>\d+)"

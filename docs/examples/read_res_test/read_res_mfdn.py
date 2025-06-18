@@ -21,6 +21,8 @@
     - 05/18/22 (mac): Update example file.
     - 11/26/23 (mac): Add Nex decomposition.
     - 03/13/24 (mac): Illustrate selection of mesh point by parameters.
+    - 07/03/23 (mac): Add occupations.
+
 """
 
 import os
@@ -77,6 +79,7 @@ def explore_point(results_data):
     print("Data attributes...")
     print("results_data.postprocessor_ob_rmes {}".format(results_data.postprocessor_ob_rmes))
     print("results_data.postprocessor_tb_rmes {}".format(results_data.postprocessor_tb_rmes))
+    print("results_data.mfdn_level_occupations {}".format(results_data.mfdn_level_occupations))
     print()
 
     # access ob moments
@@ -95,6 +98,15 @@ def explore_point(results_data):
     print("Test Nex decomposition...")
     decomposition = results_data.get_decomposition("Nex", (1.0,0,1))
     print("Nex decomposition {}".format(decomposition))
+    print()
+
+    # access occupations
+    print("Test occupations...")
+    for species_code in ["p", "n"]:
+        orbitals, occupations = results_data.get_occupations(species_code, (1.0,0,1))
+        for orbital, occupation in zip(orbitals, occupations):
+            n, l, j = orbital
+            print("  {:1s}   {:2d} {:2d} {:4.1f}    {:.6f}".format(species_code, n, l, j, occupation))
     print()
     
 ################################################################

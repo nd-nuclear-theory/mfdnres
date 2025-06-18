@@ -30,6 +30,9 @@
         - Update handling of angular momenta for mfdn GPU version.
     10/05/23 (mac): Update handling of ambiguous radius observables.
     08/01/24 (mac): Support empty radii section.
+    07/03/25 (mac):
+        - Parse occupation probabilities.
+        - Parse spectroscopic amplitudes.
 """
 
 from __future__ import annotations
@@ -97,7 +100,7 @@ def split_mfdn_results_line(tokenized_line):
 
     # trap overflow values
     #
-    # NAIVE: data_list = list(map(float,tokenized_line[4:]))
+    # NAIVE: data_list = list(map(float, tokenized_line[4:]))
     #
     # Note: FORTRAN may output "NaN" or "*****".  The former is handled
     # gracefully by float as float("NaN") => nan, but float("*****") crashes, so
@@ -111,7 +114,7 @@ def split_mfdn_results_line(tokenized_line):
     return (qn,data)
 
             
-def count_mfdn_results_line_properties(self:MFDnResultsData,tokenized_lines):
+def count_mfdn_results_line_properties(self:MFDnResultsData, tokenized_lines):
     """Peek at generic mfdn results line, to count data properties.
 
     This is necessary when columns are added to MFDn's generic static properties
@@ -139,7 +142,7 @@ def count_mfdn_results_line_properties(self:MFDnResultsData,tokenized_lines):
 # section handlers
 ################################################################
 
-def parse_params(self:MFDnResultsData,tokenized_lines):
+def parse_params(self:MFDnResultsData, tokenized_lines):
     """
     Parse any section containing key-value pairs to add to params dictionary.
 
@@ -239,7 +242,7 @@ def parse_params(self:MFDnResultsData,tokenized_lines):
 
     ## self.params["neivals"] = None
     
-def parse_energies(self:MFDnResultsData,tokenized_lines):
+def parse_energies(self:MFDnResultsData, tokenized_lines):
     """ Parse energies.
 
     Globals:
@@ -279,7 +282,7 @@ def parse_energies(self:MFDnResultsData,tokenized_lines):
         self.mfdn_level_properties["T"][qn] = T
 
         
-def parse_decompositions_Nex(self:MFDnResultsData,tokenized_lines):
+def parse_decompositions_Nex(self:MFDnResultsData, tokenized_lines):
     """Parse Nex decomposition.
 
     Unstable feature: Note only alternate Nex values are output by
@@ -303,7 +306,7 @@ def parse_decompositions_Nex(self:MFDnResultsData,tokenized_lines):
         self.mfdn_level_decompositions["Nex"][qn]=data
 
         
-def parse_generic_static_properties(self:MFDnResultsData,tokenized_lines,container,property_names):
+def parse_generic_static_properties(self:MFDnResultsData, tokenized_lines, container, property_names):
     """Parse generic static properties given list of property names for the data columns.
 
     Any "extra" values in the parsed line, beyond the number of property names
@@ -336,27 +339,27 @@ def parse_generic_static_properties(self:MFDnResultsData,tokenized_lines,contain
                 container[property_name][qn]=data[property_index]
 
     
-def parse_M1_moments(self:MFDnResultsData,tokenized_lines):
+def parse_M1_moments(self:MFDnResultsData, tokenized_lines):
     """Parse M1 moments.
     """
     property_names = ["M1","Dlp","Dln","Dsp","Dsn"]
-    parse_generic_static_properties(self,tokenized_lines,self.mfdn_ob_moments,property_names)
+    parse_generic_static_properties(self, tokenized_lines, self.mfdn_ob_moments, property_names)
 
     
-def parse_E2_moments(self:MFDnResultsData,tokenized_lines):
+def parse_E2_moments(self:MFDnResultsData, tokenized_lines):
     """Parse E2 moments.
     """
     property_names = ["E2p","E2n"]
-    parse_generic_static_properties(self,tokenized_lines,self.mfdn_ob_moments,property_names)
+    parse_generic_static_properties(self, tokenized_lines, self.mfdn_ob_moments, property_names)
 
     
-def parse_angular_momenta(self:MFDnResultsData,tokenized_lines):
+def parse_angular_momenta(self:MFDnResultsData, tokenized_lines):
     """Parse squared angular momenta.
     """
 
     # parse raw (squared observable) values
     revision = self.params.get("Revision","beta00")
-    num_properties = count_mfdn_results_line_properties(self,tokenized_lines)
+    num_properties = count_mfdn_results_line_properties(self, tokenized_lines)
     if num_properties==5:
         # mfdn v15 beta00
         property_names = ["L_sqr", "S_sqr", "Sp_sqr", "Sn_sqr", "J_sqr"]
@@ -373,10 +376,10 @@ def parse_angular_momenta(self:MFDnResultsData,tokenized_lines):
         property_names = ["L_sqr", "S_sqr", None, "Sp_sqr", None, "Sn_sqr", "J_sqr"]
     else:
         raise ValueError("unexpected number of columns in angular momentum section ({} observables)".format(num_properties))
-    parse_generic_static_properties(self,tokenized_lines,self.mfdn_level_properties,property_names)
+    parse_generic_static_properties(self, tokenized_lines, self.mfdn_level_properties, property_names)
 
     
-def parse_radii(self:MFDnResultsData,tokenized_lines):
+def parse_radii(self:MFDnResultsData, tokenized_lines):
     """Parse radii.
     """
 
@@ -403,17 +406,17 @@ def parse_radii(self:MFDnResultsData,tokenized_lines):
     # output ["rpp", "rnn", "rpn"] or ["rpp", "rpn", "rnn"] for the last three
     # columns, so interpretation of the last two columns is ambiguous.  These
     # last two columns should therefore be *ignored* on input, to prevent later misuse.
-    num_properties = count_mfdn_results_line_properties(self,tokenized_lines)
+    num_properties = count_mfdn_results_line_properties(self, tokenized_lines)
     if num_properties==3:
         property_names = ["rp", "rn", "r"]
     elif num_properties in [6, 7]:
         property_names = ["rp", "rn", "r", "rpp"]
     else:
         raise ValueError("unrecognized number of columns in radii section ({} observables)".format(num_properties))
-    parse_generic_static_properties(self,tokenized_lines,self.mfdn_tb_expectations,property_names)
+    parse_generic_static_properties(self, tokenized_lines, self.mfdn_tb_expectations, property_names)
 
     
-def parse_other_tbo(self:MFDnResultsData,tokenized_lines):
+def parse_other_tbo(self:MFDnResultsData, tokenized_lines):
     """Parse other two-body observables.
 
     Requires "tbo_names" to have been parsed from TBMEfile entries in MFDn
@@ -426,7 +429,7 @@ def parse_other_tbo(self:MFDnResultsData,tokenized_lines):
         property_names = self.params["tbo_names"][1:]
     else:
         property_names = []
-    parse_generic_static_properties(self,tokenized_lines,self.mfdn_tb_expectations,property_names)
+    parse_generic_static_properties(self, tokenized_lines, self.mfdn_tb_expectations, property_names)
 
     
 def parse_mfdn_ob_rmes(self:MFDnResultsData, tokenized_lines):
@@ -532,6 +535,89 @@ def parse_postprocessor_tb_rmes(self:MFDnResultsData, tokenized_lines):
     """
     parse_postprocessor_generic_rmes(self, tokenized_lines, self.postprocessor_tb_rmes)
 
+    
+def parse_occupations(self:MFDnResultsData, tokenized_lines):
+    """Parse MFDn native occupation probabilities.
+
+    """
+
+    # set up data structures
+    orbitals_by_species = [[], []]  # proton and neutron orbital sets
+    occupations_by_species_by_level = [dict(), dict()]  # proton and neutron occupation data
+    for species_index in range(2):
+        for qn in self.levels:
+            occupations_by_species_by_level[species_index][qn] = []
+
+    # extract orbitals and occupations
+    
+    # Note: We need to map sequence number to qn.  Since a dictionary preserves
+    # the order of keys, we could use self.energies.keys() to provide qn in
+    # sequence order.  Alternatively, note that self.levels provides levels in
+    # order of energy, which is normally equivalent to sequence number, but is
+    # not strictly so in the presence of degeneracies.  However, self.levels is
+    # obtained by sorting self.energies.keys() by energy, and the sorting is
+    # guaranteed to be stable.  So let us use self.levels as a more semantically
+    # transparent choice.
+
+    for tokenized_line in tokenized_lines:
+
+        # extract orbital info
+        species_name = tokenized_line[1]
+        species_index = {"pro": 0, "neu": 1}[species_name]
+        ## species_code = species_name[0]  # "pro" -> "p", "neu" -> "n"
+        n = int(tokenized_line[2])
+        l = int(tokenized_line[3])
+        j = int(tokenized_line[4])/2
+        orbital_qn = (n, l, j)
+        orbitals_by_species[species_index].append(orbital_qn)
+        
+        # extract occupations (for that orbital)
+        occupation_data = tokenized_line[5:]
+        for state_index, qn in enumerate(self.levels):
+            occupation = float(occupation_data[state_index])
+            occupations_by_species_by_level[species_index][qn].append(occupation)
+            
+    # store to data structure
+    for species_index in range(2):
+        species_code = ["p", "n"][species_index]
+        orbitals = orbitals_by_species[species_index]
+        target_occupations_for_species = self.mfdn_level_occupations.setdefault(species_code, dict())
+        for qn in self.levels:
+            occupations_as_array = np.array(occupations_by_species_by_level[species_index][qn])
+            target_occupations_for_species[qn] = (orbitals, occupations_as_array)
+
+            
+def parse_postprocessor_spectroscopic_amplitudes(self:MFDnResultsData, tokenized_lines):
+    """Parse "postprocessor" output (as digested by the scripting) for spectroscopic amplitudes.
+
+    These are initially obtained by repackaging the output of rhodium, pending
+    possible future implementation in mfdn-transisions.
+    """
+    ##parse_postprocessor_generic_rmes(self, tokenized_lines, self.postprocessor_tb_rmes)
+
+    # parse header
+    tokenized_line = tokenized_lines.pop(0)
+    delta_nuclide = int(tokenized_line[0]), int(tokenized_line[1])
+    tokenized_line = tokenized_lines.pop(0)
+    qnf = (float(tokenized_line[0]), int(tokenized_line[1]), int(tokenized_line[2]))
+    tokenized_line = tokenized_lines.pop(0)
+    qni = (float(tokenized_line[0]), int(tokenized_line[1]), int(tokenized_line[2]))
+
+    # parse amplitudes
+    amplitudes = dict()
+    for tokenized_line in tokenized_lines:
+        n, l, j, value = int(tokenized_line[0]), int(tokenized_line[1]), float(tokenized_line[2]), float(tokenized_line[3])
+        amplitudes[(n,l,j)] = value
+    
+    # store amplitudes container
+    data_for_delta_nuclide = self.postprocessor_spectroscopic_amplitudes.setdefault(delta_nuclide, dict())
+    data_for_delta_nuclide[(qnf,qni)] = amplitudes
+    
+    
+################################################################
+# parsing control code
+################################################################
+
 section_handlers = {
     # [CODE]
     "MFDn" : parse_params,
@@ -549,17 +635,14 @@ section_handlers = {
     "Angular momenta" : parse_angular_momenta,
     "Relative radii" : parse_radii,
     "Other 2-body observables" : parse_other_tbo,
-    ## "Occupation probabilities" : None,
+    "Occupation probabilities" : parse_occupations,
     "Transitions": parse_mfdn_ob_rmes,
     "Transition one-body observables": parse_postprocessor_ob_rmes_legacy,
     "One-body observable": parse_postprocessor_ob_rmes,
     "Two-body observable": parse_postprocessor_tb_rmes,
+    "Spectroscopic amplitudes": parse_postprocessor_spectroscopic_amplitudes,
 }
 
-
-################################################################
-# parsing control code
-################################################################
 
 def parse_mesh_point(self:MFDnResultsData, sections, section_handlers):
     """ Parse single mesh point into results object.
@@ -617,6 +700,7 @@ input.register_code_name('obscalc', 'mfdn_v15')
 input.register_code_name('obscalc-ob', 'mfdn_v15')
 input.register_code_name('transitions-ob', 'mfdn_v15')
 input.register_code_name('transitions-tb', 'mfdn_v15')
+input.register_code_name('transitions-spamp', 'mfdn_v15')
 
 
 if (__name__=="__main__"):

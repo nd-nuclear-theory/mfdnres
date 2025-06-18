@@ -132,6 +132,10 @@ class MFDnResultsData(results_data.ResultsData):
 
     Data attributes:
 
+        Note: If adding a new data attribute, make sure that a type hint is
+        provided, and that it is initialized in the __init__ method and
+        accounted for (if appropriate) in the update method.
+
         mfdn_level_decompositions (dict): wave function probability decompositions
 
             Mapping: decomposition_name -> qn -> values
@@ -197,16 +201,6 @@ class MFDnResultsData(results_data.ResultsData):
 
             Mapping: observable_name -> (qnf,qni) -> value
 
-        mfdn_level_lanczos_decomposition_filenames (dict): filename for Lanczos decomposition data
-
-            Mapping: decomposition_type -> qn -> filename
-
-                decomposition_type (str): decomposition type ("U3SpSnS", etc.)
-
-                qn: (J,g,n)
-
-                filename (str): path to lanczos file containing alpha and beta coefficients
-
         mfdn_level_lanczos_decomposition_data (dict): Lanczos decomposition alpha-beta data
 
             The filename is retained for debugging ("provenance") purposes.
@@ -215,12 +209,38 @@ class MFDnResultsData(results_data.ResultsData):
 
                 decomposition_type (str): decomposition type ("U3SpSnS", etc.)
 
-                qn: (J,g,n)
+                qn (tuple): (J,g,n)
 
                 decomposition_data (tuple): (filename, alpha, beta)
 
+        mfdn_level_occupations (dict): MFDn-native occupations
+
+            Mapping: qn -> species_code -> qn -> (orbitals, occupations)
+ 
+                species_code (str): "p" or "n"
+ 
+                orbitals (list[tuple]): [(n,l,j)_0, (n,l,j)_1, ...]
+
+                occupations (np.array): [n_0, n_1, ...]
+
+        postprocessor_spamps (dict): Spectroscopic amplitudes, putatively to be
+        calculated by mfdn-transitions, and currently by rhodium, after being
+        digested by the run scripting.
+
+            Mapping: delta_nuclide -> (qnf, qni) -> orbital -> value
+ 
+                delta_nuclide (tuple): (delta_Z, delta_N)
+
+                qnf, qni (tuple): (J,g,n)
+
+                orbital (tuple): (n,l,j)
+                
+    
+    
+
     Accessors:
        [See definitions below.]
+
     """
 
     # Data attribute renaming 09/17/20 (mac)
@@ -248,15 +268,23 @@ class MFDnResultsData(results_data.ResultsData):
     # NEW
     #     => postprocessor_tb_rmes
 
+    ########################################
+    # Type hints
+    ########################################
+    
     mfdn_level_decompositions:dict[str,dict]
     mfdn_level_residuals:dict[LevelQNType,float]
     mfdn_level_properties:dict[str,dict[LevelQNType,float]]
+    mfdn_level_occupations:dict[str, dict[tuple[float,int,int],tuple[list,np.array]]]
     mfdn_ob_moments:dict[str,dict[LevelQNType,float]]
     mfdn_ob_rmes:dict[str,results_data.RMEData]
     mfdn_tb_expectations:dict[str,dict[LevelQNType,float]]
     postprocessor_ob_rmes:dict[str,results_data.RMEData]
     postprocessor_tb_rmes:dict[str,results_data.RMEData]
+    mfdn_level_lanczos_decomposition_data:dict[str,dict[tuple[float,int,int],tuple]]
+    postprocessor_spamps:dict[tuple[int,int],dict[tuple[tuple[float,int,int],tuple[float,int,int]],dict[tuple[int,int,float],float]]]
 
+    
     ########################################
     # Initializer
     ########################################
@@ -269,13 +297,16 @@ class MFDnResultsData(results_data.ResultsData):
         self.mfdn_level_decompositions = {}
         self.mfdn_level_residuals = {}
         self.mfdn_level_properties = {}
+        self.mfdn_level_occupations = {}
         self.mfdn_ob_moments = {}
         self.mfdn_ob_rmes = {}
         self.mfdn_tb_expectations = {}
         self.postprocessor_ob_rmes = {}
         self.postprocessor_tb_rmes = {}
         self.mfdn_level_lanczos_decomposition_data = {}
+        self.postprocessor_spectroscopic_amplitudes = {}
 
+        
     ########################################
     # Accessors
     ########################################
@@ -299,6 +330,45 @@ class MFDnResultsData(results_data.ResultsData):
 
         return value
 
+
+    def get_occupations(
+            self, species:str, qn:LevelQNType,
+            verbose=False
+    ):
+        """Retrieve list of orbital occupations.
+
+        Default return is None.
+
+        Example:
+            >>> mesh_point.get_occupations("p", (1.0, 0, 1))
+
+        Arguments:
+
+            species (str): "p" or "n"
+
+            qn (tuple): Quantum numbers for state.
+
+        Returns:
+
+            orbitals (list): List of (n,l,j) quantum numbers for orbitals.
+
+            occupations (np.array): Occupations.
+
+        """
+
+        data_for_species = self.mfdn_level_occupations.get(species, None)
+        if data_for_species is None:
+            return None
+
+        orbitals_occupations = data_for_species.get(qn)
+        if orbitals_occupations is None:
+            return None
+
+        orbitals, occupations = orbitals_occupations
+        
+        return orbitals, occupations
+
+    
     def get_decomposition(self,decomposition_type,qn:LevelQNType,verbose=False):
         """ Retrieve decomposition ("Nex") as np.array.
 
@@ -1150,6 +1220,38 @@ class MFDnResultsData(results_data.ResultsData):
         iterations = len(alpha)
 
         return iterations
+
+
+    def get_spectroscopic_amplitudes(
+            self, delta_nuclide:tuple[int,int], qn_pair:LevelQNPairType,
+            verbose=False
+    ):
+        """Retrieve dictionary of spectroscopic amplitudes.
+
+        Default return is None.
+
+        Example:
+            >>> mesh_point.get_spectroscopic_amplitudes((0,+1), ((0.5, 1, 1), (1.0, 0, 1)))
+
+        Arguments:
+
+            delta_nuclide (tuple): (delta_Z, delta_N)
+
+            qn_pair (tuple): Quantum numbers for states (qn_bra,qn_ket).
+
+        Returns:
+
+            (dict): Spectroscopic amplitudes, as mapping (n,l,j)->amplitude.
+
+        """
+
+        data_for_delta_nuclide = self.postprocessor_spectroscopic_amplitudes.get(delta_nuclide)
+        if data_for_delta_nuclide is None:
+            return None
+
+        amplitudes = data_for_delta_nuclide.get(qn_pair)
+        
+        return amplitudes
     
     
     ########################################
@@ -1169,14 +1271,18 @@ class MFDnResultsData(results_data.ResultsData):
 
         # merge observable dictionaries
         update_observable_dictionary(self.mfdn_level_decompositions,other.mfdn_level_decompositions,dict)
+        # mfdn_level_residuals: Omit from update, since these are run-specific and thus not included in merging of mesh points.
         update_observable_dictionary(self.mfdn_level_properties,other.mfdn_level_properties,dict)
+        update_observable_dictionary(self.mfdn_level_occupations,other.mfdn_level_occupations,dict)
         update_observable_dictionary(self.mfdn_ob_moments,other.mfdn_ob_moments,dict)
         update_observable_dictionary(self.mfdn_ob_rmes,other.mfdn_ob_rmes,results_data.RMEData)
         update_observable_dictionary(self.mfdn_tb_expectations,other.mfdn_tb_expectations,dict)
         update_observable_dictionary(self.postprocessor_ob_rmes,other.postprocessor_ob_rmes,results_data.RMEData)
         update_observable_dictionary(self.postprocessor_tb_rmes,other.postprocessor_tb_rmes,results_data.RMEData)
         update_observable_dictionary(self.mfdn_level_lanczos_decomposition_data,other.mfdn_level_lanczos_decomposition_data,dict)
+        update_observable_dictionary(self.postprocessor_spectroscopic_amplitudes,other.postprocessor_spectroscopic_amplitudes,dict)
 
+        
 #################################################
 # test code
 #################################################
