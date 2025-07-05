@@ -213,7 +213,9 @@ class SpectroscopicFactor(mfdnres.observable.Observable):
         """ Formatted LaTeX text representing observable.
         """
         l, j = self._lj
-        label = "S({:d},{:s})".format(l,mfdnres.ticks.half_int_str(j))
+        ## level_pair_text = self._level_pair[0].label_text, self._level_pair[1].label_text
+        level_pair_text = mfdnres.data.qn_text(self._level_pair[0]), self._level_pair[1].label_text  # INTERIM
+        label = r"S({:d},{:s};{}\rightarrow{})".format(l, mfdnres.ticks.half_int_str(j), level_pair_text[1], level_pair_text[0])
         return label
 
     @property
