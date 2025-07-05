@@ -57,7 +57,7 @@ def nucleon_number_by_observable_tag(nuclide):
 
     Returns:
 
-        (dict): observable tag ("m", "p", "n") -> (A, Z, N)
+        (dict): Observable tag ("m", "p", "n") -> (A, Z, N).
     """
 
     A = sum(nuclide)
@@ -85,15 +85,17 @@ def Nmax_shifted(observable_data, shift, *, shift_index_name="Nmax"):
         Delta_data = Nmax_shifted(observable_data, 0) - Nmax_shifted(observable_data, -2)
 
     Arguments:
-        observable_data (pd.DataFrame): data multi-indexed by (Nmax,hw)
 
-        shift (int): displacement to Nmax index
+        observable_data (pd.DataFrame): Data multi-indexed by (Nmax,hw).
 
-        shift_index_name (str, optional): name of multiindex component to shift
-        (defaults to "Nmax")
+        shift (int): Displacement to Nmax index.
+
+        shift_index_name (str, optional): Name of multiindex component to shift
+        (defaults to "Nmax").
 
     Returns:
-        (pd.DataFrame): shifted data multi-indexed by (Nmax,hw)
+
+        (pd.DataFrame): Shifted data multi-indexed by (Nmax,hw).
 
     """
     index_names = observable_data.index.names
@@ -251,11 +253,11 @@ class OverrideLabels(Observable):
 
         Arguments:
 
-            observable (Observable): observable providing value
+            observable (Observable): Observable providing value.
 
-            observable_label_text (str, optional): observable label text
+            observable_label_text (str, optional): Observable label text.
 
-            axis_label_text (tuple, optional): axis label text
+            axis_label_text (tuple, optional): Axis label text.
 
         """
         super().__init__()
@@ -324,8 +326,8 @@ class LegacyObservable(Observable):
 
         Arguments:
 
-            specifier (tuple): legacy observable specifier
-            (a.k.a. "nuclide_observable")
+            specifier (tuple): Legacy observable specifier
+            (a.k.a. "nuclide_observable").
 
         """
         super().__init__()
@@ -342,15 +344,16 @@ class Difference(Observable):
     """
 
     def __init__(self, observable1, observable2, observable_label_delimiters=None):
-        """ Initialize with given parameters.
+        """Initialize with given parameters.
 
         Arguments:
 
-            observable1, observable2 (Observable): first and second terms
+            observable1, observable2 (Observable): Observables to be differenced
+            (first minus second).
 
-            observable_label_delimiters (tuple, optional): left/right delimiter
+            observable_label_delimiters (tuple, optional): Left/right delimiter
             pairs to put around the labels for the first/second observable
-            appearing in the ratio, e.g., (("[","]"),("[","]"))
+            appearing in the ratio, e.g., (("[","]"),("[","]")).
 
         """
         super().__init__()
@@ -444,15 +447,16 @@ class Sum(Observable):
     """
 
     def __init__(self, observable1, observable2, observable_label_delimiters=None):
-        """ Initialize with given parameters.
+        """Initialize with given parameters.
 
         Arguments:
 
-            observable1, observable2 (Observable): first and second terms
+            observable1, observable2 (Observable): Observables
+            to be summed.
 
-            observable_label_delimiters (tuple, optional): left/right delimiter
+            observable_label_delimiters (tuple, optional): Left/right delimiter
             pairs to put around the labels for the first/second observable
-            appearing in the ratio, e.g., (("[","]"),("[","]"))
+            appearing in the ratio, e.g., (("[","]"),("[","]")).
 
         """
         super().__init__()
@@ -551,11 +555,12 @@ class Ratio(Observable):
 
         Arguments:
 
-            observable1, observable2 (Observable): first and second terms
+            observable1, observable2 (Observable): Numerator and denominator
+            observables.
 
-            observable_label_delimiters (tuple, optional): left/right delimiter
+            observable_label_delimiters (tuple, optional): Left/right delimiter
             pairs to put around the labels for the first/second observable
-            appearing in the ratio, e.g., (("[","]"),("[","]"))
+            appearing in the ratio, e.g., (("[","]"),("[","]")).
 
         """
         super().__init__()
@@ -657,17 +662,17 @@ class Power(Observable):
     """
 
     def __init__(self, observable1, power, observable_label_delimiters=None):
-        """ Initialize with given parameters.
+        """Initialize with given parameters.
 
         Arguments:
 
-            observable1 (Observable): observable to be exponentiated
+            observable1 (Observable): Observable to be exponentiated.
 
-            power (int): power to which to raise observable
+            power (int): Power to which to raise observable.
 
-            observable_label_delimiters (tuple, optional): left/right delimiter
-            pairs to put around the labels for the observable
-            appearing in the power, e.g., ("[","]")
+            observable_label_delimiters (tuple, optional): Left/right delimiter
+            pairs to put around the labels for the observable appearing in the
+            power, e.g., ("[","]").
 
         """
         super().__init__()
@@ -764,15 +769,15 @@ class FixSignTo(Observable):
 
         Arguments:
 
-            observable1 (Observable): observable providing value
+            observable1 (Observable): Observable providing value.
 
-            observable2 (Observable, optional): observable providing sign; if
+            observable2 (Observable, optional): Observable providing sign.  If
                 omitted, observable1 is used, which amounts to taking
-                abs(observble1)
+                abs(observble1).
 
-            observable_label_delimiters (tuple, optional): left/right delimiter
-                pair to put around the label for the observable,
-                e.g., (r"\vert",r"\vert")
+            observable_label_delimiters (tuple, optional): Left/right delimiter
+                pair to put around the label for the observable, e.g.,
+                (r"\vert",r"\vert").
 
         """
         super().__init__()
@@ -844,7 +849,7 @@ class Energy(Observable):
 
             nuclide (tuple): (Z, N)
 
-            level (LevelSelector): level
+            level (LevelSelector): Level selector for level.
 
         """
         super().__init__()
@@ -912,16 +917,18 @@ class ExcitationEnergy(Observable):
 
             nuclide (tuple): (Z, N)
 
-            level (LevelSelector): level
+            level (LevelSelector): Level selector for level.
 
-            reference_level (LevelSelector): reference ("ground state") level for energy difference
+            reference_level (LevelSelector): Reference ("ground state") level
+            for energy difference.
 
-            Nmax_shift (int, optional): shift in Nmax to apply to excited level,
+            Nmax_shift (int, optional): Shift in Nmax to apply to excited level,
             for cross-parity excitation energies (e.g., Nmax_shift=1 to
             calculated "Nmax+1" excited level energy relative to "Nmax"
-            reference level energy, reported at "Nmax")
+            reference level energy, reported at "Nmax").
 
-            label_as_difference (bool, optional): whether or not to show reference level in observable label
+            label_as_difference (bool, optional): Whether or not to show
+            reference level in observable label.
 
         """
         super().__init__()
@@ -1006,7 +1013,7 @@ class Isospin(Observable):
 
             nuclide (tuple): (Z, N)
 
-            level (LevelSelector): level
+            level (LevelSelector): Level selector for level.
 
         """
         super().__init__()
@@ -1134,10 +1141,10 @@ class Radius(Observable):
 
             nuclide (tuple): (Z, N)
 
-            operator (str): identifier for radius operator, as accepted by
-            MFDnResultsData.get_radius()
+            operator (str): Ientifier for radius operator, as accepted by
+            MFDnResultsData.get_radius().
 
-            level (LevelSelector): level
+            level (LevelSelector): Level selector for level.
 
         """
         super().__init__()
@@ -1283,10 +1290,10 @@ class Moment(Observable):
 
             nuclide (tuple): (Z, N)
 
-            operator (str): identifier for electromagnetic operator, as accepted
-            by MFDnResultsData.get_moment()
+            operator (str): Identifier for electromagnetic operator, as accepted
+            by MFDnResultsData.get_rme().
 
-            level (LevelSelector): level
+            level (LevelSelector): Level selector for level.
 
         """
         super().__init__()
@@ -1379,11 +1386,17 @@ class RME(Observable):
 
             nuclide (tuple): (Z, N)
 
-            operator (str): identifier for electromagnetic operator, as accepted
-            by MFDnResultsData.get_rme()
+            operator (str): Identifier for electromagnetic operator, as accepted
+            by MFDnResultsData.get_rme().
 
-            level (LevelSelector): level
+            levelf (LevelSelector): Level selector for final level.
 
+            leveli (LevelSelector): Level selector for initial level.
+
+            [RESERVED:] label_text (str, (str, str)): Overide for observable and axis label text
+            (observable_label_text, axis_label_text).
+
+            [RESERVED:] rank (str): Particle rank ("ob" or "tb") of operator.  
         """
         super().__init__()
         self._nuclide = nuclide
@@ -1470,13 +1483,17 @@ class ME(Observable):
 
             nuclide (tuple): (Z, N)
 
-            operator (str): identifier for electromagnetic operator, as accepted
-            by MFDnResultsData.get_rme()
+            operator (str): Identifier for electromagnetic operator, as accepted
+            by MFDnResultsData.get_rme().
 
-            level (LevelSelector): level
+            levelf (LevelSelector): Level selector for final level.
 
-            label_text (str, (str, str)): overide for observable and axis label text
-            (observable_label_text, axis_label_text)
+            leveli (LevelSelector): Level selector for initial level.
+
+            label_text (str, (str, str)): Overide for observable and axis label text
+            (observable_label_text, axis_label_text).
+
+            rank (str): Particle rank ("ob" or "tb") of operator.  
 
         """
         super().__init__()
@@ -1554,12 +1571,17 @@ class RTP(Observable):
 
             nuclide (tuple): (Z, N)
 
-            operator (str): identifier for electromagnetic operator, as accepted
-            by MFDnResultsData.get_rme()
+            operator (str): Identifier for electromagnetic operator, as accepted
+            by MFDnResultsData.get_rme().
 
-            levelf (LevelSelector): final level
+            levelf (LevelSelector): Level selector for final level.
 
-            leveli (LevelSelector): final initial level
+            leveli (LevelSelector): Level selector for initial level.
+
+            [RESERVED:] label_text (str, (str, str)): Overide for observable and axis label text
+            (observable_label_text, axis_label_text).
+
+            [RESERVED:] rank (str): Particle rank ("ob" or "tb") of operator.  
 
         """
         super().__init__()
