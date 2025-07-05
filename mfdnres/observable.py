@@ -167,15 +167,25 @@ class Observable(object):
             e.g., (("Nmax", int), ("hw", float))
 
         """
-        # select mesh down to given nuclide
+        
+        # select mesh for given nuclide (still a mesh over the key parameters)
         selector = {"nuclide": self._nuclide}
         mesh_data_selected = analysis.selected_mesh_data(mesh_data, selector, verbose=verbose)
 
+        # stub: support for final nuclide differing from initial nuclide
+        ## try:
+        ##     selector_final = {"nuclide": self._final_nuclide}
+        ##     mesh_data_selected_final = analysis.selected_mesh_data(mesh_data, selector_final, verbose=verbose)
+        ## except AttributeError:
+        ##     mesh_data_selected_final = mesh_data_selector
+        
         # generate hw table
         #
         # e.g., key_descriptor = (("Nmax",int),("hw",float))
         #
-        # TODO: Replace use of analysis.make_obs_table with stripped-down tabulation code.
+        # TODO (mac): Replace use of analysis.make_obs_table with stripped-down
+        # tabulation code.  And support differing nuclide (in
+        # mesh_data_selected_final) for final level selector.
         table = analysis.make_obs_table(mesh_data_selected, key_descriptor, self.value, verbose=verbose)
 
         # structure table into DataFrame with compound index
