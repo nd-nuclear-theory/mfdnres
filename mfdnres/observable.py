@@ -167,7 +167,7 @@ class Observable(object):
         """
         # select mesh down to given nuclide
         selector = {"nuclide": self._nuclide}
-        mesh_data_selected = analysis.selected_mesh_data(mesh_data,selector)
+        mesh_data_selected = analysis.selected_mesh_data(mesh_data, selector, verbose=verbose)
 
         # generate hw table
         #
