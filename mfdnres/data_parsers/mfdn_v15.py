@@ -597,15 +597,25 @@ def parse_postprocessor_spectroscopic_amplitudes(self:MFDnResultsData, tokenized
 
     # parse header
     tokenized_line = tokenized_lines.pop(0)
-    delta_nuclide = int(tokenized_line[0]), int(tokenized_line[1])
-    tokenized_line = tokenized_lines.pop(0)
-    qnf = (float(tokenized_line[0]), int(tokenized_line[1]), int(tokenized_line[2]))
-    tokenized_line = tokenized_lines.pop(0)
-    qni = (float(tokenized_line[0]), int(tokenized_line[1]), int(tokenized_line[2]))
+    if len(tokenized_line)==2:
+        # trial format -- DEPRECATED
+        delta_nuclide = int(tokenized_line[0]), int(tokenized_line[1])
+        tokenized_line = tokenized_lines.pop(0)
+        qnf = (float(tokenized_line[0]), int(tokenized_line[1]), int(tokenized_line[2]))
+        tokenized_line = tokenized_lines.pop(0)
+        qni = (float(tokenized_line[0]), int(tokenized_line[1]), int(tokenized_line[2]))
+    elif len(tokenized_line)==8:
+        delta_nuclide = int(tokenized_line[0]), int(tokenized_line[1])
+        qnf = (float(tokenized_line[2]), int(tokenized_line[3]), int(tokenized_line[4]))
+        qni = (float(tokenized_line[5]), int(tokenized_line[6]), int(tokenized_line[7]))
+    else:
+        raise ValueError("unexpected number of columns in spectroscopic amplitude section header")
 
     # parse amplitudes
     amplitudes = dict()
     for tokenized_line in tokenized_lines:
+        if len(tokenized_line)!=4:
+            raise ValueError("unexpected number of columns in spectroscopic amplitude section data")
         n, l, j, value = int(tokenized_line[0]), int(tokenized_line[1]), float(tokenized_line[2]), float(tokenized_line[3])
         amplitudes[(n,l,j)] = value
     

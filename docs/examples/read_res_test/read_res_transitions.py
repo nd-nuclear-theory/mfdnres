@@ -1,22 +1,23 @@
-"""read_res_mfdn_transitions_spamp.py
+"""read_res_transitions.py
 
-    Provides simple example of reading and accessing spectroscopic amplitude
-    results in a putative format for future spectroscopic amplitude calculations
-    by mfdn-transitions.  In initial implmentation, such results are obtained by
-    digesting results from rhodium.
+    Provides simple example of reading and accessing MFDn postprocessor results.
 
     In practice, such results may need to be "merged" with results from mfdn.
 
     Required test data:
-        data/mfdn-transitions-spamp/runmac0908-transitions-spamp-Z3-N3-Daejeon16-coul1-hw15.000-Nmax02-Mj0.5.res
-        data/mfdn-transitions-spamp/runmac0908-transitions-spamp-Z3-N3-Daejeon16-coul1-hw15.000-Nmax02-Mj1.5.res
+        data/mfdn-transitions/runtransitions00-transitions-ob-Z3-N3-Daejeon16-coul1-hw15.000-Nmax02.res
+        data/mfdn-transitions/runtransitions00-transitions-tb-Z3-N3-Daejeon16-coul1-hw15.000-Nmax02.res
+
+        This example output is produced by mcscript-ncci/docs/examples/runtransitions00.py.
 
     Mark A. Caprio
     University of Notre Dame
 
     Language: Python 3
 
-    - 07/03/25 (mac): Created.
+    - 09/17/20 (mac): Created.
+    - 05/18/22 (mac): Update example file.
+    - 07/12/22 (mac): Provide example use of two-body RME accessor.
 
 """
 
@@ -34,7 +35,7 @@ def read_data():
     """
 
     print("Reading input file...")
-    data_dir = os.path.join("data","mfdn-transitions-spamp")
+    data_dir = os.path.join("data","mfdn-transitions")
     mesh_data = mfdnres.input.slurp_res_files(
         data_dir,
         res_format="mfdn_v15",
@@ -80,17 +81,27 @@ def explore_point(results_data):
 
     # examine data attributes
     print("Data attributes...")
-    print("results_data.postprocessor_spectroscopic_amplitudes {}".format(results_data.postprocessor_spectroscopic_amplitudes))
+    print("results_data.postprocessor_ob_rmes {}".format(results_data.postprocessor_ob_rmes))
+    print("results_data.postprocessor_tb_rmes {}".format(results_data.postprocessor_tb_rmes))
     print()
 
     # access ob rmes
-    print("Test accessors (spectroscopic amplitudes)...")
-    amplitudes = results_data.get_spectroscopic_amplitudes((0,+1), ((0.5, 1, 1), (1.0, 0, 1)))
-    for orbital, value in amplitudes.items():
-        n, l, j = orbital
-        print("  {:1d} {:1d} {:3.1f}    {:+e}".format(n, l, j, value))
+    print("Test accessors (one-body)...")
+    print("M1 moment (from dipole term rmes) {}".format(results_data.get_moment("M1",(1.0,0,1))))
+    print("M1 rme (from dipole term rmes) {}".format(results_data.get_rme("M1",((1.0,0,1),(1.0,0,1)))))
+    print("E2 moment {}".format(results_data.get_moment("E2p",(1.0,0,1))))
+    print("E2 rme {}".format(results_data.get_rme("E2p",((1.0,0,1),(1.0,0,1)))))
     print()
 
+    # access tb rmes
+    print("Test accessors (two-body)...")
+    print("QxQ_0 rme {}".format(results_data.get_rme("QxQ_0",((2.0,0,1),(2.0,0,1)),rank="tb")))
+    print()
+
+    print("Test get_rme verbose mode...")
+    print("E2 rme {}".format(results_data.get_rme("E2p",((1.0,0,1),(1.0,0,1)),verbose=True)))
+    print("E2 rme {}".format(results_data.get_rme("E2p",((1.0,0,1),(1.0,1,1)),verbose=True)))  # invalid state pair
+    print()
     
 ################################################################
 # main
