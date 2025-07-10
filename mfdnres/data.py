@@ -69,6 +69,7 @@
     - 05/10/25 (mac): Make observable argument to set_up_hw_scan_axes and set_up_Nmax_scan_axes
         optional if observable_axis_label_text provided.
     - 05/18/25 (mac): Remove nuclide_str() and qn_str() in favor of implementation in tools.
+    - 07/10/25 (mac): Permit specification of label displacement by Nmax in add_hw_scan_plot_Nmax_labels.
 """
 
 import collections
@@ -1407,56 +1408,55 @@ def add_hw_scan_plot_Nmax_labels(
 
     Arguments:
 
-        ax (mpl.axes.Axes): axes object
+        ax (mpl.axes.Axes): Axes object.
 
-        Nmax_groups (pd.DataFrameGroupBy): curve data grouped by Nmax (as
-            returned by add_hw_scan_plot())
+        Nmax_groups (pd.DataFrameGroupBy): Curve data grouped by Nmax (as
+            returned by add_hw_scan_plot()).
 
-        label_list (list of int): list of Nmax values for labels [formerly
-        Nmax_label_list]
+        label_list (list of int): List of Nmax values for labels [formerly
+        Nmax_label_list].
 
-        legend_index (int, optional): index within label_list for Nmax
+        legend_index (int, optional): Index within label_list for Nmax
         label to which to attach the legend "Nmax" (or None to omit legend)
-        [formerly Nmax_label_tagged_index]
+        [formerly Nmax_label_tagged_index].
 
-        side (str, optional): side of curve for label "left" or "right"
+        side (str, optional): Side of curve for label "left" or "right".
 
-        data_point_index (int, optional): index of data point within curve for
-        labeling (0 for "left" end of curve, -1 for "right" end of curve); or
-        None for default based on side
+        data_point_index (int, optional): Index of data point within curve for
+        labeling (0 for "left" end of curve, -1 for "right" end of curve).
+        Default is based on side.
 
-        text_displacement (tuple, optional): xy displacement in points of text relative to curve point; or
-        None for default based on side
+        text_displacement (tuple or dict, optional): Displacement (x,y), in
+        points, of text relative to curve point.  Can be given as a dictionary
+        of displacement values by Nmax, with fallthrough to default value.
+        Default is based on side, namely, (+12,+0) for "right" or (-2,+0) for
+        "left".
 
-        legend_position (str, optional): position of Nmax
-        legend label relative to Nmax labels ("bottom" or "top")
+        legend_position (str, optional): Position of Nmax
+        legend label relative to Nmax labels ("bottom" or "top").
 
-        legend_xy (tuple of float, optional): explicit position of Nmax legend
+        legend_xy (tuple of float, optional): Explicit position of Nmax legend
         label relative to the Nmax label to which it is attached, for manual
         fine-tuning (defaults legend_xy=(1,0) for legend_position="bottom",
-        legend_xy=(1,1) for or legend_position="top")
+        legend_xy=(1,1) for or legend_position="top").
 
-        label_text (str, optional): template string for label (applied as format
-        string to the value of Nmax), default "{}"; may be used to provide an arbitrary text label for hw
-        scan curves
+        label_text (str, optional): Template string for label (applied as format
+        string to the value of Nmax), default "{}"; may be used to provide an
+        arbitrary text label for hw scan curves.
 
-        fontsize (str, optional): fontsize argument for annotate
+        fontsize (str, optional): Fontsize argument for annotate.
 
     """
 
     # TODO (mac, 03/19/23): add in generalizations for call-out lines
 
-    if side=="right":
-        if data_point_index is None:
+    # deduce default parameters
+    if data_point_index is None:
+        if side=="right":
             data_point_index=-1
-        if text_displacement is None:
-            text_displacement=(+12,+0)
-    elif side=="left":
-        if data_point_index is None:
+        elif side=="left":
             data_point_index=0
-        if text_displacement is None:
-            text_displacement=(-2,+0)
-        
+    
     for Nmax, group in Nmax_groups:
 
         # extract curve endpoint
@@ -1465,14 +1465,37 @@ def add_hw_scan_plot_Nmax_labels(
         
         # generate Nmax label
         if Nmax in label_list:
+
+            # construct text
             if label_text is None:
                 label_text = r"{}"
             resolved_label_text = label_text.format(Nmax)
+
+            # deduce displacement
+            if isinstance(text_displacement, tuple):
+                used_text_displacement = text_displacement
+            elif isinstance(text_displacement, dict):
+                if Nmax in text_displacement:
+                    used_text_displacement = text_displacement[Nmax]
+                else:
+                    used_text_displacement = None  # allows fallthrough to default if Nmax does not appear in text_displacement dictionary
+            elif text_displacement is None:
+                used_text_displacement=None
+            else:
+                raise ValueError("Unrecognized type ({}) for text displacement ({})".format(type(text_displacement), text_displacement))
+            
+            if used_text_displacement is None:
+                if side=="right":
+                    used_text_displacement=(+12,+0)
+                elif side=="left":
+                    used_text_displacement=(-2,+0)
+
+            # generate label
             Nmax_label = ax.annotate(
                 r"${}$".format(resolved_label_text),
                 ##r"${}$".format(Nmax),
                 xy=endpoint, xycoords="data",
-                xytext=text_displacement, textcoords="offset points",
+                xytext=used_text_displacement, textcoords="offset points",
                 fontsize=fontsize,
                 horizontalalignment="right", verticalalignment="center",
                 ##arrowprops=dict(arrowstyle="-", linewidth=0.5, shrinkA=1, shrinkB=3),
