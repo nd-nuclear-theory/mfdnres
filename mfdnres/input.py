@@ -40,6 +40,7 @@
         - Add results_type option for res_file_directory().
         - Add read_runs().
     02/22/24 (mac): Add results_postprocessors option to read_runs().
+    07/20/25 (mac): Change default value of slurp_res_files option glob_pattern to None.
 
 """
 
@@ -356,7 +357,7 @@ def slurp_res_files(
         res_format=None,
         filename_format=None,
         params=None,
-        glob_pattern="*.res",
+        glob_pattern=None,
         verbose=False,
 ):
     """Read all results files in given directories.
@@ -367,17 +368,17 @@ def slurp_res_files(
     Arguments:
 
         directory_list (str or list of str): Directory or list of directories
-            containing files to import
+            containing files to import.
 
-        res_format (str, optional): Identifier string for the results file parser to use
+        res_format (str, optional): Identifier string for the results file parser to use.
 
-        filename_format (str, optional): Filename format to match, or "ALL" try
-            try multiple formats until one matches
+        filename_format (str, optional): Filename format to match, or "ALL" to
+            try multiple formats until one matches.
 
-        glob_pattern (str,optional): Glob pattern for results filenames to read
-            within each directory
+        glob_pattern (str, optional): Glob pattern for results filenames to read
+            within each directory.  Defaults to "*.res".
 
-        verbose (bool,optional): Enable debugging output
+        verbose (bool, optional): Enable debugging output.
 
     Returns:
 
@@ -394,6 +395,8 @@ def slurp_res_files(
 
     # accumulate mesh points
     mesh_data = []
+    if glob_pattern is None:
+        glob_pattern = "*.res"
     for directory in directory_list:
         full_glob_pattern = os.path.join(directory, glob_pattern)
         if (verbose):
