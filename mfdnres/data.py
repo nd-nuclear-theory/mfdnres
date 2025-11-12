@@ -572,16 +572,18 @@ def resolve_qn_text(level_selector):
 
 
 def make_observable_axis_label_text(observable_object):
-    """ Generate axis label (with units) for observable, given observable_object.
+    """Generate axis label (with units) for observable, given observable_object (or
+simple tuple of observable and units strings).
 
     Arguments:
 
         observable_object (observable.Observable): observable object, or 
-        tuple (observable_str,units_ str)
+        tuple (observable_str,units_str)
 
     Returns:
 
         label (str): label string, to be interpreted in math mode
+
     """
 
     if type(observable_object) is tuple:
