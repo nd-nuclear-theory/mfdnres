@@ -121,7 +121,7 @@ class SpectroscopicFactor(mfdnres.observable.Observable):
 
     """
 
-    def __init__(self, nuclide, delta_nuclide, levelf, leveli, lj):
+    def __init__(self, nuclide, delta_nuclide, levelf, leveli, channel=None):
         """Initialize with given parameters.
 
         Arguments:
@@ -135,14 +135,15 @@ class SpectroscopicFactor(mfdnres.observable.Observable):
 
             leveli (LevelSelector): Level selector for initial level.
 
-            lj (tuple): Angular momentum channel (l,j) for spectroscopic factor.
+            channel (tuple): Angular momentum channel (l,), (l,j) for spectroscopic
+            factor, or None for total spectroscopic factor.
 
         """
         super().__init__()
         self._nuclide = nuclide  # DEPRECATED
         self._delta_nuclide = delta_nuclide
         self._level_pair = levelf, leveli
-        self._lj = lj
+        self._channel = channel
 
         # deduce final nuclide
         final_nuclide = (nuclide[0]+delta_nuclide[0], nuclide[1]+delta_nuclide[1])
@@ -155,7 +156,7 @@ class SpectroscopicFactor(mfdnres.observable.Observable):
         if self._delta_nuclide not in {(+1,0), (0,+1)}:
             raise ValueError("Unexpected delta_nuclide.  Only nucleon addition presently supported by implemented formulas.")
         
-        # TODO (mac): Resolve level selection on differeing initial and final results data.
+        # TODO (mac): Resolve level selection on differing initial and final results data.
         ## qn_pair = self._level_pair[0].select_level(results_data_final), self._level_pair[1].select_level(results_data_initial)
         qn_pair = self._level_pair[0], self._level_pair[1].select_level(results_data)  # INTERIM
         if (qn_pair[0] is None) or (qn_pair[1] is None):
@@ -169,10 +170,16 @@ class SpectroscopicFactor(mfdnres.observable.Observable):
         Jf, _, _ = qn_pair[0]
         am_factor = 1/(2*Jf+1)
         S = 0
+        channel = self._channel
         for orbital, amplitude in amplitudes.items():
             n, l, j = orbital
-            if (l, j) != self._lj:
-                continue
+            if channel is not None:
+                if (
+                        (len(channel)==1 and (l, ) != channel)
+                        or
+                        (len(channel)==2 and (l, j) != channel)
+                ):
+                    continue
             N = 2*n+l
             S += mass_ratio**N * am_factor * amplitude**2
         return S
@@ -181,6 +188,12 @@ class SpectroscopicFactor(mfdnres.observable.Observable):
     def descriptor_str(self):
         """ Text string describing observable.
         """
+        if channel is None:
+            channel_str = "total"
+        elif len(channel)==1:
+            channel_str = "{:d}".format(*self._channel),
+        elif len(channel)==2:
+            channel_str = "{:d}-{:.1f}".format(*self._channel
         return "-".join([
             mfdnres.tools.nuclide_str(self._nuclide_pair[0]),
             mfdnres.tools.nuclide_str(self._nuclide_pair[1]),
@@ -188,7 +201,7 @@ class SpectroscopicFactor(mfdnres.observable.Observable):
             ##self._operator,
             mfdnres.tools.qn_str(self._level_pair[0]),  ## self._level_pair[0].descriptor_str,  # interim
             self._level_pair[1].descriptor_str,
-            "{:d}-{:.1f}".format(*self._lj),
+            channel_str
         ])
 
     @property
@@ -212,10 +225,15 @@ class SpectroscopicFactor(mfdnres.observable.Observable):
     def observable_label_text(self):
         """ Formatted LaTeX text representing observable.
         """
-        l, j = self._lj
+        l, j = self._channel
         ## level_pair_text = self._level_pair[0].label_text, self._level_pair[1].label_text
         level_pair_text = mfdnres.data.qn_text(self._level_pair[0]), self._level_pair[1].label_text  # INTERIM
-        label = r"S({:d},{:s};{}\rightarrow{})".format(l, mfdnres.ticks.half_int_str(j), level_pair_text[1], level_pair_text[0])
+        if channel is None:
+            label = r"S({}\rightarrow{})".format(level_pair_text[1], level_pair_text[0])
+        elif len(channel)==1:
+            label = r"S({:d};{}\rightarrow{})".format(l, level_pair_text[1], level_pair_text[0])
+        elif len(channel)==2:
+            label = r"S({:d},{:s};{}\rightarrow{})".format(l, mfdnres.ticks.half_int_str(j), level_pair_text[1], level_pair_text[0])
         return label
 
     @property
