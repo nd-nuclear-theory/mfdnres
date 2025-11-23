@@ -166,7 +166,7 @@ def extract_key(key_fields,results_data):
         (tuple): values of given parameters
 
     """
-    key = tuple([results_data.params[key] for key in key_fields])
+    key = tuple([results_data.params.get(key) for key in key_fields])
     return key
 
 def make_key_function(key_descriptor):
@@ -630,7 +630,8 @@ def make_obs_table(mesh_data,key_descriptor,obs_extractor,key_list=None,prune=Fa
         except Exception as err:
             if verbose:
                 print("observable extractor failed with exception for key={}".format(key))
-                traceback.print_exception(etype=type(err), value=err, tb=err.__traceback__)
+                traceback.print_exception(type(err), value=err, tb=err.__traceback__)
+                ## traceback.print_exception(err)  # Python 3.10+ only
             value = np.nan
         if (prune and np.isnan(value)):
             continue

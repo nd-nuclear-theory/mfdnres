@@ -1,5 +1,7 @@
 """ mfdn_format_7_ho.py -- declares descriptor parser
 
+    See mfdn_format_7_ho_test.py for parsing tests.
+
     Language: Python 3
     Mark A. Caprio
     Patrick J. Fasano
@@ -18,6 +20,9 @@
         + Support natural orbital base state information in descriptor.
         + Support "decomp" flag.
     12/06/20 (pjf): Add additional decomposition descriptor parsing support.
+    10/12/23 (mac): Update decomposition descriptor parsing to support task_descriptor_decomposition_2.
+    01/16/23 (zz): Add isoscalar coulomb support in parser.
+
 """
 
 import re
@@ -30,21 +35,22 @@ def parser(filename):
     special case, but allowing for natural orbitals built on this basis.
 
     Args:
-        filename (string) : filename (as basename)
+        filename (string): filename (as basename)
 
     Returns:
-        (dict) : info parsed from filename
+        (dict): info parsed from filename
 
     """
 
     regex = re.compile(
         # prolog
         r"run(?P<run>\w+)"
-        r"\-(?P<code_name>((mfdn)|(obscalc-ob)|(transitions-ob)|(transitions-tb))[^\-]*)"
+        r"\-(?P<code_name>((mfdn)|(obscalc-ob)|(transitions-ob)|(transitions-tb)|(transitions-spamp))[^\-]*)"
         r"\-(?P<descriptor>"
         # descriptor contents
         r"Z(?P<Z>\d+)\-N(?P<N>\d+)"
         r"\-(?P<interaction>.+)\-coul(?P<coulomb>\d)"
+        r"(is)?"
         r"\-hw(?P<hw>[\d\.]+)"
         r"(\-a_cm(?P<lawson>[\d\.]+))?"
         r"\-Nmax(?P<Nmax>\d+)"
@@ -53,41 +59,53 @@ def parser(filename):
         r"(\-Mj(?P<M>-?[\d\.]+))?"
         r"(\-lan(?P<lanczos>\d+))?"
         r"(\-tol(?P<tolerance>\d+\.\d+[eE][+-]\d+))?"
-        r"("   # begin natorb group
+        # natorb group (optional)
+        r"("  # begin natorb group
           r"(?P<natural_orbital_flag>\-natorb)"
-          r"(\-J(?P<J>[\d\.]+)\-g(?P<g>[01])\-n(?P<n>[\d]+))?"
+          r"(\-J(?P<natural_orbital_J>[\d\.]+)\-g(?P<natural_orbital_g>[01])\-n(?P<natural_orbital_n>[\d]+))?"
           r"(\-no(?P<natural_orbital_iteration>\d+))?"
         r")?"  # end natorb group
-        r"(\-J(?P<decomp_J>[\d\.]+)\-g(?P<decomp_g>[01])\-n(?P<decomp_n>[\d]+))?"
-        r"(\-op(?P<decomposition_operator>.+)\-dlan(?P<decomposition_lanczos>\d+))?"
-        r"(?P<decomposition_flag>\-decomp)?"
+        # decomposition group (optional)
+        r"("  # begin decomposition group
+          r"\-J(?P<decomposition_J>[\d\.]+)\-g(?P<decomposition_g>[01])\-n(?P<decomposition_n>[\d]+)"
+          # task_descriptor_decomposition_1 has "op" prefix before "decomposition_operator_name"
+          # task_descriptor_decomposition_2 has no prefix before "decomposition_type"
+          r"\-(op)?(?P<decomposition_type>.+)\-dlan(?P<decomposition_lanczos>\d+)"
+          r"(?P<decomposition_flag>\-decomp)?"
+        r")?"  # end decomposition group
+        # subset index (optional)
         r"(\-subset(?P<subset_index>\d+))?"
         # epilog
         r").(?P<extension>((res)|(out)|(lanczos)))"
     )
 
     flag_conversions = {
-        "mixed_parity_flag" : (lambda s  :  (s=="x")),
-        "fci_flag" : (lambda s  :  (s=="-fci")),
-        "natural_orbital_flag" : (lambda s  :  (s=="-natorb")),
-        "decomposition_flag" : (lambda s  :  (s=="-decomp")),
+        "mixed_parity_flag": (lambda s : (s=="x")),
+        "fci_flag": (lambda s : (s=="-fci")),
+        "natural_orbital_flag": (lambda s : (s=="-natorb")),
+        "decomposition_flag": (lambda s : (s=="-decomp")),
     }
 
     conversions = {
-        "Z" : int,
-        "N" : int,
-        "interaction" : str,
-        "coulomb" : int,
-        "hw" : float,
-        "lawson" : float,
-        "Nmax" : int,
-        "Ncut" : int,
-        "M" : float,
-        "lanczos" : int,
-        "J": float, "g": int, "n": int,
-        "decomp_J": float, "decomp_g": int, "decomp_n": int,
+        "Z": int,
+        "N": int,
+        "interaction": str,
+        "coulomb": int,
+        "hw": float,
+        "lawson": float,
+        "Nmax": int,
+        "Ncut": int,
+        "M": float,
+        "lanczos": int,
+        # natorb group (optional)
+        "natural_orbital_J": float, "natural_orbital_g": int, "natural_orbital_n": int,
+        "natural_orbital_iteration": int,
+        # decomposition group (optional)
+        "decomposition_type": str,
+        "decomposition_J": float, "decomposition_g": int, "decomposition_n": int,
         "decomposition_lanczos": int,
-        "natural_orbital_iteration" : int
+        # subset index (optional)
+        "subset_index": int,
         }
 
     match = regex.match(filename)
@@ -96,7 +114,7 @@ def parser(filename):
     info = match.groupdict()
 
     # convert fields
-    for key,conversion in flag_conversions.items():
+    for key, conversion in flag_conversions.items():
         info[key] = conversion(info[key])
     for key in conversions:
         conversion = conversions[key]
@@ -107,33 +125,14 @@ def parser(filename):
         info["natural_orbital_iteration"] = 0
 
     # build natorb base state
-    info["natorb_base_state"] = (info.pop("J"), info.pop("g"), info.pop("n"))
+    info["natorb_base_state"] = (info.pop("natural_orbital_J"), info.pop("natural_orbital_g"), info.pop("natural_orbital_n"))
 
     # build decomposition state
-    info["decomposition_state"] = (info.pop("decomp_J"), info.pop("decomp_g"), info.pop("decomp_n"))
+    info["decomposition_state"] = (info.pop("decomposition_J"), info.pop("decomposition_g"), info.pop("decomposition_n"))
+
+    # provide legacy decomposition_operator field (DEPRECATED)
+    info["decomposition_operator"] = info.get("decomposition_type")
 
     return info
 
 input.register_filename_format("mfdn_format_7_ho", parser)
-
-if (__name__ == "__main__"):
-
-    filename = r"run0000-mfdn-Z2-N6-Daejeon16-coul1-hw05.000-a_cm20-Nmax02-Mj0.0-lan500-tol1.0e-06-natorb-no0.res"
-    info = input.parse_filename(filename, filename_format="mfdn_format_7_ho")
-    print(filename)
-    print(info)
-
-    filename = r"run0000-mfdn-Z2-N6-Daejeon16-coul1-hw05.000-a_cm20-Nmax02x-Mj0.0-lan500-tol1.0e-06.res"
-    info = input.parse_filename(filename, filename_format="mfdn_format_7_ho")
-    print(filename)
-    print(info)
-
-    filename = r"runpjf0015-mfdn15-Z3-N4-JISP16-coul1-hw20.000-a_cm40-Nmax02-Mj0.5-lan1000-tol1.0e-06-natorb-no0.res"
-    info = input.parse_filename(filename, filename_format="mfdn_format_7_ho")
-    print(filename)
-    print(info)
-
-    filename = r"runpjf0069-mfdn15-Z2-N1-Daejeon16-coul1-hw22.500-a_cm0-Nmax14-Mj0.5-lan400-tol1.0e-06-natorb-J00.5-g0-n01-no0.res"
-    info = input.parse_filename(filename, filename_format="mfdn_format_7_ho")
-    print(filename)
-    print(info)

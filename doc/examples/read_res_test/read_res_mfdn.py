@@ -19,6 +19,9 @@
     - 09/17/20 (mac): Created.
     - 05/10/21 (mac): Update example file.
     - 05/18/22 (mac): Update example file.
+    - 11/26/23 (mac): Add Nex decomposition.
+    - 03/13/24 (mac): Illustrate selection of mesh point by parameters.
+    - 07/03/23 (mac): Add occupations.
 
 """
 
@@ -41,16 +44,17 @@ def read_data():
         data_dir,
         res_format="mfdn_v15",
         filename_format="mfdn_format_7_ho",
-        glob_pattern="runmfdn13-mfdn15-*-Mj1.0-*.res",  # pick just one input file for this simple test
-        ## glob_pattern="runmfdn13gpu-mfdn15-*-Mj1.0-*.res",  # pick just one input file for this simple test
+        glob_pattern="runmfdn13-mfdn15-*.res",
+        ## glob_pattern="runmfdn13gpu-mfdn15-*-Mj1.0-*.res",  # inspect gpu runs
         verbose=True
     )
     print()
     
-    # diagnostic output -- FOR ILLUSTRATION ONLY
+    # summarize mesh (diagnostic output)
     print("Raw mesh (params)")
     for results_data in mesh_data:
         print(mfdnres.analysis.dict_items(results_data.params))
+        print()
     print()
     
     return mesh_data
@@ -64,22 +68,45 @@ def explore_point(results_data):
 
     """
 
+    print("Inspecting mesh point")
+    print()
+    
+    # parameters
+    print("Params")
+    print(mfdnres.analysis.dict_items(results_data.params))
+
     # examine data attributes
     print("Data attributes...")
     print("results_data.postprocessor_ob_rmes {}".format(results_data.postprocessor_ob_rmes))
     print("results_data.postprocessor_tb_rmes {}".format(results_data.postprocessor_tb_rmes))
+    print("results_data.mfdn_level_occupations {}".format(results_data.mfdn_level_occupations))
     print()
 
     # access ob moments
     print("Test accessors (one-body)...")
-    print("M1 moment (native physical) {}".format(results_data.get_moment("M1-native",(1.0,0,1))))
-    print("M1 moment (from dipole term rmes) {}".format(results_data.get_moment("M1",(1.0,0,1))))
-    print("E2 moment (from dipole term rmes) {}".format(results_data.get_moment("E2p",(1.0,0,1))))
+    print("M1 moment (native physical) {}".format(results_data.get_moment("M1-native", (1.0,0,1))))
+    print("M1 moment (from dipole term rmes) {}".format(results_data.get_moment("M1", (1.0,0,1))))
+    print("E2 moment (from dipole term rmes) {}".format(results_data.get_moment("E2p", (1.0,0,1))))
     print()
 
     # access tb expectations
     print("Test accessors (two-body)...")
-    print("Rp {}".format(results_data.get_radius("rp",(1.0,0,1))))
+    print("Rp {}".format(results_data.get_radius("rp", (1.0,0,1))))
+    print()
+
+    # access Nex decomposition
+    print("Test Nex decomposition...")
+    decomposition = results_data.get_decomposition("Nex", (1.0,0,1))
+    print("Nex decomposition {}".format(decomposition))
+    print()
+
+    # access occupations
+    print("Test occupations...")
+    for species_code in ["p", "n"]:
+        orbitals, occupations = results_data.get_occupations(species_code, (1.0,0,1))
+        for orbital, occupation in zip(orbitals, occupations):
+            n, l, j = orbital
+            print("  {:1s}   {:2d} {:2d} {:4.1f}    {:.6f}".format(species_code, n, l, j, occupation))
     print()
     
 ################################################################
@@ -88,4 +115,14 @@ def explore_point(results_data):
 
 # read data
 mesh_data = read_data()
-explore_point(mesh_data[0])
+
+# select single mesh point to explore
+#
+# Note that some of these parameters are superfluous for the present data but
+# are included for illustration (e.g., the example data only contain results for
+# 6Li, so "nuclide" is superfluous).
+results_data = mfdnres.analysis.selected_mesh_point(
+    mesh_data,
+    {"nuclide": (3,3), "interaction": "Daejeon16", "Nmax": 2, "hw": 15.0, "M": 1.0},
+)
+explore_point(results_data)

@@ -202,9 +202,11 @@ def read_data():
     res_format = "mfdn_v15"
     filename_format="mfdn_format_7_ho"
     mesh_data = mfdnres.res.slurp_res_files(
-        data_dir_list,res_format,filename_format,
+        data_dir_list,
+        res_format=res_format,
+        filename_format=filename_format,
         glob_pattern="*.res",
-        verbose=True
+        verbose=True,
     )
 
     # TUTORIAL: To see what our initial, raw mesh of MFDnResultsData objects looks like...
@@ -366,9 +368,9 @@ def make_basic_plot_canned(mesh_data):
     interaction, coulomb = interaction_coulomb
     observable_data = mfdnres.data.make_hw_scan_data(
         mesh_data, observable,
-        selector =  {"interaction": interaction, "coulomb": coulomb},
-        Nmax_range = (NMAX_MIN,Nmax_max), hw_range = hw_range,
-        verbose = False
+        selector= {"interaction": interaction, "coulomb": coulomb},
+        Nmax_range=(NMAX_MIN,Nmax_max), hw_range = hw_range,
+        verbose=False,
         )
    
     # write data
@@ -731,7 +733,7 @@ def make_gallery(mesh_data):
         interaction, coulomb = interaction_coulomb
         observable_data = mfdnres.data.make_hw_scan_data(
             mesh_data, observable,
-            selector= "interaction": interaction, "coulomb": coulomb},
+            selector={"interaction": interaction, "coulomb": coulomb},
             Nmax_range=(NMAX_MIN,Nmax_max), hw_range=hw_range,
             verbose=False,  # set to True if debugging new observable
             )

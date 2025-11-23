@@ -53,6 +53,23 @@
     - 07/09/23 (mac): Support value None for option Nmax_label_tagged_index in
         add_hw_scan_plot_Nmax_labels().
     - 07/24/23 (mac): Simplify option names for add_hw_scan_plot_Nmax_labels().
+    - 10/24/23 (mac): Provide observable_scale, tick_specifier, and labelpad options
+        for set_up_Nmax_scan_axes().
+    - 11/28/23 (mac): 
+        + Provide label_text option for add_hw_scan_plot_Nmax_labels().
+        + Change add_hw_scan_plot_Nmax_labels() option legend_index default to None.
+    - 12/29/23 (mac): Provide zorder and linestyle options for add_expt_marker_band().
+    - 09/01/24 (mac): Support (J,g, [n]) quantum numbers in qn_text(). 
+    - 09/27/24 (mac):
+        + Remove support for legacy "tuple" observables.
+        + Add support for generic key tuples in make_hw_scan_data().
+    - 10/17/24 (mac): Provide legend_xy option for add_hw_scan_plot_Nmax_labels().
+    - 01/18/25 (mac): Rename arguments and update docstrings to reflect 
+        removal of support for legacy "tuple" observables.
+    - 05/10/25 (mac): Make observable argument to set_up_hw_scan_axes and set_up_Nmax_scan_axes
+        optional if observable_axis_label_text provided.
+    - 05/18/25 (mac): Remove nuclide_str() and qn_str() in favor of implementation in tools.
+    - 07/10/25 (mac): Permit specification of label displacement by Nmax in add_hw_scan_plot_Nmax_labels.
 """
 
 import collections
@@ -229,99 +246,6 @@ def break_label_at_symbol(label, symbol, separator = "$\n$"):
 
 
 ################################################################
-# observable parsing
-################################################################
-
-def unpack_observable(observable):
-    """Unpack standard observable tuple into type, operator, and qn list.
-
-    Arguments
-
-        observable (tuple): standard observable specifier tuple
-
-    Returns:
-
-        observable_type (str): "energy", ...
-
-        observable_operator (str): "M1", ..., or None for energy
-
-        observable_qn_list (list of tuple): [(J1,g1,n1),...]
-
-    """
-    observable_type = observable[0]
-    if len(observable)==2:  # e.g., for "energy","isospin"
-        observable_operator = None
-        observable_qn_list = observable[1:]
-    else:
-        observable_operator = observable[1]
-        observable_qn_list = observable[2:]
-
-    return (observable_type,observable_operator,observable_qn_list)
-
-################################################################
-# descriptor string construction
-################################################################
-
-def nuclide_observable_descriptor(nuclide_observable):
-    """ Generate standard descriptor string for a (nuclide,observable) pair.
-
-    Arguments:
-        nuclide_observable (tuple): standard nuclide/observable pair or compound
-
-    Returns:
-        descriptor (str): descriptor string
-    """
-    # trap compound observable
-    if nuclide_observable[0] in {"diff","ratio"}:
-        (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
-        return r"{}_{}_{}".format(  # "{}-{}-{}"
-            arithmetic_operation,
-            nuclide_observable_descriptor(nuclide_observable1),
-            nuclide_observable_descriptor(nuclide_observable2)
-        )
-    elif nuclide_observable[0] in {"fix-sign-to"}:
-        # descriptor does not reflect any sign fixes
-        #
-        # This is to prevent excessive growth of file names (if "fix-sign-to"
-        # were treateed like "diff" or "ratio"), both for readability and to
-        # avoid "File name too long" errors.
-        (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
-        return nuclide_observable_descriptor(nuclide_observable1)
-    elif nuclide_observable[0] in {"minus"}:
-        (arithmetic_operation,nuclide_observable1) = nuclide_observable
-        return r"{}_{}".format(
-            arithmetic_operation,
-            nuclide_observable_descriptor(nuclide_observable1),
-        )
-
-    # unpack arguments
-    (nuclide,observable) = nuclide_observable
-    (observable_type,observable_operator,observable_qn_list) = unpack_observable(observable)
-    qn_list_str = "-".join([
-        (
-            observable_qn.descriptor_str if isinstance(observable_qn,level.Level)
-            else qn_str(observable_qn) if type(observable_qn) is tuple
-            else str(observable_qn)  # fall through (e.g., for integer)
-        )
-        for observable_qn in observable_qn_list
-    ])
-
-    if observable_operator is None:
-        descriptor_template = "Z{nuclide[0]:02d}-N{nuclide[1]:02d}-{observable_type}-{qn_list_str}"
-    else:
-        descriptor_template = "Z{nuclide[0]:02d}-N{nuclide[1]:02d}-{observable_type}-{observable_operator}-{qn_list_str}"
-
-    descriptor=descriptor_template.format(
-            nuclide=nuclide,
-            observable_type=observable_type,
-            observable_operator=observable_operator,
-            observable=observable,
-            qn_list_str=qn_list_str
-        )
-
-    return descriptor
-
-################################################################
 # basic text labels
 ################################################################
 
@@ -368,6 +292,12 @@ ELEMENT_SYMBOLS = [
 def element_symbol(Z):
     """Generate text label component for element symbol.
 
+    Example:
+
+        >>> mfdnres.data.element_symbol(66)
+
+        '\\mathrm{Dy}'
+
     Arguments:
 
         Z (int): Z for element
@@ -406,6 +336,20 @@ def isotope(nuclide, format = None, as_tuple = False):
     
     Name inspired by eponymous commend from LaTeX isotope package.
 
+    Example:
+
+        >>> mfdnres.data.isotope((66,90))
+
+        '^{156}\\mathrm{Dy}'
+
+        >>> mfdnres.data.isotope((66,90), format="AZSN")
+
+        '^{156}_{66}\\mathrm{Dy}^{}_{90}'
+
+        >>> mfdnres.data.isotope((66,90), format="tuple")
+        
+        '(66,90)'
+
     Arguments:
 
         nuclide (tuple): (Z,N)
@@ -441,34 +385,27 @@ def isotope(nuclide, format = None, as_tuple = False):
     
     return label
 
-
-def nuclide_str(nuclide):
-    """Generate simple string for nuclide code, for use in filenames, e.g., "Z03-N03".
-
-    Implements special case of isotope_str for format="ZN".
-
-    Arguments:
-
-        nuclide (tuple): (Z,N)
-
-    Returns:
-
-        (str): simple string representation of nuclide
-
-    """
-    (Z,N) = nuclide
-    label = "Z{nuclide[0]:02d}-N{nuclide[1]:02d}".format(nuclide=nuclide)
-    return label
-
 def isotope_str(nuclide, format = None, lower = False):
     """Generate simple string for isotope symbol, for use in filenames, e.g., "156Dy".
+
+    Example:
+
+        >>> mfdnres.data.isotope_str((66,90))
+        '156Dy'
+
+        >>> mfdnres.data.isotope_str((66,90), format="As")
+        '156dy'
+
+        >>> mfdnres.data.isotope_str((66,90), format="ZN")
+        'Z66-N90'
 
     Arguments:
 
         nuclide (tuple): (Z,N)
 
         format (str, optional): format code for label ("AS"=A+Symbol,
-        "As"=A+symbol, "ZN"=Zxx-Nxx); if None, defaults to "AS"
+        "As"=A+symbol); also supports formatting as in filenames via
+        tools.qn_str ("ZN"=Zxx-Nxx); if None, defaults to "AS"
 
         lower (bool, optional, deprecated): force lowercase (redundant to format
         option value "As")
@@ -486,7 +423,7 @@ def isotope_str(nuclide, format = None, lower = False):
         A = sum(nuclide)
         label = "{}{}".format(A, element_symbol)
     elif format == "ZN":
-        label = nuclide_str(nuclide)
+        label = tools.nuclide_str(nuclide)
     else:
         raise ValueError("unrecognized format option".format(format))
     return label
@@ -499,6 +436,12 @@ def parse_isotope_str(label):
     This is the inverse of isotope_str(). Note that this function is *almost*
     case insensitive; "n" (neutron) is distinguished from "N" (nitrogen). This
     is the only instance where the case is relevant.
+
+    Example:
+
+        >>> mfdnres.data.parse_isotope_str("156Dy")
+
+        (66, 90)
 
     Arguments:
         label (str): simple string representation of nuclide
@@ -530,7 +473,7 @@ def qn_text(qn,show_parity=True,show_index=True):
 
     Arguments:
 
-        qn (tuple): (J,g,n) quantum numbers
+        qn (tuple): (J,g) or (J,g,n) quantum numbers
 
         show_parity (bool, optional): whether or not to show parity (subscript)
 
@@ -541,7 +484,13 @@ def qn_text(qn,show_parity=True,show_index=True):
         label (str): label string, to be interpreted in math mode
     """
 
-    J, g, n = qn
+    if len(qn)==3:
+        J, g, n = qn
+    elif len(qn)==2:
+        J, g = qn
+        n = None
+    else:
+        raise ValueError("Unexpected form for quantum numbers: {}".format(qn))
 
     # am.HalfInt.Str() is missing in Python
     ## J = am.HalfInt(int(2*qn[0]),2)
@@ -551,7 +500,7 @@ def qn_text(qn,show_parity=True,show_index=True):
         P_str = "+" if g==0 else "-"
     else:
         P_str = ""
-    if show_index:
+    if show_index and (n is not None):
         n_str = "{:d}".format(n)
     else:
         n_str = ""
@@ -559,20 +508,6 @@ def qn_text(qn,show_parity=True,show_index=True):
     label = r"{{{}}}^{{{}}}_{{{}}}".format(J_str,P_str,n_str)
     return label
 
-def qn_str(qn):
-    """Generate simple string for (J,g,n) quantum numbers, for use in filenames, e.g., "00.0-0-1".
-
-    Arguments:
-
-        qn (tuple): (J,g,n) quantum numbers
-
-    Returns:
-
-        (str): simple string representation of qn
-
-    """
-    label = "{:04.1f}-{:1d}-{:02d}".format(*qn)
-    return label
 
 HW_AXIS_LABEL_TEXT = r"$\hbar\omega~(\mathrm{MeV})$"
 NMAX_AXIS_LABEL_TEXT = r"$N_{\mathrm{max}}$"
@@ -602,13 +537,14 @@ def resolve_qn(results_data, level_selector, verbose=False):
             resolved_qn = level_selector.select_level(results_data)
         except Exception as err:
             print("level_selector.select_level failed with exception: {}".format(err))
-            traceback.print_exception(etype=type(err), value=err, tb=err.__traceback__)
+            traceback.print_exception(type(err), value=err, tb=err.__traceback__)
             ##traceback.print_tb(err.__traceback__)
             raise
     else:
         raise(TypeError("Unexpected value for level selector"))
     
     return resolved_qn
+
 
 def resolve_qn_text(level_selector):
     """Resolve LaTeX label text for (J,g,n) quantum number tuple or level selector.
@@ -634,550 +570,35 @@ def resolve_qn_text(level_selector):
 
     return label
 
-################################################################
-# observable registry (legacy)
-################################################################
 
-# Legacy observable extractors are deprecated in favor of observable.Observable.
-
-Observable = collections.namedtuple('Observable', ["extractor_generator", "observable_label_generator", "axis_label_generator"])
-
-# Each field of Observable is a callable, with signature...
-#
-#    Arguments:
-#
-#        nuclide (tuple)
-#
-#        observable_operator (str)
-#
-#        observable_qn_list (list of tuple)
-#
-#     Returns:
-#
-#         For extractor_generator:
-#
-#             extractor (callable): results_data (MFDnResultsData) -> observable value (float, np.array, or np.nan)
-#
-#         For observable_label_generator:
-#
-#             label (str): label string, to be interpreted in math mode
-#
-#         For axis_label_generator:
-#
-#             observable (str): observable label string, to be interpreted in math mode
-#             units (str): units string, to be interpreted in math mode, or None
-
-# extractor registry
-OBSERVABLE_BY_OBSERVABLE_TYPE = {}
-
-def register_observable(observable_type, observable):
-    """Register information for extracting observable.
-
-    Args:
-        observable_type (str): identifier for observable
-        observable (Observable): callables to generate extractor and plotting labels
-
-    """
-
-    OBSERVABLE_BY_OBSERVABLE_TYPE[observable_type] = observable
-
-################################################################
-# observable implementations (legacy)
-################################################################
-
-# TODO 04/08/22 (mac): finish upgrading observables to handle level.Level in place of qn
-
-# DEBUGGING: If an extractor fails and raises an exception, this will not be
-# seen, since all exceptions are caught by ncci.analysis.make_obs_table, which
-# simply tabulates a nan.  For debugging purposes, a try can be used within the
-# extractor to trap and print the exception:
-#
-#        try:
-#            resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
-#        except Exception as e:
-#            print(e)
-
-
-# energy
-
-def energy_extractor(nuclide,observable_operator,observable_qn_list):
-    ## return lambda results_data : results_data.get_energy(*observable_qn_list)
-    def extractor(results_data):
-        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
-        return results_data.get_energy(*resolved_qn_list)
-    return extractor
-
-def energy_observable_label(nuclide,observable_operator,observable_qn_list):
-    observable_str = r"E"
-    ##qn_str = qn_text(observable_qn_list[0])
-    qn_str = resolve_qn_text(observable_qn_list[0])
-    label = r"{}({})".format(observable_str,qn_str)
-    return label
-
-def energy_axis_label(nuclide,observable_operator,observable_qn_list):
-    observable_str = r"E"
-    units_str = r"\mathrm{MeV}"
-    return observable_str, units_str
-
-register_observable("energy", Observable(energy_extractor, energy_observable_label, energy_axis_label))
-
-# isospin
-
-def isospin_extractor(nuclide,observable_operator,observable_qn_list):
-    ## return lambda results_data : results_data.get_isospin(*observable_qn_list)
-    def extractor(results_data):
-        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
-        return results_data.get_isospin(*resolved_qn_list)
-    return extractor
-
-def isospin_observable_label(nuclide,observable_operator,observable_qn_list):
-    observable_str = r"\bar{T}"
-    qn_str = resolve_qn_text(observable_qn_list[0])
-    label = r"{}({})".format(observable_str,qn_str)
-    return label
-
-def isospin_axis_label(nuclide,observable_operator,observable_qn_list):
-    observable_str = r"\bar{T}"
-    units_str = None
-    return observable_str, units_str
-
-register_observable("isospin", Observable(isospin_extractor, isospin_observable_label, isospin_axis_label))
-
-# n index -- diagnostic on level selection
-
-def n_extractor(nuclide,observable_operator,observable_qn_list):
-    ## return lambda results_data : results_data.get_isospin(*observable_qn_list)
-    def extractor(results_data):
-        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
-        return resolved_qn_list[0][2]
-    return extractor
-
-def n_observable_label(nuclide,observable_operator,observable_qn_list):
-    observable_str = r"n"
-    qn_str = resolve_qn_text(observable_qn_list[0])
-    label = r"{}({})".format(observable_str,qn_str)
-    return label
-
-def n_axis_label(nuclide,observable_operator,observable_qn_list):
-    observable_str = r"n"
-    units_str = None
-    return observable_str, units_str
-
-register_observable("n", Observable(n_extractor, n_observable_label, n_axis_label))
-
-# radius
-
-def radius_extractor(nuclide,observable_operator,observable_qn_list):
-    ## return lambda results_data : results_data.get_radius(observable_operator,*observable_qn_list)
-    def extractor(results_data):
-        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
-        return results_data.get_radius(observable_operator,*resolved_qn_list)
-    return extractor
-
-RADIUS_STR_BY_OPERATOR = {
-    "rp" : r"r_p",
-    "rn" : r"r_n",
-    "r" : "r",
-    "rp-ss" : r"r_{p,\mathrm{s.s.}}",
-    "rn-ss" : r"r_{n,\mathrm{s.s.}}",
-}
-
-def radius_observable_label(nuclide,observable_operator,observable_qn_list):
-    observable_str = RADIUS_STR_BY_OPERATOR[observable_operator]
-    qn_str = resolve_qn_text(observable_qn_list[0])
-    label = r"{}({})".format(observable_str,qn_str)
-    return label
-
-def radius_axis_label(nuclide,observable_operator,observable_qn_list):
-    observable_str = r"r"
-    units_str = r"\mathrm{fm}"
-    return observable_str, units_str
-
-register_observable("radius", Observable(radius_extractor, radius_observable_label, radius_axis_label))
-
-# radius-sqr
-
-def radius_sqr_extractor(nuclide,observable_operator,observable_qn_list):
-    ## return lambda results_data : results_data.get_radius(observable_operator,*observable_qn_list)**2
-    def extractor(results_data):
-        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
-        return results_data.get_radius(observable_operator,*resolved_qn_list)**2
-    return extractor
-
-def radius_sqr_observable_label(nuclide,observable_operator,observable_qn_list):
-    # Assumption is that radius-sqr will be taken in ratio with an E2 moment,
-    # i.e., "Q" (not "eQ"), so, for squared radii, do *not* add factor of e (and
-    # brackets on observable label).  If it is instead taken in ratio to an E2
-    # rme, we would need the factor of e.
-    ## observable_str = "e{}^2".format(RADIUS_STR_BY_OPERATOR[observable_operator])
-    ## label = r"[{}({})]".format(observable_str,qn_str)
-    observable_str = "{}^2".format(RADIUS_STR_BY_OPERATOR[observable_operator])
-    qn_str = resolve_qn_text(observable_qn_list[0])
-    label = r"{}({})".format(observable_str,qn_str)
-    return label
-
-def radius_sqr_axis_label(nuclide,observable_operator,observable_qn_list):
-    # Assumption is that radius-sqr will be taken in ratio with an E2 moment
-    # (see note on observable label).
-    ## observable_str = r"er^2"
-    ## units_str = r"e\,\mathrm{fm}^{2}"
-    observable_str = r"r^2"
-    units_str = r"\mathrm{fm}^{2}"
-    return observable_str, units_str
-
-register_observable("radius-sqr", Observable(radius_sqr_extractor, radius_sqr_observable_label, radius_sqr_axis_label))
-
-# radius-quart
-
-def radius_quart_extractor(nuclide,observable_operator,observable_qn_list):
-    ## return lambda results_data : results_data.get_radius(observable_operator,*observable_qn_list)**4
-    def extractor(results_data):
-        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
-        return results_data.get_radius(observable_operator,*resolved_qn_list)**4
-    return extractor
-
-def radius_quart_observable_label(nuclide,observable_operator,observable_qn_list):
-    # Assumption is that radius-quart will be taken in ratio with an E2 rme, so,
-    # for quartic power of radii, add factor of e^2 (and brackets on observable
-    # label).
-    observable_str = "e^2{}^4".format(RADIUS_STR_BY_OPERATOR[observable_operator])
-    qn_str = resolve_qn_text(observable_qn_list[0])
-    label = r"[{}({})]".format(observable_str,qn_str)
-    return label
-
-def radius_quart_axis_label(nuclide,observable_operator,observable_qn_list):
-    # Assumption is that radius-sqr will be taken in ratio with an E2 rme, so,
-    # for quartic power of radii, add factor of e^2.
-    observable_str = r"e^2r^4"
-    units_str = r"e^2\,\mathrm{fm}^{4}"
-    return observable_str, units_str
-
-register_observable("radius-quart", Observable(radius_quart_extractor, radius_quart_observable_label, radius_quart_axis_label))
-
-# moment
-
-def moment_extractor(nuclide,observable_operator,observable_qn_list):
-    ##return lambda results_data : results_data.get_moment(observable_operator,*observable_qn_list)
-    def extractor(results_data):
-        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
-        return results_data.get_moment(observable_operator,*resolved_qn_list)
-    return extractor
-
-def moment_observable_label(nuclide,observable_operator,observable_qn_list):
-    if observable_operator == "M1":
-        observable_str = r"\mu"
-    elif observable_operator in {"Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
-        observable_str = r"\mu_{{{}}}".format(observable_operator[1:])
-    elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
-        observable_str = r"Q_{{{}}}".format(observable_operator[2:])
-    qn_str = resolve_qn_text(observable_qn_list[0])
-    label = r"{}({})".format(observable_str,qn_str)
-    return label
-
-def moment_axis_label(nuclide,observable_operator,observable_qn_list):
-    if observable_operator in {"M1","Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
-        observable_str = r"\mu"
-        units_str = r"\mu_N"
-    elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
-        observable_str = r"Q"  ## r"eQ"
-        units_str = r"\mathrm{fm}^{2}"  ## r"e\,\mathrm{fm}^{2}"
-    return observable_str, units_str
-
-register_observable("moment", Observable(moment_extractor, moment_observable_label, moment_axis_label))
-
-# moment-sqr
-
-def moment_sqr_extractor(nuclide,observable_operator,observable_qn_list):
-    ## return lambda results_data : results_data.get_moment(observable_operator,*observable_qn_list)**2
-    def extractor(results_data):
-        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
-        return results_data.get_moment(observable_operator,*resolved_qn_list)**2
-    return extractor
-
-def moment_sqr_observable_label(nuclide,observable_operator,observable_qn_list):
-    # Assumption is that moment-sqr will be taken in ratio with an rtp, so, for
-    # squared E moments, want to include the e unit (and brackets on observable
-    # label).
-    if observable_operator == "M1":
-        observable_str = r"\mu"
-    elif observable_operator in {"Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
-        observable_str = r"\mu_{{{}}}".format(observable_operator[1:])
-    elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
-        observable_str = r"eQ_{{{}}}".format(observable_operator[2:])
-    qn_str = resolve_qn_text(observable_qn_list[0])
-    label = r"[{}({})]^2".format(observable_str,qn_str)
-    return label
-
-def moment_sqr_axis_label(nuclide,observable_operator,observable_qn_list):
-    # Assumption is that moment-sqr will be taken in ratio with an rtp, so,
-    # for squared E moments, want to include the e unit.
-    if observable_operator in {"M1","Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
-        observable_str = r"\mu^2"
-        units_str = r"\mu_N^2"
-    elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
-        observable_str = r"(eQ)^2"
-        units_str = r"e^2\,\mathrm{fm}^{4}"
-    return observable_str, units_str
-
-register_observable("moment-sqr", Observable(moment_sqr_extractor, moment_sqr_observable_label, moment_sqr_axis_label))
-
-# rtp
-
-def rtp_extractor(nuclide,observable_operator,observable_qn_list):
-    ## return lambda results_data : results_data.get_rtp(observable_operator,tuple(observable_qn_list))
-    def extractor(results_data):
-        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
-        return results_data.get_rtp(observable_operator,resolved_qn_list)
-    return extractor
-
-def rtp_observable_label(nuclide,observable_operator,observable_qn_list):
-    if observable_operator == "M1":
-        observable_str = r"M1"
-    elif observable_operator in {"Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
-        observable_str = r"M1_{{{}}}".format(observable_operator[1:])
-    elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
-        observable_str = r"E2_{{{}}}".format(observable_operator[2:])
-    elif observable_operator in {"E1p","E1n","E1"}:
-        observable_str = r"E1_{{{}}}".format(observable_operator[2:])
-    elif observable_operator in {"E0p","E0n","E00","E01","E0"}:
-        observable_str = r"E0_{{{}}}".format(observable_operator[2:])
-    qn_str_1 = resolve_qn_text(observable_qn_list[0])
-    qn_str_2 = resolve_qn_text(observable_qn_list[1])
-    label = r"B({};{}\rightarrow{})".format(observable_str,qn_str_2,qn_str_1)  # <1|O|2> = 2->1
-    return label
-
-def rtp_axis_label(nuclide,observable_operator,observable_qn_list):
-    if observable_operator in {"M1","Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
-        observable_str = r"B(M1)"
-        units_str = r"\mu_N^2"
-    elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
-        observable_str = r"B(E2)"
-        units_str = r"e^2\,\mathrm{fm}^{4}"
-    elif observable_operator in {"E1p","E1n","E1"}:
-        observable_str = r"B(E1)"
-        units_str = r"e^2\,\mathrm{fm}^{2}"
-    elif observable_operator in {"E0p","E0n","E00","E01","E0"}:
-        observable_str = r"B(E0)"
-        units_str = r"e^2\,\mathrm{fm}^{4}"
-    return observable_str, units_str
-
-register_observable("rtp", Observable(rtp_extractor, rtp_observable_label, rtp_axis_label))
-
-# rme
-
-def rme_extractor(nuclide,observable_operator,observable_qn_list):
-    ##return lambda results_data : results_data.get_rme(observable_operator,tuple(observable_qn_list))
-    def extractor(results_data):
-        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
-        return results_data.get_rme(observable_operator,resolved_qn_list)
-    return extractor
-
-def rme_observable_label(nuclide,observable_operator,observable_qn_list):
-    if observable_operator == "M1":
-        observable_str = r"M1"
-    elif observable_operator in {"Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
-        observable_str = r"M1_{{{}}}".format(observable_operator[1:])
-    elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
-        observable_str = r"E2_{{{}}}".format(observable_operator[2:])
-    elif observable_operator in {"E1p","E1n","E1"}:
-        observable_str = r"E1_{{{}}}".format(observable_operator[2:])
-    elif observable_operator in {"E0p","E0n","E00","E01","E0"}:
-        observable_str = r"E0_{{{}}}".format(observable_operator[2:])
-    qn_str_1 = resolve_qn_text(observable_qn_list[0])
-    qn_str_2 = resolve_qn_text(observable_qn_list[1])
-    label = r"\langle {} \Vert {} \Vert {} \rangle".format(qn_str_1,observable_str,qn_str_2)  # <1|O|2> = 2->1
-    return label
-
-def rme_axis_label(nuclide,observable_operator,observable_qn_list):
-    if observable_operator in {"M1","Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1"}:
-        observable_str = r"\langle M1 \rangle"
-        units_str = r"\mu_N"
-    elif observable_operator in {"E2p","E2n","E20","E21","E2"}:
-        observable_str = r"\langle E2 \rangle"
-        units_str = r"e\,\mathrm{fm}^{2}"
-    elif observable_operator in {"E1p","E1n","E1"}:
-        observable_str = r"\langle E1 \rangle"
-        units_str = r"e\,\mathrm{fm}"
-    elif observable_operator in {"E0p","E0n","E00","E01","E0"}:
-        observable_str = r"\langle E0 \rangle"
-        units_str = r"e\,\mathrm{fm}^{2}"
-    return observable_str, units_str
-
-register_observable("rme", Observable(rme_extractor, rme_observable_label, rme_axis_label))
-
-# Nex-probability
-
-def Nex_probability_extractor(nuclide,observable_operator,observable_qn_list):
-
-    ##g_0= mfdnres.ncci.N0_for_nuclide(nuclide)
-    # TODO revise meaning of observable_operator argument to be Nex rather than Nex_index
-
-    def extractor(results_data):
-        resolved_qn_list = tuple([resolve_qn(results_data, qn) for qn in observable_qn_list])
-        Nex_index = observable_operator  # 0 for lowest Nex, 1 for next Nex, ...
-        decomposition = results_data.get_decomposition("Nex",*resolved_qn_list)
-        if decomposition is None:
-            return np.nan
-        else:
-            return decomposition[Nex_index]
-
-    return extractor
-
-def Nex_probability_observable_label(nuclide,observable_operator,observable_qn_list):
-    # TODO revise meaning of observable_operator argument to be Nex rather than Nex_index
-    Nex_index = observable_operator
-    Nex = 2*Nex_index
-    ## observable_str = r"P(N_{{\mathrm{{ex}}}}={Nex})".format(Nex=Nex)  # CAVEAT: Nex is relative to lowest for current parity
-    observable_str = r"P_{{N_{{\mathrm{{ex}}}}={Nex}}}".format(Nex=Nex)  # CAVEAT: Nex is relative to lowest for current parity
-    qn_str = resolve_qn_text(observable_qn_list[0])
-    label = r"{}({})".format(observable_str,qn_str)
-    return label
-
-def Nex_probability_axis_label(nuclide,observable_operator,observable_qn_list):
-    ##observable_str = r"P(N_{\mathrm{ex}})"
-    observable_str = r"P_{N_{\mathrm{ex}}}"
-    units_str = None
-    return observable_str, units_str
-
-register_observable("Nex-probability", Observable(Nex_probability_extractor, Nex_probability_observable_label, Nex_probability_axis_label))
-
-
-################################################################
-# text labels derived from plotting parameters
-################################################################
-
-def make_nuclide_text(nuclide_observable,as_tuple=False):
-    """Generate text label component for nuclide, given nuclide_observable.
+def make_observable_axis_label_text(observable_object):
+    """Generate axis label (with units) for observable, given observable_object (or
+simple tuple of observable and units strings).
 
     Arguments:
 
-        nuclide_observable (tuple): standard nuclide/observable pair or compound
-
-        as_tuple (bool, optional): return (Z,N) label rather than standard nuclide symbol
+        observable_object (observable.Observable): observable object, or 
+        tuple (observable_str,units_str)
 
     Returns:
 
         label (str): label string, to be interpreted in math mode
 
     """
-    # trap compound observable
-    if nuclide_observable[0] in {"diff","ratio","fix-sign-to"}:
-        (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
-        ## same_nuclide = (nuclide_observable1[0]==nuclide_observable2[0])  # CAVEAT: test fails to "see through" compound observables given as arguments
-        nuclide_text1 = make_nuclide_text(nuclide_observable1)
-        nuclide_text2 = make_nuclide_text(nuclide_observable2)
-        same_nuclide = nuclide_text1 == nuclide_text2
-        if same_nuclide:
-            nuclide_text = nuclide_text1
-        else:
-            nuclide_text = r"{}/{}".format(
-                make_nuclide_text(nuclide_observable1,as_tuple=as_tuple),
-                make_nuclide_text(nuclide_observable2,as_tuple=as_tuple)
-            )
-        return nuclide_text
-    elif nuclide_observable[0] in {"minus"}:
-        (arithmetic_operation,nuclide_observable1) = nuclide_observable
-        nuclide_text = make_nuclide_text(nuclide_observable1,as_tuple=as_tuple)
-        return nuclide_text
 
-    (nuclide,observable) = nuclide_observable
-
-    return isotope(nuclide,as_tuple=as_tuple)
-
-def make_observable_text(nuclide_observable):
-    """ Generate text label for observable, given nuclide_observable.
-
-    Arguments:
-
-        nuclide_observable (tuple): standard nuclide/observable pair or compound
-
-    Returns:
-
-        label (str): label string, to be interpreted in math mode
-    """
-
-    # trap compound observable
-    if nuclide_observable[0] in {"diff","ratio"}:
-        (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
-        if arithmetic_operation == "diff":
-            arithmetic_symbol = "-"
-        elif arithmetic_operation == "ratio":
-            arithmetic_symbol = "/"
-        return r"{}{}{}".format(
-            make_observable_text(nuclide_observable1),
-            arithmetic_symbol,
-            make_observable_text(nuclide_observable2)
-        )
-    elif nuclide_observable[0] in {"fix-sign-to"}:
-        (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
-        return make_observable_text(nuclide_observable1)
-    elif nuclide_observable[0] in {"minus"}:
-        (arithmetic_operation,nuclide_observable1) = nuclide_observable
-        arithmetic_symbol = "-"
-        return r"{}{}".format(
-            arithmetic_symbol,
-            make_observable_text(nuclide_observable1),
-        )
-
-    # unpack arguments
-    (nuclide,observable) = nuclide_observable
-    (observable_type,observable_operator,observable_qn_list) = unpack_observable(observable)
-
-    # construct label
-    if observable_type in OBSERVABLE_BY_OBSERVABLE_TYPE:
-        label = OBSERVABLE_BY_OBSERVABLE_TYPE[observable_type].observable_label_generator(nuclide,observable_operator,observable_qn_list)
+    if type(observable_object) is tuple:
+        # tuple overrride
+        observable_str, units_str = observable_object
     else:
-        raise(ValueError("unrecognized observable type {}".format(observable_type)))
-
-    return label
-
-def make_observable_axis_label_text(nuclide_observable):
-    """ Generate axis label (with units) for observable, given nuclide_observable.
-
-    Arguments:
-
-        nuclide_observable (tuple): standard nuclide/observable pair or compound
-
-    Returns:
-
-        label (str): label string, to be interpreted in math mode
-    """
-
-    if isinstance(nuclide_observable, tuple):
-        
-        # trap compound observable
-        if nuclide_observable[0] in {"diff","ratio","fix-sign-to"}:
-            (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
-            if arithmetic_operation == "diff":
-                return r"\Delta {}".format(make_observable_axis_label_text(nuclide_observable1))
-            elif arithmetic_operation == "ratio":
-                return r"\mathrm{Ratio}"
-            elif arithmetic_operation == "fix-sign-to":
-                return make_observable_axis_label_text(nuclide_observable1)
-        elif nuclide_observable[0] in {"minus"}:
-            (arithmetic_operation,nuclide_observable1) = nuclide_observable
-            return make_observable_axis_label_text(nuclide_observable1)
-    
-        # unpack arguments
-        (nuclide,observable) = nuclide_observable
-        (observable_type,observable_operator,observable_qn_list) = unpack_observable(observable)
-    
-        # construct label
-        if observable_type in OBSERVABLE_BY_OBSERVABLE_TYPE:
-            (observable_str, units_str) = OBSERVABLE_BY_OBSERVABLE_TYPE[observable_type].axis_label_generator(nuclide,observable_operator,observable_qn_list)
-        else:
-            raise(ValueError("unrecognized observable type {}".format(observable_type)))
-
-    else:
-        ##if isinstance(nuclide_observable, observable.Observable):
-        observable_str, units_str = nuclide_observable.axis_label_text
+        observable_str, units_str = observable_object.axis_label_text
         
     if units_str is None:
         label = observable_str
     else:
-        label = r"{}~({})".format(observable_str,units_str)
+        label = r"{}~({})".format(observable_str, units_str)
 
     return label
+
 
 def make_interaction_text(interaction_coulomb):
     """ Make interaction text, given interaction_coulomb.
@@ -1192,6 +613,7 @@ def make_interaction_text(interaction_coulomb):
     """
     label = r"\mathrm{{{}}}".format(interaction_coulomb[0])
     return label
+
 
 def Nmax_label_text(Nmax_highlight,Nmax_max=None):
     """ Generate Nmax label of form Nmax=* or Nmax=*(*).
@@ -1250,6 +672,7 @@ def Nmax_dashing_emratio(Nmax_relative,base_length=8,exponent_scale=8):
         return (base_length*r,base_length*(1-r))
 
     raise ValueError("invalid Nmax_relative {}".format(Nmax_relative))
+
 
 def Nmax_dashing_scidraw(Nmax_relative):
     """Provide dashing pattern based on relative Nmax.
@@ -1341,6 +764,7 @@ def Nmax_color(Nmax_relative):
 
     raise ValueError("invalid Nmax_relative {}".format(Nmax_relative))
 
+
 def Nmax_marker_face_color(Nmax_relative):
     """Provide face color based on relative Nmax.
 
@@ -1363,6 +787,7 @@ def Nmax_marker_face_color(Nmax_relative):
 
     raise ValueError("invalid Nmax_relative {}".format(Nmax_relative))
 
+
 def Nmax_symbol_scale(Nmax_relative,exponent_scale=8):
     """ Provide symbol scale based on relative Nmax.
 
@@ -1377,8 +802,7 @@ def Nmax_symbol_scale(Nmax_relative,exponent_scale=8):
 
     return 2**(Nmax_relative/exponent_scale)
 
-    ## raise ValueError("invalid Nmax_relative {}".format(Nmax_relative))
-
+    
 def Nmax_plot_style(
         Nmax_relative,
         marker_size=6,
@@ -1415,6 +839,7 @@ def Nmax_plot_style(
         dashes=Nmax_dashing(Nmax_relative),
         color=Nmax_color(Nmax_relative),
         )
+
 
 def hw_plot_style(
         hw,
@@ -1454,34 +879,42 @@ def hw_plot_style(
         ##color=Nmax_color(Nmax_relative),
         )
 
+
 ################################################################
 # (Nmax,hw) multi-indexed data ("hw scan")
 ################################################################
 
 
-def hw_scan_descriptor(interaction_coulomb, nuclide_observable, verbose=False):
-    """ Generate standard descriptor string for a (nuclide,observable) pair.
+def hw_scan_descriptor(interaction_coulomb, observable_object, verbose=False):
+    """Generate standard descriptor string for a (nuclide,observable) pair.
 
     Arguments:
-        nuclide_observable (tuple): standard nuclide/observable pair or compound
+
+        interaction_coulomb (tuple or str): tuple of (interaction, use_coulomb),
+        or may simply be given as an interaction string (in which case
+        use_coulomb defaults to False)
+
+        observable_object (observable.Observable): observable object
 
     Returns:
         descriptor (str): descriptor string
+
     """
 
     if verbose:
-        print("Generating hw_scan_descriptor: {} {}".format(interaction_coulomb,nuclide_observable))
+        print("Generating hw_scan_descriptor: {} {}".format(interaction_coulomb,observable_object))
 
-    # trap new-style observable
-    if isinstance(nuclide_observable, tuple):
-        observable_descriptor = nuclide_observable_descriptor(nuclide_observable)
+    # trap interaction only (no use_coulomb)
+    if isinstance(interaction_coulomb, tuple):
+        interaction, use_coulomb = interaction_coulomb
     else:
-        ##if isinstance(nuclide_observable, observable.Observable):
-        observable_descriptor = nuclide_observable.descriptor_str
+        interaction, use_coulomb = interaction_coulomb, False
+        
+    observable_descriptor = observable_object.descriptor_str
     
-    descriptor="hw-scan_{interaction_coulomb[0]:s}-{interaction_coulomb[1]:1d}_{observable_descriptor}".format(
-        interaction_coulomb=interaction_coulomb,
-        observable_descriptor=observable_descriptor
+    descriptor="hw-scan_{interaction:s}-{use_coulomb:1d}_{observable_descriptor}".format(
+        interaction=interaction, use_coulomb=use_coulomb,
+        observable_descriptor=observable_descriptor,
     )
 
     return descriptor
@@ -1500,9 +933,15 @@ def hw_scan_drop_nan(observable_data):
     clean_data = observable_data[observable_data["value"].notna()]
     return clean_data
 
+
+KEY_DESCRIPTOR_NMAX_HW = (("Nmax", int), ("hw", float))
+
 def make_hw_scan_data(
-        mesh_data,nuclide_observable,
-        selector=None,Nmax_range=None,hw_range=None,
+        mesh_data, observable, *,
+        selector=None,
+        key_descriptor=KEY_DESCRIPTOR_NMAX_HW,
+        Nmax_range=None, hw_range=None,
+        mesh_ranges=None,
         verbose=False):
     """Tabulate generic observable vs. (Nmax,hw), for scan plots.
 
@@ -1510,124 +949,58 @@ def make_hw_scan_data(
     either hw scans (curves representing fixed Nmax) or Nmax scans (curves
     representing fixed hw).
 
-    Simple observables generically have the form
-    (<type>,[<operator>],<qn1>,[<qn2>]):
+    Tabulation format (for default key descriptor):
 
-        ("energy", qn)
-        ("isospin", qn)
-        ("radius", operator, qn)
-        ("moment", operator, qn)
-        ("moment-sqr", operator, qn)
-        ("rtp", operator, qnf, qni)  # reduced transition probability
-        ("Nex-probability", index, qn)  # e.g., for even Nmax, index=0 -> Nmax=0, index=1->Nmax=2
-
-        Note that order of arguments (qnf, qni) for a transition is based on the
-        bra-ket order in the corresponding matrix element <f|O|i>.
-
-        Operators are as defined in the MFDnResultsData accessors:
-            "M1","Dlp","Dln","Dsp","Dsn","Dl0","Dl1","Ds0","Ds1",  # M1 type
-            "E2p","E2n","E20","E21"  # E2 type
-
-    Compound observables:
-
-        ("diff", obs1, obs2)  # obs1-obs2
-
-        ("ratio", obs1, obs2)  # obs1/obs2
-
-        ("minus", obs1)  # -obs1
-
-        ("fix-sign-to", obs1, obs2) # obs1*sign(obs2); serves to fix sign
-            fluctuations for matrix elements between same initial and final
-            states, so that obs2 is always positive
-
-    Examples:
-
-        ("energy", (1.5,1,1))  # energy of first 3/2- state
-
-        ("rtp", "E2p",  (1.5,1,1),  (2.5,1,1))  # E2 (proton) reduced transition probability B(E2;5/2->3/2)
-
-
-    Tabulation format:
         Nmax hw value
 
     Arguments:
+
         mesh_data (list of ResultsData): data set to include
 
-        nuclide_observable (tuple): simple (nuclide,observable) or compound thereof
-            nuclide (tuple): (Z,N)
-            observable (tuple): (observable_type,observable_operator,(Jf,gf,nf),...)
+        observable (mfdnres.observable.Observable): observable object
 
-        selector (dict): parameter-value pairs for selection using analysis.selected_mesh_data,
+        selector (dict, optional): parameter-value pairs for selection using analysis.selected_mesh_data,
             e.g., {"interaction":interaction,"coulomb":coulomb}
 
+        key_descriptor (tuple of tuple, optional): dtype descriptor for key
+
+        Nmax_range (tuple of float, optional): range to which to limit first
+        mesh parameter, which is by default Nmax
+
+        hw_range (tuple of float, optional): range to which to limit second mesh
+        parameter, which is by default hw
+
+        mesh_ranges (tuple of tuple of float, optional): range to which to limit
+        mesh parameters, which have meanings as specified by key_descriptor
+
     Returns:
-        observable_data (np.array): scan data, with rows (Nmax,hw,value)
+        observable_data (pd.DataFrame): scan data, with rows (Nmax,hw,value)
 
     """
 
-    KEY_DESCRIPTOR_NMAX_HW = (("Nmax",int),("hw",float))
     
-    # trap new-style observable
-    if not isinstance(nuclide_observable, tuple):
-        ##if isinstance(nuclide_observable, observable.Observable):
-        if selector is None:
-            selector = {}
-        mesh_data_selected = analysis.selected_mesh_data(mesh_data,selector)
-        observable_data = nuclide_observable.data(mesh_data_selected, KEY_DESCRIPTOR_NMAX_HW, verbose=verbose)
-    else:
+
+    ## if not isinstance(observable, observable.Observable):
+    ##     raise ValueError("Invalid observable {}".format(observable))
     
-        # trap compound observable
-        if nuclide_observable[0] in {"diff","ratio","fix-sign-to"}:
-            (arithmetic_operation,nuclide_observable1,nuclide_observable2) = nuclide_observable
-            data1 = make_hw_scan_data(mesh_data,nuclide_observable1,selector=selector,Nmax_range=Nmax_range,hw_range=hw_range)
-            data2 = make_hw_scan_data(mesh_data,nuclide_observable2,selector=selector,Nmax_range=Nmax_range,hw_range=hw_range)
-            if arithmetic_operation == "diff":
-                return data1-data2
-            elif arithmetic_operation == "ratio":
-                return data1/data2
-            elif arithmetic_operation == "fix-sign-to":
-                return data1*data2.apply(np.sign,raw=True)
-        elif nuclide_observable[0] in {"minus"}:
-            (arithmetic_operation,nuclide_observable1) = nuclide_observable
-            data1 = make_hw_scan_data(mesh_data,nuclide_observable1,selector=selector,Nmax_range=Nmax_range,hw_range=hw_range)
-            return -data1
-
-        # unpack arguments
-        (nuclide,observable) = nuclide_observable
-        (observable_type,observable_operator,observable_qn_list) = unpack_observable(observable)
-
-        # select nuclide
-        full_selector = {"nuclide":nuclide}
-        if selector is not None:
-            full_selector.update(selector)
-        mesh_data_selected = analysis.selected_mesh_data(mesh_data,full_selector)
-        analysis.mesh_key_listing(
-            mesh_data_selected,
-            ("nuclide","interaction","coulomb","hw","Nmax","parity"),
-            verbose=verbose
-        )
-
-        # generate table
-
-        # NOTE: May ultimately supplant analysis.make_obs_table ndarray step with
-        # direct construction of pandas data frame.
-
-        if observable_type in OBSERVABLE_BY_OBSERVABLE_TYPE:
-            extractor = OBSERVABLE_BY_OBSERVABLE_TYPE[observable_type].extractor_generator(nuclide,observable_operator,observable_qn_list)
-            table = analysis.make_obs_table(mesh_data_selected,KEY_DESCRIPTOR_NMAX_HW,extractor)
-        else:
-            raise(ValueError("unrecognized observable type {} (not in {})".format(observable_type,list(OBSERVABLE_BY_OBSERVABLE_TYPE.keys()))))
-
-        # convert to DataFrame
-        observable_data = pd.DataFrame(table).set_index(["Nmax","hw"])
+    if selector is None:
+        selector = {}
+    mesh_data_selected = analysis.selected_mesh_data(mesh_data,selector,verbose=verbose)
+    observable_data = observable.data(mesh_data_selected, key_descriptor, verbose=verbose)
 
     # drop nan values
+    if verbose:
+        print("Observable data before purging NaNs")
+        print(observable_data)
     observable_data = hw_scan_drop_nan(observable_data)
 
     # slice on (Nmax,hw)
     Nmax_slice = slice(None) if Nmax_range is None else slice(*Nmax_range)
     hw_slice = slice(None) if hw_range is None else slice(*hw_range)
-    observable_data = observable_data.loc[(Nmax_slice,hw_slice),:]  # pandas MultiIndex slicing
+    observable_data = observable_data.loc[(Nmax_slice, hw_slice), :]  # pandas MultiIndex slicing
+    if mesh_ranges is not None:
+        mesh_slices = tuple(map(slice,mesh_ranges))
+        observable_data = observable_data.loc[mesh_slices, :]  # pandas MultiIndex slicing
 
     if verbose:
         print(observable_data)
@@ -1660,45 +1033,64 @@ def write_hw_scan_data(descriptor,observable_data,directory="data",format_str_ob
     with open(output_file_name, 'wt') as out_file:
         out_file.write(output_str)
 
+        
 def set_up_hw_scan_axes(
-        ax, nuclide_observable, hw_range, observable_range,
+        ax, observable_object=None, hw_range=None, observable_range=None, *,
         hw_range_extension=(0.05,0.05), observable_range_extension=(0.05,0.05),
         observable_scale=None,
+        observable_axis_label_text=None,
         hw_labelpad=None,
         observable_labelpad=None,
-        observable_axis_label_text=None,
         hw_tick_specifier=None,
         observable_tick_specifier=None,
 ):
-    """ Set up axis ranges, labels, and ticks for hw scan plot.
+    """Set up axis ranges, labels, and ticks for hw scan plot.
+
+    Traditional syntax had four positional arguments:
+
+        ax, observable_object, hw_range, observable_range
+
+    But it is helpful to be able to leave observable_object unspecified, and instead specify
+    observable_axis_label_text.
 
     Arguments:
 
         ax (mpl.axes.Axes): axes object
 
-        nuclide_observable (tuple): standard nuclide/observable pair or compound
+        observable_object (observable.Observable, optional): observable object (may be
+        given as None, if observable_axis_label_text is specified)
 
-        hw_range (tuple of float): x range, before extension
+        hw_range (tuple of float, optional): x range, before extension
+        (nominally optional, but mandatory)
 
-        observable_range (tuple of float): y range, or None for matplotlib auto
+        observable_range (tuple of float, optional): y range, or None for matplotlib auto
 
-        observable_scale (str): y scale ("linear" or "log")
+        observable_scale (str, optional): y scale ("linear" or "log")
 
-        hw_range_extension (tuple of float, optional): x range relative extension
+        observable_axis_label_text (str, optional): override for observable axis
+        label text
 
-        observable_range_extension (tuple of float, optional): y range relative extension
+        hw_range_extension (tuple of float, optional): x range relative
+        extension
+
+        observable_range_extension (tuple of float, optional): y range relative
+        extension
 
         hw_labelpad (scalar, optional): pass-though labelpad option for xlabel
 
-        observable_labelpad (scalar, optional): pass-though labelpad option for ylabel
+        observable_labelpad (scalar, optional): pass-though labelpad option for
+        ylabel
 
-        observable_axis_label_text (str, optional): override for observable axis label text
+        hw_tick_specifier (tuple, optional): tick specification
+        (min,max,step,num_subdivision) for hw ticks
 
-        hw_tick_specifier (tuple, optional): tick specification (min,max,step,num_subdivision) for hw ticks
-
-        observable_tick_specifier (tuple, optional): tick specification (min,max,step,num_subdivision) for observable ticks
+        observable_tick_specifier (tuple, optional): tick specification
+        (min,max,step,num_subdivision) for observable ticks
 
     """
+
+    if hw_range is None:
+        raise(ValueError("hw_range must be specified"))
 
     # set ticks
     #
@@ -1712,18 +1104,21 @@ def set_up_hw_scan_axes(
         ticks.set_ticks(ax,"y",y_ticks)
 
     # set limits
-    ax.set_xlim(*extend_interval_relative(hw_range,hw_range_extension))
+    ax.set_xlim(*extend_interval_relative(hw_range, hw_range_extension))
     if observable_scale=="log":
         # Note: Override any range extension for log scale
         observable_range_extension=(0.,0.)
         ax.set_yscale("log")
     if (observable_range is not None) and np.isfinite(observable_range[0]).all():
-        ax.set_ylim(*extend_interval_relative(observable_range,observable_range_extension))
+        ax.set_ylim(*extend_interval_relative(observable_range, observable_range_extension))
         
     # set axis labels
     ax.set_xlabel(HW_AXIS_LABEL_TEXT, labelpad=hw_labelpad)
     if observable_axis_label_text is None:
-        observable_axis_label_text = make_observable_axis_label_text(nuclide_observable)
+        if observable_object is not None:
+            observable_axis_label_text = make_observable_axis_label_text(observable_object)
+        else:
+            observable_axis_label_text = ""
     ax.set_ylabel(
         r"${}$".format(observable_axis_label_text),
         labelpad=observable_labelpad,
@@ -1802,36 +1197,96 @@ def set_up_hw_scan_secondary_axis(
     return ax_secondary_y
     
 def set_up_Nmax_scan_axes(
-        ax,nuclide_observable,Nmax_range,observable_range,
-        Nmax_range_extension=(0.05,0.05),observable_range_extension=(0.05,0.05)
+        ax, observable_object=None, Nmax_range=None, observable_range=None, *,
+        Nmax_range_extension=(0.05,0.05),
+        observable_range_extension=(0.05,0.05),
+        observable_scale=None,
+        observable_axis_label_text=None,
+        Nmax_labelpad=None,
+        observable_labelpad=None,
+        Nmax_tick_specifier=None,
+        observable_tick_specifier=None,
 ):
-    """ Set up axes.
+    """Set up axis ranges, labels, and ticks for Nmax scan plot.
+
+    Traditional syntax had four positional arguments:
+
+        ax, observable_object, hw_range, observable_range
+
+    But it is helpful to be able to leave observable_object unspecified, and instead specify
+    observable_axis_label_text.
 
     Arguments:
 
         ax (mpl.axes.Axes): axes object
 
-        nuclide_observable (tuple): standard nuclide/observable pair or compound
+        observable_object (observable.Observable, optional): observable object (may be
+        given as None, if observable_axis_label_text is specified)
 
-        Nmax_range (tuple of int): x range, before extension
+        Nmax_range (tuple of int, optional): x range, before extension
+        (nominally optional, but mandatory)
 
-        observable_range (tuple of float): y range, or None for matplotlib auto
+        observable_range (tuple of float, optional): y range, or None for
+        matplotlib auto
 
-        Nmax_range_extension (tuple of float, optional): x range relative extension
+        observable_scale (str, optional): y scale ("linear" or "log")
 
-        observable_range_extension (tuple of float, optional): y range relative extension
+        observable_axis_label_text (str, optional): override for observable axis
+        label text
+
+        Nmax_range_extension (tuple of float, optional): x range relative
+        extension
+
+        observable_range_extension (tuple of float, optional): y range relative
+        extension
+
+        Nmax_labelpad (scalar, optional): pass-though labelpad option for xlabel
+
+        observable_labelpad (scalar, optional): pass-though labelpad option for
+        ylabel
+
+        Nmax_tick_specifier (tuple, optional): tick specification
+        (min,max,step,num_subdivision) for Nmax ticks
+
+        observable_tick_specifier (tuple, optional): tick specification
+        (min,max,step,num_subdivision) for observable ticks
 
     """
 
-    # TODO 03/19/23 (mac): Add tick specifier arguments.
-    
-    ax.set_xlabel(NMAX_AXIS_LABEL_TEXT)
-    ax.set_xlim(*extend_interval_relative(Nmax_range,Nmax_range_extension))
-    ax.set_ylabel(r"${}$".format(make_observable_axis_label_text(nuclide_observable)))
-    if (observable_range is not None) and np.isfinite(observable_range[0]).all():
-        ax.set_ylim(*extend_interval_relative(observable_range,observable_range_extension))
+    # set ticks
+    #
+    # Note that the tick specification must come *before* setting range limits,
+    # since the range limits automatically readjust when you set the ticks.
+    if Nmax_tick_specifier is not None:
+        x_ticks = ticks.linear_ticks(*Nmax_tick_specifier)
+        ticks.set_ticks(ax,"x",x_ticks)
+    if observable_tick_specifier is not None:
+        y_ticks = ticks.linear_ticks(*observable_tick_specifier)
+        ticks.set_ticks(ax,"y",y_ticks)
 
-def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**kwargs):
+    # set limits
+    ax.set_xlim(*extend_interval_relative(Nmax_range, Nmax_range_extension))
+    if observable_scale=="log":
+        # Note: Override any range extension for log scale
+        observable_range_extension=(0.,0.)
+        ax.set_yscale("log")
+    if (observable_range is not None) and np.isfinite(observable_range[0]).all():
+        ax.set_ylim(*extend_interval_relative(observable_range, observable_range_extension))
+        
+    # set axis labels
+    ax.set_xlabel(NMAX_AXIS_LABEL_TEXT, labelpad=Nmax_labelpad)
+    if observable_axis_label_text is None:
+        if observable_object is not None:
+            observable_axis_label_text = make_observable_axis_label_text(observable_object)
+        else:
+            observable_axis_label_text = ""
+    ax.set_ylabel(
+        r"${}$".format(observable_axis_label_text),
+        labelpad=observable_labelpad,
+    )
+        
+
+def add_observable_panel_label(ax,interaction_coulomb,observable_object,**kwargs):
     """ Add observable panel label to plot.
 
     Standardized label provides: nuclide, observable, interaction
@@ -1842,20 +1297,15 @@ def add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**kwarg
 
         interaction_coulomb (tuple): interaction/coulomb specifier
 
-        nuclide_observable (tuple): standard nuclide/observable pair or compound
+        observable_object (observable.Observable): observable object
 
         **kwargs: pass-through keyword arguments to ax.annotate
 
     """
 
     # panel label
-    if isinstance(nuclide_observable, tuple):
-        nuclide_text = make_nuclide_text(nuclide_observable)
-        observable_text = make_observable_text(nuclide_observable)
-    else:
-        ##if isinstance(nuclide_observable, observable.Observable):
-        nuclide_text = nuclide_observable.nuclide_label_text
-        observable_text = nuclide_observable.observable_label_text
+    nuclide_text = observable_object.nuclide_label_text
+    observable_text = observable_object.observable_label_text
 
     interaction_text = make_interaction_text(interaction_coulomb)
 
@@ -1883,6 +1333,7 @@ def add_hw_scan_plot(
         ax,observable_data,Nmax_max,
         Nmax_plot_style=Nmax_plot_style,
         Nmax_plot_style_kw={},
+        verbose=False,
         **kwargs,
 ):
     """Add hw scan plot to axes.
@@ -1921,6 +1372,11 @@ def add_hw_scan_plot(
     Nmax_groups = observable_data.reset_index().groupby("Nmax")
     for Nmax, group in Nmax_groups:
 
+        if verbose:
+            print("Nmax {}".format(Nmax))
+            print(group)
+            print(Nmax_max)
+            
         # combine styling options (last takes precedence)
         kw_full = {
             **kw_defaults,
@@ -1937,55 +1393,72 @@ def add_hw_scan_plot(
 
 def add_hw_scan_plot_Nmax_labels(
         ax, Nmax_groups, label_list,
-        legend_index=-1,
+        legend_index=None,
         side="right",
         data_point_index=None,
         text_displacement=None,
         legend_position="bottom",
+        legend_text="N_{\mathrm{max}}",
+        legend_xy=None,
+        label_text=None,
+        fontsize="x-small",
 ):
     """Add Nmax curve labels to previously drawn hw scan plot.
 
+    May equivalently be used to add hw curve labels to previously drawn Nmax
+    scan plot, with appropriate override of legend_text.
+
     Arguments:
 
-        ax (mpl.axes.Axes): axes object
+        ax (mpl.axes.Axes): Axes object.
 
-        Nmax_groups (pd.DataFrameGroupBy): curve data grouped by Nmax (as
-            returned by add_hw_scan_plot())
+        Nmax_groups (pd.DataFrameGroupBy): Curve data grouped by Nmax (as
+            returned by add_hw_scan_plot()).
 
-        label_list (list of int): list of Nmax values for labels [formerly
-        Nmax_label_list]
+        label_list (list of int): List of Nmax values for labels [formerly
+        Nmax_label_list].
 
-        legend_index (int, optional): index within label_list for Nmax
+        legend_index (int, optional): Index within label_list for Nmax
         label to which to attach the legend "Nmax" (or None to omit legend)
-        [formerly Nmax_label_tagged_index]
+        [formerly Nmax_label_tagged_index].
 
-        side (str, optional): side of curve for label "left" or "right"
+        side (str, optional): Side of curve for label "left" or "right".
 
-        data_point_index (int, optional): index of data point within curve for
-        labeling (0 for "left" end of curve, -1 for "right" end of curve); or
-        None for default based on side
+        data_point_index (int, optional): Index of data point within curve for
+        labeling (0 for "left" end of curve, -1 for "right" end of curve).
+        Default is based on side.
 
-        text_displacement (tuple, optional): xy displacement in points of text relative to curve point; or
-        None for default based on side
+        text_displacement (tuple or dict, optional): Displacement (x,y), in
+        points, of text relative to curve point.  Can be given as a dictionary
+        of displacement values by Nmax, with fallthrough to default value.
+        Default is based on side, namely, (+12,+0) for "right" or (-2,+0) for
+        "left".
 
-        legend_position (str, optional): position of Nmax
-        legend label relative to Nmax labels ("bottom" or "top")
+        legend_position (str, optional): Position of Nmax
+        legend label relative to Nmax labels ("bottom" or "top").
+
+        legend_xy (tuple of float, optional): Explicit position of Nmax legend
+        label relative to the Nmax label to which it is attached, for manual
+        fine-tuning (defaults legend_xy=(1,0) for legend_position="bottom",
+        legend_xy=(1,1) for or legend_position="top").
+
+        label_text (str, optional): Template string for label (applied as format
+        string to the value of Nmax), default "{}"; may be used to provide an
+        arbitrary text label for hw scan curves.
+
+        fontsize (str, optional): Fontsize argument for annotate.
 
     """
 
     # TODO (mac, 03/19/23): add in generalizations for call-out lines
 
-    if side=="right":
-        if data_point_index is None:
+    # deduce default parameters
+    if data_point_index is None:
+        if side=="right":
             data_point_index=-1
-        if text_displacement is None:
-            text_displacement=(+12,+0)
-    elif side=="left":
-        if data_point_index is None:
+        elif side=="left":
             data_point_index=0
-        if text_displacement is None:
-            text_displacement=(-2,+0)
-        
+    
     for Nmax, group in Nmax_groups:
 
         # extract curve endpoint
@@ -1994,11 +1467,38 @@ def add_hw_scan_plot_Nmax_labels(
         
         # generate Nmax label
         if Nmax in label_list:
+
+            # construct text
+            if label_text is None:
+                label_text = r"{}"
+            resolved_label_text = label_text.format(Nmax)
+
+            # deduce displacement
+            if isinstance(text_displacement, tuple):
+                used_text_displacement = text_displacement
+            elif isinstance(text_displacement, dict):
+                if Nmax in text_displacement:
+                    used_text_displacement = text_displacement[Nmax]
+                else:
+                    used_text_displacement = None  # allows fallthrough to default if Nmax does not appear in text_displacement dictionary
+            elif text_displacement is None:
+                used_text_displacement=None
+            else:
+                raise ValueError("Unrecognized type ({}) for text displacement ({})".format(type(text_displacement), text_displacement))
+            
+            if used_text_displacement is None:
+                if side=="right":
+                    used_text_displacement=(+12,+0)
+                elif side=="left":
+                    used_text_displacement=(-2,+0)
+
+            # generate label
             Nmax_label = ax.annotate(
-                r"${}$".format(Nmax),
+                r"${}$".format(resolved_label_text),
+                ##r"${}$".format(Nmax),
                 xy=endpoint, xycoords="data",
-                xytext=text_displacement, textcoords="offset points",
-                fontsize="x-small",
+                xytext=used_text_displacement, textcoords="offset points",
+                fontsize=fontsize,
                 horizontalalignment="right", verticalalignment="center",
                 ##arrowprops=dict(arrowstyle="-", linewidth=0.5, shrinkA=1, shrinkB=3),
                 ##bbox=dict(boxstyle="square", visible=False, pad=0.),  # to clip call-out line under text
@@ -2011,15 +1511,17 @@ def add_hw_scan_plot_Nmax_labels(
                 and Nmax == label_list[legend_index]
         ):
             if legend_position=="bottom":
-                xy=(1,0)
-                verticalalignment="top"
+                if legend_xy is None:
+                    legend_xy = (1,0)
+                verticalalignment = "top"
             elif legend_position=="top":
-                xy=(1,1)
-                verticalalignment="bottom"
+                if legend_xy is None:
+                    legend_xy = (1,1)
+                verticalalignment = "bottom"
             ax.annotate(
-                r"$N_{\mathrm{max}}$",
-                xy=xy, xycoords=Nmax_label,
-                fontsize="x-small",
+                r"${}$".format(legend_text),
+                xy=legend_xy, xycoords=Nmax_label,
+                fontsize=fontsize,
                 horizontalalignment="right", verticalalignment=verticalalignment,
             )
 
@@ -2048,14 +1550,21 @@ def add_Nmax_scan_plot(
         kwargs (Line2D properties, optional): kwargs are used to specify plot
         properties (e.g., marker, markersize) not otherwise fixed by the prior arguments
 
+    Returns:
+
+       hw_groups (pd.DataFrameGroupBy): curve data grouped by hw (for
+           possible use in subsequent calls to labeling functions)
+
+
     """
 
     kw_defaults = {
         "markersize": 6,
         "marker": ".",
     }
-    
-    for hw, group in observable_data.reset_index().groupby("hw"):
+
+    hw_groups = observable_data.reset_index().groupby("hw")
+    for hw, group in hw_groups:
         if verbose:
             print("hw {}\n {}".format(hw,group))
 
@@ -2072,9 +1581,11 @@ def add_Nmax_scan_plot(
             **kw_full,
         )
 
+    return hw_groups
+
 def write_hw_scan_plot(
         descriptor,
-        interaction_coulomb,nuclide_observable,
+        interaction_coulomb,observable_object,
         observable_data,
         hw_range,observable_range,Nmax_max,
         hw_range_extension=(0.02,0.02),
@@ -2098,7 +1609,7 @@ def write_hw_scan_plot(
 
         interaction_coulomb (tuple): interaction/coulomb specifier
 
-        nuclide_observable (tuple): standard nuclide/observable pair or compound
+        observable_object (observable.Observable): observable object
 
         observable_data (pd.DataFrame): data multi-indexed by (Nmax,hw)
 
@@ -2125,7 +1636,7 @@ def write_hw_scan_plot(
     # provide axis labeling
     set_up_hw_scan_axes(
         ax,
-        nuclide_observable,
+        observable_object,
         hw_range,
         observable_range,
         hw_range_extension=hw_range_extension,
@@ -2133,7 +1644,7 @@ def write_hw_scan_plot(
     )
 
     # make panel label
-    add_observable_panel_label(ax,interaction_coulomb,nuclide_observable,**panel_label_kwargs)
+    add_observable_panel_label(ax,interaction_coulomb,observable_object,**panel_label_kwargs)
 
     # make Nmax label
     ax.annotate(
@@ -2164,12 +1675,17 @@ def write_hw_scan_plot(
 ################################################################
 
 def add_expt_marker_band(
-        ax,x_range,y_with_error,
-        color="black",linewidth=1,
-        error_facecolor="lightgray",error_edgecolor="black",error_linewidth=0.5,
-        error_full_rectangle=False
+        ax,x_range, y_with_error,
+        error_full_rectangle=False,
+        color="black", linewidth=1, linestyle="solid",
+        error_facecolor="lightgray",
+        error_edgecolor="black", error_linewidth=0.5, error_linestyle="solid",
+        zorder=None,
 ):
     """Add marker indicating value with error band (rectangle) and central value (line).
+
+    Limitation: Giving a value for error_linestyle other than "solid" seems to
+    break the rendering of the whole axis.
 
     Arguments:
 
@@ -2182,11 +1698,14 @@ def add_expt_marker_band(
            values (in keeping with the conventions of Axes.errorbar); if None,
            no marker is drawn
 
+        error_full_rectangle (bool, optional): draw full rectangle for error band, instead of just top and bottom lines
+
         color, linewidth (optional): styling parameters for central value
 
-        error_facecolor, error_edgecolor, error_linewidth (optional): styling parameters error band
+        error_facecolor, error_edgecolor, error_linewidth, error_linestyle (optional): styling parameters error band
 
-        error_full_rectangle (bool, optional): draw full rectangle for error band, instead of just top and bottom lines
+        zorder (optional): styling parameters for whole object
+
 
     """
 
@@ -2204,6 +1723,12 @@ def add_expt_marker_band(
         dy_plus = y_error
         dy_minus = y_error
 
+    # support zorder overrides
+    if zorder is None:
+        zorder_options = {}
+    else:
+        zorder_options = dict(zorder=zorder)
+        
     # error band
     if y_error is not None:
         y0 = y-dy_minus
@@ -2212,20 +1737,30 @@ def add_expt_marker_band(
             ax.fill(
                 [x0,x1,x1,x0],
                 [y0,y0,y1,y1],
-                edgecolor=error_edgecolor,linewidth=error_linewidth,
-                facecolor=error_facecolor
+                edgecolor=error_edgecolor, linewidth=error_linewidth, linestyle=error_linestyle,
+                facecolor=error_facecolor,
+                **zorder_options,
             )
         else:
             ax.fill(
                 [x0,x1,x1,x0],
                 [y0,y0,y1,y1],
-                edgecolor=error_edgecolor,linewidth=0,
-                facecolor=error_facecolor
+                edgecolor=error_edgecolor, linewidth=0, linestyle=error_linestyle,
+                facecolor=error_facecolor,
+                **zorder_options,
             )
-            ax.hlines([y0,y1],*x_range,color=error_edgecolor,linewidth=error_linewidth)
+            ax.hlines(
+                [y0,y1], *x_range,
+                color=error_edgecolor, linewidth=error_linewidth,
+                **zorder_options,
+            )
 
     # central value
-    ax.hlines(y,*x_range,color=color,linewidth=linewidth)
+    ax.hlines(
+        y, *x_range,
+        color=color, linewidth=linewidth, linestyle=linestyle,
+        **zorder_options,
+    )
 
 def add_data_marker(ax,x,y_with_error,errorbar_kw=dict()):
     """Add marker indicating value with error band (rectangle) and central value (line).

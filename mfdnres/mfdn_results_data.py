@@ -41,6 +41,9 @@
     08/01/22 (pjf): Use RMEData for RME storage.
     11/19/22 (mac): Deduce two-body RME from MFDn two-body expectation value in get_rme().
     04/27/23 (mac): Provide get_me() accessor for use with scalar observables.
+    10/12/23 (mac): Provide support for Lanczos decomposition filename storage in
+        mfdn_level_lanczos_decomposition_filenames.
+    10/26/23 (mac): Provide support for Lanczos decomposition alpha_beta storage.
 """
 
 from __future__ import annotations
@@ -129,6 +132,10 @@ class MFDnResultsData(results_data.ResultsData):
 
     Data attributes:
 
+        Note: If adding a new data attribute, make sure that a type hint is
+        provided, and that it is initialized in the __init__ method and
+        accounted for (if appropriate) in the update method.
+
         mfdn_level_decompositions (dict): wave function probability decompositions
 
             Mapping: decomposition_name -> qn -> values
@@ -194,8 +201,46 @@ class MFDnResultsData(results_data.ResultsData):
 
             Mapping: observable_name -> (qnf,qni) -> value
 
+        mfdn_level_lanczos_decomposition_data (dict): Lanczos decomposition alpha-beta data
+
+            The filename is retained for debugging ("provenance") purposes.
+
+            Mapping: decomposition_type -> qn -> decomposition_data
+
+                decomposition_type (str): decomposition type ("U3SpSnS", etc.)
+
+                qn (tuple): (J,g,n)
+
+                decomposition_data (tuple): (filename, alpha, beta)
+
+        mfdn_level_occupations (dict): MFDn-native occupations
+
+            Mapping: qn -> species_code -> qn -> (orbitals, occupations)
+ 
+                species_code (str): "p" or "n"
+ 
+                orbitals (list[tuple]): [(n,l,j)_0, (n,l,j)_1, ...]
+
+                occupations (np.array): [n_0, n_1, ...]
+
+        postprocessor_spamps (dict): Spectroscopic amplitudes, putatively to be
+        calculated by mfdn-transitions, and currently by rhodium, after being
+        digested by the run scripting.
+
+            Mapping: delta_nuclide -> (qnf, qni) -> orbital -> value
+ 
+                delta_nuclide (tuple): (delta_Z, delta_N)
+
+                qnf, qni (tuple): (J,g,n)
+
+                orbital (tuple): (n,l,j)
+                
+    
+    
+
     Accessors:
        [See definitions below.]
+
     """
 
     # Data attribute renaming 09/17/20 (mac)
@@ -223,15 +268,23 @@ class MFDnResultsData(results_data.ResultsData):
     # NEW
     #     => postprocessor_tb_rmes
 
+    ########################################
+    # Type hints
+    ########################################
+    
     mfdn_level_decompositions:dict[str,dict]
     mfdn_level_residuals:dict[LevelQNType,float]
     mfdn_level_properties:dict[str,dict[LevelQNType,float]]
+    mfdn_level_occupations:dict[str, dict[tuple[float,int,int],tuple[list,np.array]]]
     mfdn_ob_moments:dict[str,dict[LevelQNType,float]]
     mfdn_ob_rmes:dict[str,results_data.RMEData]
     mfdn_tb_expectations:dict[str,dict[LevelQNType,float]]
     postprocessor_ob_rmes:dict[str,results_data.RMEData]
     postprocessor_tb_rmes:dict[str,results_data.RMEData]
+    mfdn_level_lanczos_decomposition_data:dict[str,dict[tuple[float,int,int],tuple]]
+    postprocessor_spamps:dict[tuple[int,int],dict[tuple[tuple[float,int,int],tuple[float,int,int]],dict[tuple[int,int,float],float]]]
 
+    
     ########################################
     # Initializer
     ########################################
@@ -244,12 +297,16 @@ class MFDnResultsData(results_data.ResultsData):
         self.mfdn_level_decompositions = {}
         self.mfdn_level_residuals = {}
         self.mfdn_level_properties = {}
+        self.mfdn_level_occupations = {}
         self.mfdn_ob_moments = {}
         self.mfdn_ob_rmes = {}
         self.mfdn_tb_expectations = {}
         self.postprocessor_ob_rmes = {}
         self.postprocessor_tb_rmes = {}
+        self.mfdn_level_lanczos_decomposition_data = {}
+        self.postprocessor_spectroscopic_amplitudes = {}
 
+        
     ########################################
     # Accessors
     ########################################
@@ -273,6 +330,45 @@ class MFDnResultsData(results_data.ResultsData):
 
         return value
 
+
+    def get_occupations(
+            self, species:str, qn:LevelQNType,
+            verbose=False
+    ):
+        """Retrieve list of orbital occupations.
+
+        Default return is None.
+
+        Example:
+            >>> mesh_point.get_occupations("p", (1.0, 0, 1))
+
+        Arguments:
+
+            species (str): "p" or "n"
+
+            qn (tuple): Quantum numbers for state.
+
+        Returns:
+
+            orbitals (list): List of (n,l,j) quantum numbers for orbitals.
+
+            occupations (np.array): Occupations.
+
+        """
+
+        data_for_species = self.mfdn_level_occupations.get(species, None)
+        if data_for_species is None:
+            return None
+
+        orbitals_occupations = data_for_species.get(qn)
+        if orbitals_occupations is None:
+            return None
+
+        orbitals, occupations = orbitals_occupations
+        
+        return orbitals, occupations
+
+    
     def get_decomposition(self,decomposition_type,qn:LevelQNType,verbose=False):
         """ Retrieve decomposition ("Nex") as np.array.
 
@@ -323,11 +419,13 @@ class MFDnResultsData(results_data.ResultsData):
         # extract labels
         (J,gex,n) = qn
 
-        # trap deduced observables (single species radii relative to own center
-        # of mass)
+        # trap deduced observables
+        
+        # single species radii relative to own center of mass
         #
-        # Relation to MFDn output observables "r_pp" and "r_nn" deduced from
-        # cshalo [PRC 90, 034305 (2014)] (A5).
+        # The relation of the single species radii (relative to own center of
+        # mass) to the MFDn output observables "r_pp" and "r_nn" is read off
+        # from cshalo [PRC 90, 034305 (2014)] (A5).
         if (radius_type == "rp-ss"):
             nuclide = self.params["nuclide"]
             Np, Nn = nuclide
@@ -597,6 +695,9 @@ class MFDnResultsData(results_data.ResultsData):
         For two-body operators, the fallback options for deducing the RME are:
 
            - MFDn two-body expectation value
+
+        Important: To retrieve the matrix element of a two-body operator, you
+        must specify rank="tb".
 
         Note that MFDn two-body operator expectation values are computed based
         on input TBMEs, and thus do not assume an oscillator basis.
@@ -883,7 +984,7 @@ class MFDnResultsData(results_data.ResultsData):
         Resulting matrix may be useful either for diagnostic purposes (to review
         available transitions) or in block calculations with RMEs.
 
-        See get_rme for conventions regarding RME itself.
+        See get_rme for a detailed discussion of how the RMEs themselves are deduced.
 
         Example:
             >>> mesh_point.get_rme_matrix("E2p",((2,0),(2,0)),(4,4),verbose=True)
@@ -941,6 +1042,8 @@ class MFDnResultsData(results_data.ResultsData):
         "hat" factor in the RME, which we have under Edmonds's Wigner-Eckart
         convention.
 
+        See get_rme for a detailed discussion of how the underlying RME is deduced.
+
         Arguments:
 
             observable (str): operator type ("E0p", ...) accepted by get_rme
@@ -981,6 +1084,7 @@ class MFDnResultsData(results_data.ResultsData):
     ):
         """ Retrieve reduced transition probability (RTP).
 
+        See get_rme for a detailed discussion of how the underlying RME is deduced.
 
         Arguments:
 
@@ -1021,6 +1125,8 @@ class MFDnResultsData(results_data.ResultsData):
     ):
         """ Retrieve expectation value (deduced from RME).
 
+        See get_rme for a detailed discussion of how the underlying RME is deduced.
+
         Arguments:
 
             observable (str): operator type ("E2p", ...) accepted by get_rme
@@ -1050,6 +1156,104 @@ class MFDnResultsData(results_data.ResultsData):
 
         return expectation_value
 
+    def get_lanczos_decomposition_filename(self,decomposition_type,qn:LevelQNType,verbose=False):
+        """ Retrieve Lanczos decomposition filename (for debugging purposes).
+
+        Arguments:
+            decomposition_type (str): decomposition type ("U3SpSnS", etc.)
+            qn (tuple): quantum numbers for state
+
+        Returns:
+            filename (str): filename for alpha-beta file
+        """
+
+        # retrieve decomposition
+        try:
+            lanczos_decomposition_data = self.mfdn_level_lanczos_decomposition_data[decomposition_type][qn]
+        except:
+            return None
+
+        filename, alpha, beta = lanczos_decomposition_data
+
+        return filename
+    
+    def get_lanczos_decomposition_alpha_beta(self,decomposition_type,qn:LevelQNType,verbose=False):
+        """ Retrieve Lanczos decomposition data.
+
+        Arguments:
+            decomposition_type (str): decomposition type ("U3SpSnS", etc.)
+            qn (tuple): quantum numbers for state
+
+        Returns:
+            alpha (np.array): vectors of diagonal matrix elements
+            beta (np.array): vectors of off-diagonal matrix elements
+        """
+
+        # retrieve decomposition
+        try:
+            lanczos_decomposition_data = self.mfdn_level_lanczos_decomposition_data[decomposition_type][qn]
+        except:
+            return None
+
+        filename, alpha, beta = lanczos_decomposition_data
+
+        return alpha, beta
+
+    def get_lanczos_decomposition_num_iterations(self,decomposition_type,qn:LevelQNType,verbose=False):
+        """ Retrieve number of iterations in Lanczos decomposition data.
+
+        Arguments:
+            decomposition_type (str): decomposition type ("U3SpSnS", etc.)
+            qn (tuple): quantum numbers for state
+
+        Returns:
+            (int): number of Lanczos iterations
+        """
+
+        # retrieve decomposition
+        try:
+            lanczos_decomposition_data = self.mfdn_level_lanczos_decomposition_data[decomposition_type][qn]
+        except:
+            return None
+
+        filename, alpha, beta = lanczos_decomposition_data
+        iterations = len(alpha)
+
+        return iterations
+
+
+    def get_spectroscopic_amplitudes(
+            self, delta_nuclide:tuple[int,int], qn_pair:LevelQNPairType,
+            verbose=False
+    ):
+        """Retrieve dictionary of spectroscopic amplitudes.
+
+        Default return is None.
+
+        Example:
+            >>> mesh_point.get_spectroscopic_amplitudes((0,+1), ((0.5, 1, 1), (1.0, 0, 1)))
+
+        Arguments:
+
+            delta_nuclide (tuple): (delta_Z, delta_N)
+
+            qn_pair (tuple): Quantum numbers for states (qn_bra,qn_ket).
+
+        Returns:
+
+            (dict): Spectroscopic amplitudes, as mapping (n,l,j)->amplitude.
+
+        """
+
+        data_for_delta_nuclide = self.postprocessor_spectroscopic_amplitudes.get(delta_nuclide)
+        if data_for_delta_nuclide is None:
+            return None
+
+        amplitudes = data_for_delta_nuclide.get(qn_pair)
+        
+        return amplitudes
+    
+    
     ########################################
     # Updating method
     ########################################
@@ -1067,13 +1271,18 @@ class MFDnResultsData(results_data.ResultsData):
 
         # merge observable dictionaries
         update_observable_dictionary(self.mfdn_level_decompositions,other.mfdn_level_decompositions,dict)
+        # mfdn_level_residuals: Omit from update, since these are run-specific and thus not included in merging of mesh points.
         update_observable_dictionary(self.mfdn_level_properties,other.mfdn_level_properties,dict)
+        update_observable_dictionary(self.mfdn_level_occupations,other.mfdn_level_occupations,dict)
         update_observable_dictionary(self.mfdn_ob_moments,other.mfdn_ob_moments,dict)
         update_observable_dictionary(self.mfdn_ob_rmes,other.mfdn_ob_rmes,results_data.RMEData)
         update_observable_dictionary(self.mfdn_tb_expectations,other.mfdn_tb_expectations,dict)
         update_observable_dictionary(self.postprocessor_ob_rmes,other.postprocessor_ob_rmes,results_data.RMEData)
         update_observable_dictionary(self.postprocessor_tb_rmes,other.postprocessor_tb_rmes,results_data.RMEData)
+        update_observable_dictionary(self.mfdn_level_lanczos_decomposition_data,other.mfdn_level_lanczos_decomposition_data,dict)
+        update_observable_dictionary(self.postprocessor_spectroscopic_amplitudes,other.postprocessor_spectroscopic_amplitudes,dict)
 
+        
 #################################################
 # test code
 #################################################

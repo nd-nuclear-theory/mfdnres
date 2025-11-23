@@ -1,4 +1,6 @@
-"""mfdn_format_pm.py -- declares descriptor parser
+"""mfdn_format_pm.py -- declares descriptor parser for Pieter Maris runs
+
+    See mfdn_format_pm_test.py for parsing tests.
 
 PM typical format
 
@@ -13,6 +15,7 @@ decimal and as field separator.
 
     07/26/15 (mac): Initiated (based on format_5_ho.py).
     04/27/18 (mac): Rename parameter Mj to M.
+    10/12/23 (mac): Provide support for LENPIC runs.
 
 """
 
@@ -39,7 +42,7 @@ def parser(filename):
         # prolog
         r"MFDn\.res"
         r"\.(?P<descriptor>"
-        # descriptor conents
+        # descriptor contents
         r"Z(?P<Z>\d+)\.N(?P<N>\d+)"
         r"\.(?P<interaction>[^\.]+)"
         r"(\.Nmin1)?"  # ignore Nmin, though could be used in detecting mixed parity runs
@@ -79,9 +82,50 @@ def parser(filename):
 
 input.register_filename_format("mfdn_format_pm", parser)
 
-if (__name__ == "__main__"):
+def parser_lenpic(filename):
+    """ Parses results filename in Pieter's typical format, defined for ho basis, for LENPIC runs.
 
-    filename = r"MFDn.res.Z4.N5.JISP16.Nmin1.Nm13.hw20.0.La500.St06.tol1e-6"
-    info = input.parse_filename(filename, filename_format="mfdn_format_pm")
-    print(filename)
-    print(info)
+    Args:
+        filename (string) : filename (as basename)
+
+    Returns:
+        (dict) : info parsed from filename
+
+    """
+
+    regex = re.compile(
+        ## r"\-Mj(?P<M>[\d\.]+)"  # TODO Mj
+        # prolog
+        r"MFDn\.res"
+        r"\.(?P<descriptor>"
+        # descriptor contents
+        r"A(?P<A>\d+)\.Z(?P<Z>\d+)\.N(?P<N>\d+)"
+        r"\.Nm(?P<Nmax>\d+)"
+        r"\.(?P<interaction>[^\.]+)"
+        r"_HO(?P<hw>[\d]+)"
+        # epilog
+        r")"
+    )
+
+    conversions = {
+        "A" : int,
+        "Z" : int,
+        "N" : int,
+        "interaction" : str,
+        "hw" : float,
+        }
+
+    match = regex.match(filename)
+    if (match == None):
+        raise ValueError("bad form for MFDn results filename: " + filename)
+    info = match.groupdict()
+    ## print(info)
+
+    # convert fields
+    for key in conversions:
+        conversion = conversions[key]
+        info[key] = conversion(info[key])
+
+    return info
+
+input.register_filename_format("mfdn_format_pm_lenpic", parser_lenpic)

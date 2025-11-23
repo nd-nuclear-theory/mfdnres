@@ -36,6 +36,12 @@
     06/27/23 (mac): Add basic mesh data caching facility, based on code
         from pjf lenpic-analysis-2022.
     07/08/23 (mac): Add run_stem option for res_file_directory().
+    10/24/24 (mac):
+        - Add results_type option for res_file_directory().
+        - Add read_runs().
+    02/22/24 (mac): Add results_postprocessors option to read_runs().
+    07/20/25 (mac): Change default value of slurp_res_files option glob_pattern to None.
+
 """
 
 import glob
@@ -50,7 +56,9 @@ import numpy as np
 
 def res_file_directory(
         username, code, run_number, *,
-        run_stem="run", results_dir="results", res_file_subdir=os.path.join("results","res"),
+        run_stem="run", results_dir="results",
+        results_subdir="results", results_type="res",
+        res_file_subdir=None,
 ):
     """Construct full path to res file directory, given user, code, and run.
 
@@ -59,42 +67,60 @@ def res_file_directory(
 
         Arguments:
 
-            username (str): user name (e.g., "mcaprio")
+            username (str): User name (e.g., "mcaprio")
 
-            code (str): code name (e.g., "spncci")
+            code (str): Code name (e.g., "spncci")
 
-            run_number (str): run name "tail" (e.g., "mac0424")
+            run_number (str): Run name "tail" (e.g., "mac0424")
 
-            run_stem (str, optional): run name "stem" (normally "run")
+            results_dir (str,optional): Name of top-level results directory within GROUP_HOME
 
-            results_dir (str,optional): name of top-level results directory within GROUP_HOME
+            run_stem (str, optional): Run name "stem" (normally, "run")
 
-            res_file_subdir (str,optional): name of subdirectory within results directory (can be None for flat structure)
+            results_subdir (str, optional): Name of results subdirectory within
+                run (normally, "results")
+
+            results_type (str, optional): Name of sub-subdirectory for given
+            type of results file (e.g., "res", "lanczos", ...), within results
+            subdirectory
+
+            res_file_subdir (str, optional): Name of subdirectory within results
+                directory; e.g., os.path.join("results","res"); usually you will
+                want to use the results_type option instead
 
         Environment:
             GROUP_HOME: directory name for group top-level results directory
               (e.g., "/afs/crc.nd.edu/group/nuclthy" for shared group results directory,
                or, for local work in your home directory, you may set equal to HOME)
 
-        >>> res_file_directory("mcaprio","mfdn","mac0563")
+        >>> mfdnres.input.res_file_directory("mcaprio", "mfdn", "mac0563")
 
             /afs/crc.nd.edu/group/nuclthy/results/mcaprio/mfdn/runmac0563/results/res
 
-        >>> res_file_directory("amccoy","spncci","aem0097",res_file_subdir="results")
+        >>> mfdnres.input.res_file_directory("mcaprio", "mfdn", "mac0563", results_type="lanczos")
+
+            /afs/crc.nd.edu/group/nuclthy/results/mcaprio/mfdn/runmac0563/results/lanczos
+
+        >>> mfdnres.input.res_file_directory("amccoy", "spncci", "aem0097", res_file_subdir="results")
 
             /afs/crc.nd.edu/group/nuclthy/results/amccoy/spncci/runaem0097/results
 
     """
 
     group_home = os.environ.get("GROUP_HOME")
-    if (type(group_home) is not str):
+    if type(group_home) is not str:
         raise(ValueError("Need to set environment variable GROUP_HOME"))
 
-    res_directory = os.path.join(group_home, results_dir, username, code, run_stem+run_number)
-    if (res_file_subdir is not None):
-        res_directory = os.path.join(res_directory,res_file_subdir)
+    if res_file_subdir is None:  # allow for legacy res_file_subdir option
+        res_file_subdir = os.path.join(results_subdir, results_type)
+    run_full_name = run_stem + run_number
+    res_directory = os.path.join(
+        group_home, results_dir, username, code, run_full_name,
+        res_file_subdir
+    )
 
     return res_directory
+
 
 ################################################################
 # filename parser registry
@@ -103,12 +129,14 @@ def res_file_directory(
 # global registration variables
 filename_format_parser = {}
 
-def register_filename_format(format_name,parser):
+def register_filename_format(format_name, parser):
     """Register information for parsing filename.
 
     Args:
-        format_name (str): name for filename format
-        parser (callable): function for parsing filename
+
+        format_name (str): Name for filename format
+
+        parser (callable): Function for parsing filename
 
     """
     if format_name == "ALL":
@@ -116,6 +144,7 @@ def register_filename_format(format_name,parser):
 
     filename_format_parser[format_name] = parser
 
+    
 ################################################################
 # filename parser control
 ################################################################
@@ -153,11 +182,16 @@ def parse_filename(filename, filename_format="ALL"):
         "nuclide" : (4,3)
 
     Args:
-        filename (str): filename to parse
-        filename_format (str, optional): filename format to match
+
+        filename (str): Filename to parse
+
+        filename_format (str, optional): Filename format to match, or "ALL" try
+        try multiple formats until one matches
 
     Returns: (dict) : dictionary with keys for parameters ("run",
+
         "descriptor", "Z", "N", ...) parsed from filename, plus
+
         "nuclide" as a tuple of int
 
     """
@@ -193,6 +227,7 @@ def parse_filename(filename, filename_format="ALL"):
 
     return info
 
+
 #################################################
 # data parser registry
 #################################################
@@ -204,13 +239,16 @@ def register_data_format(format_name,parser):
     """Register information for parsing res file.
 
     Args:
-        format_name (str): name for res file format
-        parser (callable): function for parsing file stream
+
+        format_name (str): Name for res file format
+
+        parser (callable): Function for parsing file stream
 
     """
 
     data_format_parser[format_name] = parser
 
+    
 ################################################################
 # code name registry
 ################################################################
@@ -222,19 +260,22 @@ def register_code_name(code_name,format_name):
     """Register information for deducing res format.
 
     Args:
-        code_name (str): name for code
-        format_name (str): name for filename format
+
+        code_name (str): Name for code
+
+        format_name (str): Name for filename format
 
     """
     if format_name not in data_format_parser:
         raise ValueError("unknown format_name: {:s}".format(format_name))
     code_name_map[code_name] = format_name
 
+    
 ##################################################
 # data file import control
 ##################################################
 
-def read_file(filename,res_format=None,filename_format=None,verbose=False):
+def read_file(filename, *, res_format=None, filename_format=None, params=None, verbose=False):
     """Extract results from single results file.
 
     Dispatches filename to appropriate filename parser.  Dispatches
@@ -251,12 +292,18 @@ def read_file(filename,res_format=None,filename_format=None,verbose=False):
     BaseResultsData.
 
     Arguments:
-        filename (str): filename for results file
-        res_format (str, optional): identifier string for the results file
+
+        filename (str): Filename for results file
+
+        res_format (str, optional): Identifier string for the results file
             parser to use
-        filename_format (str,optional): identifier string for the results
-            filename parser to use
-        verbose (bool,optional): enable debugging output
+
+        filename_format (str, optional): Filename format to match, or "ALL" try
+           try multiple formats until one matches
+
+        params (dict, optional): Supplementary parameters to append to params attribute
+
+        verbose (bool, optional): Enable debugging output
 
     Returns:
         (list of ResultsData): list of mesh point data objects
@@ -264,7 +311,7 @@ def read_file(filename,res_format=None,filename_format=None,verbose=False):
     """
 
     # parse results filename for any supplementary run parameters
-    info_from_filename = parse_filename(filename,filename_format)
+    info_from_filename = parse_filename(filename, filename_format)
 
     if res_format is None:
         if info_from_filename.get("code_name") is not None:
@@ -277,7 +324,7 @@ def read_file(filename,res_format=None,filename_format=None,verbose=False):
         print("  read_file: filename {}".format(filename))
     with open(filename,'rt') as fin:
         try:
-            results_list = data_format_parser[res_format](fin,verbose=verbose)
+            results_list = data_format_parser[res_format](fin, verbose=verbose)
         except Exception as e:
             print("filename {} filename_format {} res_format {}".format(filename, filename_format, res_format))
             raise e
@@ -296,57 +343,75 @@ def read_file(filename,res_format=None,filename_format=None,verbose=False):
         results.params.update(info_from_filename)
         results.filename = os.path.basename(filename)
 
+    # augment parameters with those explicitly given
+    if params is not None:
+        for results in results_list:
+            results.params.update(params)
+        
     return results_list
 
+
 def slurp_res_files(
-        res_directory_list,
+        directory_list,
+        *,
         res_format=None,
         filename_format=None,
-        glob_pattern="*.res",
-        verbose=False
+        params=None,
+        glob_pattern=None,
+        verbose=False,
 ):
-    """Read all results file in given directories.
+    """Read all results files in given directories.
 
     The results will be a list of results data objects, one for
     each mesh point within the results file.
 
     Arguments:
-        res_directory_list (str or list of str): directory or list of directories
-            containing files to import
-        res_format (str, optional): identifier string for the results file parser to use
-        filename_format (str,optional): identifier string for the results
-            filename parser to use
-        glob_pattern (str,optional): glob pattern for results filenames to read
-            within each directory
-        verbose (bool,optional): enable debugging output
+
+        directory_list (str or list of str): Directory or list of directories
+            containing files to import.
+
+        res_format (str, optional): Identifier string for the results file parser to use.
+
+        filename_format (str, optional): Filename format to match, or "ALL" to
+            try multiple formats until one matches.
+
+        glob_pattern (str, optional): Glob pattern for results filenames to read
+            within each directory.  Defaults to "*.res".
+
+        verbose (bool, optional): Enable debugging output.
 
     Returns:
-        (list of ResultsData): list of mesh point data objects
+
+        (list of ResultsData): L of mesh point data objects
 
     """
 
     # process argument: upgrade single directory to list
-    if (type(res_directory_list) == str):
-        res_directory_list = [res_directory_list]
-    res_directory_list = sorted(list(set(res_directory_list)))  # remove duplicate input directories
+    if (type(directory_list) == str):
+        directory_list = [directory_list]
+    directory_list = sorted(list(set(directory_list)))  # remove duplicate input directories
     if (verbose):
-        print("  slurp_res_files: directory list {}".format(res_directory_list))
+        print("  slurp_res_files: directory list {}".format(directory_list))
 
     # accumulate mesh points
     mesh_data = []
-    for res_directory in res_directory_list:
-        full_glob_pattern = os.path.join(res_directory,glob_pattern)
+    if glob_pattern is None:
+        glob_pattern = "*.res"
+    for directory in directory_list:
+        full_glob_pattern = os.path.join(directory, glob_pattern)
         if (verbose):
             print("  slurp_res_files: searching for files {}...".format(full_glob_pattern))
-        res_filename_list = glob.glob(full_glob_pattern)
+        filename_list = glob.glob(full_glob_pattern)
 
         # accumulate parsed data from different res files
-        for res_filename in res_filename_list:
+        for filename in filename_list:
             new_mesh_data = read_file(
-                res_filename,
-                res_format=res_format,filename_format=filename_format,
+                filename,
+                res_format=res_format,
+                filename_format=filename_format,
+                params=params,
                 ##verbose=(verbose=="verbose_by_file")
-                verbose=False  # disabled file-by-file verbosity
+                verbose=False,  # disabled file-by-file verbosity
             )
             mesh_data += new_mesh_data
 
@@ -354,6 +419,74 @@ def slurp_res_files(
         print("  slurp_res_files: extracted mesh points {}".format(len(mesh_data)))
 
     return mesh_data
+
+ND_DIRECTORY_BY_USER = {
+    "mac": "mcaprio",
+    "aem": "amccoy",
+    "pjf": "pfasano",
+    "pm": "pmaris",
+    "slv": "svittal",
+    "src": "scarmichael",
+    "zz": "zzhou",
+    "seb": "sbaker",
+}
+
+def read_runs(
+        run_list, *,
+        directory_by_user={}, code="mfdn", results_type="res",
+        slurp_function=slurp_res_files,
+        results_postprocessors=[],
+        verbose=False,
+        **slurp_function_kw,
+):
+    """Slurp results file for multiple runs, assuming standard results directory tree.
+
+    Arguments:
+
+        run_list (list of str): List of run names (without "run" prefix).
+
+        directory_by_user (dict, optional): Mapping from initials in run name to
+        user subdirectory name (e.g., {"mac": "mcaprio"}).
+
+        code (str): Code name (e.g., "spncci").
+
+        results_type (str, optional): Name of sub-subdirectory for given
+        type of results file (e.g., "res", "lanczos", ...), within results
+        subdirectory.
+
+        slurp_function (callable): Function to slurp contents of single
+        directory (e.g., mfdnres.input.slurp_res_files,
+        mfdnres.decomposition.slurp_lanczos_files).
+
+        results_postprocessors (list[callable], optional): Postprocessing
+        functions to call (in sequence) on each results_data object.
+
+        **slurp_function_kw (dict, optional): Keyword arguments for slurp function,
+        e.g., verbose=True.
+
+    """
+
+    # remove redundancies
+    run_list = sorted(list(set(run_list)))
+
+    # slurp run directories
+    mesh_data = []
+    for run in run_list:
+        user = run[:3].strip("0123456789")
+        user_dir = directory_by_user[user]
+        data_dir = res_file_directory(
+            user_dir, code, run,
+            results_type=results_type,
+        )
+        mesh_data += slurp_function(data_dir, **slurp_function_kw)
+
+    # postprocess results
+    for results_data in mesh_data:
+        for results_postprocessor in results_postprocessors:
+            results_postprocessor(results_data)
+        
+    return mesh_data
+
 
 ################################################################
 # data pickling utility
@@ -384,7 +517,7 @@ def read_data_with_caching(read_function, pickle_filename="mesh_data.pickle", **
         print("Attempting to read pickled mesh data from {}...  ".format(pickle_filename), end="", flush=True)
         with open(pickle_filename, 'rb') as fp:
             mesh_data = pickle.load(fp)
-        print("Done.", end="", flush=True)
+        print("Done.", flush=True)
         return mesh_data
     except:
         print("Failed.", flush=True)
@@ -405,6 +538,7 @@ def read_data_with_caching(read_function, pickle_filename="mesh_data.pickle", **
         print("Failed.", flush=True)
 
     return mesh_data
+
 
 #################################################
 # test code                                     #

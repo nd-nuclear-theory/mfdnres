@@ -5,13 +5,17 @@
 
     - 09/07/23 (mac): Created.  Refactor dimensionless ratio observables from
         observable.py.
-
+    - 11/26/23 (mac): Remove species subscript from beta axis label in BetaFromRatioQr2.
+    - 08/12/24 (mac): Provide strict option in ratio observables.
+    - 12/15/24 (mac): Add observable BetaFromRatioBE2r4.
+    - 05/10/25 (mac): Provide alternate interface to RatioQr2 via option observable_tag.
 """
 
 import numpy as np
 
 import mfdnres.data
 import mfdnres.observable
+import mfdnres.tools
 
 ################################################################
 # deduced observable: RatioBE2Q2
@@ -22,7 +26,7 @@ class RatioBE2Q2(mfdnres.observable.Ratio):
 
     """
 
-    def __init__(self, observable1, observable2, observable_label_delimiters=(("",""),("[e^2","]"))):
+    def __init__(self, observable1, observable2, observable_label_delimiters=(("",""),("[e^2","]")), strict=True):
         """Initialize with given parameters.
 
         Arguments:
@@ -34,7 +38,7 @@ class RatioBE2Q2(mfdnres.observable.Ratio):
             appearing in the ratio, e.g., (("[","]"),("[","]"))
 
         """
-        if not (isinstance(observable1, mfdnres.observable.RTP) and isinstance(observable2, mfdnres.observable.Moment)):
+        if strict and not (isinstance(observable1, mfdnres.observable.RTP) and isinstance(observable2, mfdnres.observable.Moment)):
             raise ValueError("Unexpected observable types in RatioBE2Q2 (found {} and {})".format(observable1, observable2))
         super().__init__(observable1, mfdnres.observable.Power(observable2, 2), observable_label_delimiters)
 
@@ -65,7 +69,7 @@ class RatioBE2r4(mfdnres.observable.Ratio):
 
     """
 
-    def __init__(self, observable1, observable2, observable_label_delimiters=(("",""),("[e^2","]"))):
+    def __init__(self, observable1, observable2, observable_label_delimiters=(("",""),("[e^2","]")), strict=True):
         """Initialize with given parameters.
 
         Arguments:
@@ -77,7 +81,7 @@ class RatioBE2r4(mfdnres.observable.Ratio):
             appearing in the ratio, e.g., (("[","]"),("[","]"))
 
         """
-        if not (isinstance(observable1, mfdnres.observable.RTP) and isinstance(observable2, mfdnres.observable.Radius)):
+        if strict and not (isinstance(observable1, mfdnres.observable.RTP) and isinstance(observable2, mfdnres.observable.Radius)):
             raise ValueError("Unexpected observable types in RatioBE2r4 (found {} and {})".format(observable1, observable2))
         super().__init__(observable1, mfdnres.observable.Power(observable2, 4), observable_label_delimiters)
 
@@ -110,24 +114,59 @@ class RatioQr2(mfdnres.observable.Ratio):
 
     """
 
-    def __init__(self, observable1, observable2, observable_label_delimiters=None):
+    def __init__(
+            self, observable1=None, observable2=None, *,
+            nuclide=None, level=None, observable_tag=None,
+            observable_label_delimiters=None, strict=True,
+    ):
         """Initialize with given parameters.
+
+        Legacy syntax:
+
+           RatioQr2(observable1, observable2)
 
         Arguments:
 
-            observable1, observable2 (Observable): first and second terms
+            observable1, observable2 (Observable): E2 and radius observables
+
+            nuclide (tuple, optional): (Z, N)
+
+            observable_tag (str, optional): identifier tag for beta observable ("p", "n", or "m")
+
+            level (LevelSelector, optional): level
 
             observable_label_delimiters (tuple, optional): left/right delimiter
             pairs to put around the labels for the first/second observable
             appearing in the ratio, e.g., (("[","]"),("[","]"))
 
+            strict (bool, optional): Whether or not to enforce expected observable types.
+
         """
-        if not (
+
+        if observable1 is None and observable2 is None:
+            # automatically determine correct observables from observable_tag
+            if nuclide is None:
+                raise ValueError("Must specify nuclide if observable arguments are given as None")
+            if level is None:
+                raise ValueError("Must specify level if observable arguments are given as None")
+            if observable_tag is None:
+                raise ValueError("Must specify observable_tag if observable arguments are given as None")
+            
+            # select E2 moment
+            e2_operator = mfdnres.observable.E2_OPERATOR_BY_OBSERVABLE_TAG[observable_tag]
+            observable1 = mfdnres.observable.Moment(nuclide, e2_operator, level)
+        
+            # select radius
+            radius_operator = mfdnres.observable.RADIUS_OPERATOR_BY_OBSERVABLE_TAG[observable_tag]
+            observable2 = mfdnres.observable.Radius(nuclide, radius_operator, level)
+            
+            
+        if strict and not (
                 isinstance(observable1, mfdnres.observable.Moment)
                 and isinstance(observable2, mfdnres.observable.Radius)
         ):
             raise ValueError("Unexpected observable types in RatioQr2 (found {} and {})".format(observable1, observable2))
-        super().__init__(observable1, mfdnres.observable.mfdnres.observable.Power(observable2, 2), observable_label_delimiters)
+        super().__init__(observable1, mfdnres.observable.Power(observable2, 2), observable_label_delimiters)
 
     @property
     def axis_label_text(self):
@@ -155,7 +194,7 @@ class RatiorQ12(mfdnres.observable.Ratio):
 
     """
 
-    def __init__(self, observable1, observable2, observable_label_delimiters=None):
+    def __init__(self, observable1, observable2, observable_label_delimiters=None, strict=True):
         """Initialize with given parameters.
 
         Caution: Arguments are still given in the order (Q, r), even with the
@@ -170,7 +209,7 @@ class RatiorQ12(mfdnres.observable.Ratio):
             appearing in the ratio, e.g., (("[","]"),("[","]"))
 
         """
-        if not (isinstance(observable1, mfdnres.observable.Moment) and isinstance(observable2, mfdnres.observable.Radius)):
+        if strict and not (isinstance(observable1, mfdnres.observable.Moment) and isinstance(observable2, mfdnres.observable.Radius)):
             raise ValueError("Unexpected observable types in RatiorQ12 (found {} and {})".format(observable1, observable2))
         super().__init__(observable2, mfdnres.observable.Power(observable1, 1/2), observable_label_delimiters)
 
@@ -197,12 +236,33 @@ class RatiorQ12(mfdnres.observable.Ratio):
 # deduced observable: BetaFromRatioQr2
 ################################################################
 
+def beta_from_ratio_qr2_prefactor(nuclide, observable_tag, J, K):
+    """ Prefector relating beta to Q/r^2.
+
+    See (13) of emnorm2-part1 [arXiv:2409.03926].
+
+    Arguments:
+
+        nuclide (tuple): (Z, N)
+
+        observable_tag (str): identifier tag for beta observable ("p", "n", or "m")
+
+        J (float): J quantum number for level (assumed unique across mesh)
+
+        K (float): K quantum number for level (assumed unique across mesh)
+    """
+
+    nucleon_number = mfdnres.observable.nucleon_number_by_observable_tag(nuclide)[observable_tag]
+    prefactor = (J+1)*(2*J+3)/(3*K**2-J*(J+1)) * np.sqrt(np.pi/5)/nucleon_number
+    return prefactor
+    
+
 class BetaFromRatioQr2(mfdnres.observable.Observable):
     """ Observable extractor for beta deformation.
 
     """
 
-    def __init__(self, nuclide, observable_tag, level, J, K, axis_label_has_observable_tag=True):
+    def __init__(self, nuclide, observable_tag, level, J, K, axis_label_has_observable_tag=True, force_beta_positive=True):
         """Initialize with given parameters.
 
         Arguments:
@@ -220,6 +280,9 @@ class BetaFromRatioQr2(mfdnres.observable.Observable):
             axis_label_has_observable_tag (bool): whether to include subscript
                 on axis label (as beta_{m,p,n})
 
+            force_beta_positive (bool): whether or not to force beta to be
+            positive, regardless of sign of Q
+
         """
         super().__init__()
         self._nuclide = nuclide
@@ -228,6 +291,7 @@ class BetaFromRatioQr2(mfdnres.observable.Observable):
         self._J = J
         self._K = K
         self._axis_label_has_observable_tag = axis_label_has_observable_tag
+        self._force_beta_positive = force_beta_positive
 
     def data(self, mesh_data, key_descriptor, verbose=False):
         """ Extract data frame of observable values over mesh.
@@ -239,12 +303,6 @@ class BetaFromRatioQr2(mfdnres.observable.Observable):
         J = self._J
         K = self._K
         
-        # retrieve nucleon number
-        A = sum(nuclide)
-        Z, N = nuclide
-        nucleon_number = mfdnres.observable.nucleon_number_by_observable_tag(nuclide)[observable_tag]
-
-
         # select E2 moment
         e2_operator = mfdnres.observable.E2_OPERATOR_BY_OBSERVABLE_TAG[observable_tag]
         moment_observable = mfdnres.observable.Moment(nuclide, e2_operator, level)
@@ -260,11 +318,11 @@ class BetaFromRatioQr2(mfdnres.observable.Observable):
         ratio_mesh = ratio_observable.data(mesh_data, key_descriptor, verbose=verbose)
         
         # convert to beta
-        prefactor = (J+1)*(2*J+3)/(3*K**2-J*(J+1)) * np.sqrt(np.pi/5)/nucleon_number
+        prefactor = beta_from_ratio_qr2_prefactor(nuclide, observable_tag, J, K)
         beta_mesh = prefactor * ratio_mesh
 
-        print("ratio_mesh {}".format(ratio_mesh))
-        print("beta_mesh {}".format(beta_mesh))
+        if self._force_beta_positive:
+            beta_mesh = np.abs(beta_mesh)
         
         return beta_mesh
 
@@ -273,7 +331,7 @@ class BetaFromRatioQr2(mfdnres.observable.Observable):
         """ Text string describing observable.
         """
         return "-".join([
-            mfdnres.data.nuclide_str(self._nuclide),
+            mfdnres.tools.nuclide_str(self._nuclide),
             "beta-from-ratio-q-rsqr",
             self._observable_tag,
             self._level.descriptor_str,
@@ -292,10 +350,150 @@ class BetaFromRatioQr2(mfdnres.observable.Observable):
     def axis_label_text(self):
         """ Formatted LaTeX text representing axis label.
         """
-        if self._axis_label_has_observable_tag:
-            observable_text = r"\beta_{{{}}}".format(self._observable_tag)
-        else:
-            observable_text = r"\beta"
+        # 11/26/23 (mac): Omit species subscript, for consistency with Q, r, etc.,
+        # observable axis labels.
+        ## if self._axis_label_has_observable_tag:
+        ##     observable_text = r"\beta_{{{}}}".format(self._observable_tag)
+        ## else:
+        ##     observable_text = r"\beta"
+        observable_text = r"\beta"
+
+        units_text = None
+        return observable_text, units_text
+    
+
+################################################################
+# deduced observable: BetaFromRatioBE2r4
+################################################################
+
+class BetaFromRatioBE2r4(mfdnres.observable.Observable):
+    """ Observable extractor for beta deformation.
+
+    """
+
+    def __init__(self, nuclide, observable_tag, levelf, leveli, level, Jf, Ji, K, *, clebsch_gordan=None, axis_label_has_observable_tag=True):
+        """Initialize with given parameters.
+
+        Requires user to provide Clebsch-Gordan coefficient.  May implement
+        calculation of Clebsch-Gordan internally in the future, but this would
+        introduce a dependency on, e.g., am.
+
+        Arguments:
+
+            nuclide (tuple): (Z, N)
+
+            observable_tag (str): identifier tag for beta observable ("p", "n", or "m")
+
+            levelf (LevelSelector): final level for transition
+
+            leveli (LevelSelector): initial level for transition
+
+            level (LevelSelector): level for radius (typically same as final
+            level for transition)
+
+            Jf (float): J quantum number for final level (assumed unique across
+            mesh); ignored until such time as Clebsch-Gordan coefficient is
+            calculated internally
+
+            Ji (float): J quantum number for initial level (assumed unique
+            across mesh); ignored until such time as Clebsch-Gordan coefficient
+            is calculated internally
+
+            K (float): K quantum number for level (assumed unique across mesh);
+            ignored until such time as Clebsch-Gordan coefficient is calculated
+            internally
+
+            clebsch_gordan (float, optional): numerical value for Clebsch-Gordan
+            coefficient (Ji,K,2,0|Jf,K); mandatory "optional" argument until
+            such time as Clebsch-Gordan coefficient is calculated internally
+
+            axis_label_has_observable_tag (bool, optional): whether to include subscript
+                on axis label (as beta_{m,p,n})
+
+        """
+        super().__init__()
+        self._nuclide = nuclide
+        self._observable_tag = observable_tag
+        self._levelf = levelf
+        self._leveli = leveli
+        self._level = level
+        self._Jf = Jf
+        self._Ji = Ji
+        self._K = K
+        self._clebsch_gordan = clebsch_gordan
+        self._axis_label_has_observable_tag = axis_label_has_observable_tag
+
+    def data(self, mesh_data, key_descriptor, verbose=False):
+        """ Extract data frame of observable values over mesh.
+        """
+
+        nuclide = self._nuclide
+        observable_tag = self._observable_tag
+        levelf = self._levelf
+        leveli = self._leveli
+        level = self._level
+        K = self._K
+        
+        # retrieve nucleon number
+        nucleon_number = mfdnres.observable.nucleon_number_by_observable_tag(nuclide)[observable_tag]
+
+        # select E2 RTP
+        e2_operator = mfdnres.observable.E2_OPERATOR_BY_OBSERVABLE_TAG[observable_tag]
+        rtp_observable = mfdnres.observable.RTP(nuclide, e2_operator, levelf, leveli)
+        
+        # select radius
+        radius_operator = mfdnres.observable.RADIUS_OPERATOR_BY_OBSERVABLE_TAG[observable_tag]
+        radius_observable = mfdnres.observable.Radius(nuclide, radius_operator, level)
+
+        # deduce ratio
+        ratio_observable = RatioBE2r4(rtp_observable, radius_observable)
+
+        # calculate mesh
+        ratio_mesh = ratio_observable.data(mesh_data, key_descriptor, verbose=verbose)
+        
+        # convert to beta
+        clebsch_gordan = self._clebsch_gordan
+        if clebsch_gordan is None:
+            raise ValueError("BetaFromRatioBE2r4 requires user-provided clebsch_gordan")
+        prefactor = 1 / clebsch_gordan**2 * (4*np.pi/5)**2 / nucleon_number**2
+        beta_mesh = np.sqrt(prefactor * ratio_mesh)
+
+        print("ratio_mesh {}".format(ratio_mesh))
+        print("beta_mesh {}".format(beta_mesh))
+        
+        return beta_mesh
+
+    @property
+    def descriptor_str(self):
+        """ Text string describing observable.
+        """
+        return "-".join([
+            mfdnres.tools.nuclide_str(self._nuclide),
+            "beta-from-ratio-q-rsqr",
+            self._observable_tag,
+            self._level.descriptor_str,
+        ])
+
+    @property
+    def observable_label_text(self):
+        """ Formatted LaTeX text representing observable.
+        """
+        observable_text = r"\beta_{{{}}}".format(self._observable_tag)
+        level_text = self._level.label_text
+        label = r"{}({})".format(observable_text,level_text)
+        return label
+
+    @property
+    def axis_label_text(self):
+        """ Formatted LaTeX text representing axis label.
+        """
+        # 11/26/23 (mac): Omit species subscript, for consistency with Q, r, etc.,
+        # observable axis labels.
+        ## if self._axis_label_has_observable_tag:
+        ##     observable_text = r"\beta_{{{}}}".format(self._observable_tag)
+        ## else:
+        ##     observable_text = r"\beta"
+        observable_text = r"\beta"
 
         units_text = None
         return observable_text, units_text

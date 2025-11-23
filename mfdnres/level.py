@@ -4,12 +4,16 @@
     University of Notre Dame
 
     - 07/31/22 (mac): Created, extracted from data.py.  Rename LevelSelector to Level.
+    - 11/29/24 (mac): Define LevelQNNex.
 """
 
 import numpy as np
 
 from . import (
-    data
+    analysis,
+    data,
+    ticks,
+    tools,
 )
 
 
@@ -97,7 +101,7 @@ class LevelQN(Level):
     def descriptor_str(self):
         """ Provide text string for use in descriptors.
         """
-        text = data.qn_str(self._qn)
+        text = tools.qn_str(self._qn)
         ## text = "{:04.1f}-{:1d}-{:02d}".format(*self._qn)  # manual without reference to submodule data
         return text
 
@@ -135,6 +139,8 @@ class LevelQNT(Level):
         super().__init__()
         self._qnT = qnT
         self._debug = debug
+        if self._debug:
+            print("Debug mode set for qnT {}".format(qnT))
 
     def select_level(self, results_data):
         """ Retrieve level.
@@ -142,16 +148,18 @@ class LevelQNT(Level):
 
         # recover quantum numbers for sought level
         J, g, n_for_T, T = self._qnT
+        if self._debug:
+            print("Searching for qnT {}".format(self._qnT))
 
         # set up binning
         T_lower = T-1
         T_upper = T+1
-        if T_lower < 0. :
+        if T_lower < 0.:
             T_bound_lower = 0.  # assumes inclusive lower bound and positive definite result for comparison
         else:
             T_bound_lower = tools.effective_am((T_lower*(T_lower+1)+T*(T+1))/2)
         T_bound_upper = tools.effective_am((T_upper*(T_upper+1)+T*(T+1))/2)
-
+            
         # scan for sought level
         current_n = 0
         current_n_for_T = 0
@@ -186,16 +194,99 @@ class LevelQNT(Level):
         ## label = "{};{}".format(mfdnres.data.qn_text((J, g, n_for_T)), T_str)
 
         # format using J_{T=...} notation
-        twice_J=int(2*J)
-        J_str = "{}/2".format(twice_J) if twice_J % 2 else twice_J//2
+        ## twice_J=int(2*J)
+        ## J_str = "{}/2".format(twice_J) if twice_J % 2 else twice_J//2
+        J_str = ticks.half_int_str(J)
         P_str = "+" if g==0 else "-"
         n_for_T_str = "{:d}".format(n_for_T)
-        twice_T=int(2*T)
-        T_str = "{}/2".format(twice_T) if twice_T % 2 else twice_T//2
+        ## twice_T=int(2*T)
+        ## T_str = "{}/2".format(twice_T) if twice_T % 2 else twice_T//2
+        T_str = ticks.half_int_str(T)
 
         label = r"{{{}}}^{{{}}}_{{{};T={}}}".format(J_str,P_str,n_for_T_str,T_str)
         return label
 
+
+################################################################
+# level selection within 0hw/2hw subspace -- (J,g,n_for_Nex,Nex)
+################################################################
+
+class LevelQNNex(Level):
+    """Provides level selector by Nex.
+
+    Classifies states as nominally 0hw or 2hw based on simple P(Nex=0)/P(Nex=2)
+    classification.  This counting is therefore not robust against severe mixing
+    during crossings.
+
+    """
+
+    def __init__(self, qnNex, debug=False):
+        """ Initialize with given parameters.
+
+        Arguments:
+
+            qnNex (tuple): (J, g, n_for_Nex, Nex)
+
+        """
+        super().__init__()
+        self._qnNex = qnNex
+        self._debug = debug
+        if self._debug:
+            print("Debug mode set for qnNex {}".format(qnNex))
+
+    def select_level(self, results_data):
+        """ Retrieve level.
+        """
+
+        # recover quantum numbers for sought level
+        J, g, n_for_Nex, Nex = self._qnNex
+        if not Nex in [0,2]:
+            raise ValueError("Unexpected Nex ({})".format(Nex))
+        if self._debug:
+            print("  Searching for qnNex {}".format(self._qnNex))
+
+        # scan for sought level
+        current_n = 0
+        current_n_for_Nex = 0
+        while current_n_for_Nex < n_for_Nex:
+            current_n +=1
+            current_qn = (J,g,current_n)
+            decomposition = results_data.get_decomposition("Nex", current_qn)
+            if decomposition is None:  # ran out of levels
+                return None
+            Nex_ratio = decomposition[0]/decomposition[1]
+            current_Nex = 0 if Nex_ratio>1 else 2
+            if self._debug:
+                print("  Nex_ratio {}: Nex {}".format(Nex_ratio, current_Nex))
+            if current_Nex == Nex:
+                current_n_for_Nex += 1
+        if self._debug:
+            print("  Selected: {}".format(current_qn))
+        return current_qn
+
+    @property
+    def descriptor_str(self):
+        """ Provide text string for use in descriptors."""
+        text = "{:04.1f}-{:1d}-{:02d}-Nex{:1d}".format(*self._qnNex)
+        return text
+
+    @property
+    def label_text(self):
+        """ Provide LaTeX label.
+        """
+
+        J, g, n_for_Nex, Nex = self._qnNex
+
+        # format using J_{...hw} notation
+        J_str = ticks.half_int_str(J)
+        P_str = "+" if g==0 else "-"
+        n_for_Nex_str = "{:d}".format(n_for_Nex)
+        Nex_str = "{:1d}".format(Nex)
+        
+        label = r"{{{}}}^{{{}}}_{{{};{}\hbar\omega}}".format(J_str,P_str,n_for_Nex_str,Nex_str)
+        return label
+    
+    
 ################################################################
 # level selection override
 ################################################################
@@ -240,15 +331,19 @@ class LevelOverride(Level):
         """
 
         if self._verbose:
-            print("Mesh point {}".format(results_data.params))
+            print("  Mesh point {}".format(results_data.params))
 
         # recover quantum numbers for sought level
         key = analysis.extract_key(self._key_fields, results_data)
         if key in self._qn_by_key:
             qn = self._qn_by_key[key]
+            if self._verbose:
+                print("  Override {}".format(qn))
         else:
             qn = self._base_level_selector.select_level(results_data)
-
+            if self._verbose:
+                print("  Pass through {}".format(qn))
+        
         # validate as existing level
         if qn not in results_data.levels:
             qn = None

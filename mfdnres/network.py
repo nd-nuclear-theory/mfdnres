@@ -8,6 +8,10 @@
 
     - 04/27/23 (mac): Created, incorporating code extracted from 12be-shape testbed.
     - 05/01/23 (mac): Add level selection, transition initial level selection, and valence marker line.
+    - 11/28/23 (mac):
+      + Change draw_expt_levels() to handle empty energy list gracefully.
+      + Provide half-integer J labels in set_up_network_axes().
+    - 07/22/24 (mac): Fix plotting of band fit with Coriolis.
 
 """
 
@@ -47,7 +51,7 @@ def level_test_0hw(results_data, qn, verbose=False):
     selected = (len(Nex_decomposition)==1) or (Nex_decomposition[0]>=Nex_decomposition[1])
     return selected
 
-def level_test_T_excited(results_data,verbose=False):
+def level_test_T_excited(results_data,qn,verbose=False):
     """Test if level has excited isospin, i.e., a deduced T > Tz.
 
     The threshold on deduced T is Tz+0.5.
@@ -113,13 +117,13 @@ def set_up_network_axes(
         # Note that the tick specification must come *before* setting range limits,
         # since the range limits automatically readjust when you set the ticks.
         # 
-        # TODO (mac): implement tick_post_transformation and tick_label_function in
-        # linear_ticks
-        x_ticks = [J for J in range(0,int(J_max)+1,1)]  # TODO (mac): currently only provides integer ticks
+        # TODO (mac): Clean up code by implementing tick_post_transformation and
+        # tick_label_function in ticks.linear_ticks().
+        J_min = J_max % 1
+        x_ticks, _ = ticks.linear_ticks(J_min, J_max, 1.0, 1)
         x_tick_values = [x*(x+1) for x in x_ticks]
-        ax.xaxis.set_major_formatter(ticks.HalfIntFormatter())
-        ## x_tick_labels=[mfdnres.ticks.half_int_str(x) for x in x_ticks]
-        ax.set_xticks(x_tick_values, x_ticks)
+        x_tick_labels=[ticks.half_int_str(x) for x in x_ticks]
+        ax.set_xticks(x_tick_values, x_tick_labels)
         if E_tick_specifier is not None:
             y_ticks = ticks.linear_ticks(*E_tick_specifier)
             ticks.set_ticks(ax,"y",y_ticks)
@@ -358,6 +362,8 @@ def draw_expt_levels(
     ##     [J*(J+1), E]
     ##     for J, E in expt_energies
     ## ])
+    if len(expt_energies) == 0:
+        return
     level_coordinates = np.array(expt_energies)
     level_coordinates[:,0] = level_coordinates[:,0]*(level_coordinates[:,0]+1)
 
@@ -422,6 +428,7 @@ def band_fit(
         selected_levels = [
             qn
             for qn in selected_levels
+            if qn is not None
             if qn[0] in J_values_for_fit
             ]
     J_list = [
@@ -494,7 +501,7 @@ def draw_band_fit(
 
         J_values_for_fit (list of float, optional): J values for band members to use in fit
 
-        with_coriolis (bool, optional): Whether or not to allot Coriolis contribution
+        with_coriolis (bool, optional): Whether or not to allow Coriolis contribution
         (for K=1/2)
 
         J_range (tuple of float, optional): Range of J values to plot; currently
@@ -519,7 +526,7 @@ def draw_band_fit(
             [
                 J*(J+1),
                 parameters[0]*1+parameters[1]*J*(J+1)+
-                (parameters[2]*(-1)**(J+1/2)*(J+1/2) if with_coriolis else 0)  # suppress noninteger J+1/2
+                (parameters[1]*parameters[2]*(-1)**(J+1/2)*(J+1/2) if with_coriolis else 0)  # suppress noninteger J+1/2
             ]
             for J in np.linspace(*J_range,num=int(J_range[1]-J_range[0])+1)
     ])
@@ -565,7 +572,6 @@ def select_network_transitions(
         Transition strength, or level providing self-transition strength, or
         tuple of two levels (level_f,level_i) providing transition strength, or None to use
         largest transition strength
-        each J
 
         reference_results_data (mfdnres.ResultsData, optional): Results data for
         use in extracting reference strength
@@ -616,11 +622,13 @@ def select_network_transitions(
             reference_results_data = results_data
         level_f, level_i = reference_strength
         qn_pair = level_f.select_level(reference_results_data), level_i.select_level(reference_results_data)
+        if None in qn_pair:
+            print("ERROR: Missing level in reference transition")
         s0 = abs(reference_strength_accessor(operator,qn_pair))
     else:
         s0 = reference_strength
     if verbose:
-        print("Reference stregth {}".format(s0))
+        print("Reference strength {} {} -> {}".format(operator, qn_pair, s0))
     network_transitions = [
         (qn_pair, strength/s0)
         for qn_pair, strength in transition_strengths

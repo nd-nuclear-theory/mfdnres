@@ -48,29 +48,41 @@ def dash_padded(text):
     """ Pad nonnull text with leading dash.
 
     Arguments:
+
         text (str): Text to pad.
 
     Returns:
+
         (str): Padded text.
     """
 
     padded_text = text if (text=="") else ("-"+text)
     return padded_text
 
+
 def nuclide_str(nuclide:NuclideType):
     """Obtain standard zero-padded string representation of nuclide (Z,N).
 
     Result is intended for use in filenames.  Format is "Z00-N00".
 
+    Example:
+
+        >>> mfdnres.tools.nuclide_str((66,90))
+
+        'Z66-N90'
+
     Arguments:
+
         nuclide (tuple): (Z,N)
 
     Returns:
+
         (str): string representation of nuclide
 
     """
 
     return "Z{nuclide[0]:02d}-N{nuclide[1]:02d}".format(nuclide=nuclide)
+
 
 def qn_str(qn:LevelQNType,qualifier=""):
     """Obtain standard zero-padded string representation of quantum numbers (J,g,n).
@@ -78,16 +90,20 @@ def qn_str(qn:LevelQNType,qualifier=""):
     Result is intended for use in filenames.  Format is "00.0-0-00".
 
     Arguments:
+
         qn (tuple): (J,g,n)
+
         qualifier (str, optional): "subscript" for quantum number labels
 
     Returns:
+
         (str): string representation of qn
 
     """
 
     (J,g,n) = qn
     return "J{qualifier}{J:04.1f}-g{qualifier}{g:1d}-n{qualifier}{n:02d}".format(J=J,g=g,n=n,qualifier=qualifier)
+
 
 ################################################################
 # line parser for free-form res files
