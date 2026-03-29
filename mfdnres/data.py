@@ -1057,8 +1057,9 @@ def set_up_hw_scan_axes(
 
         ax (mpl.axes.Axes): axes object
 
-        observable_object (observable.Observable, optional): observable object (may be
-        given as None, if observable_axis_label_text is specified)
+        observable_object (observable.Observable, optional): Observable object
+        or observable class, used to deduce axis label text.  May be omitted, if
+        observable_axis_label_text is specified.
 
         hw_range (tuple of float, optional): x range, before extension
         (nominally optional, but mandatory)
@@ -1220,8 +1221,9 @@ def set_up_Nmax_scan_axes(
 
         ax (mpl.axes.Axes): axes object
 
-        observable_object (observable.Observable, optional): observable object (may be
-        given as None, if observable_axis_label_text is specified)
+        observable_object (observable.Observable, optional): Observable object
+        or observable class, used to deduce axis label text.  May be omitted, if
+        observable_axis_label_text is specified.
 
         Nmax_range (tuple of int, optional): x range, before extension
         (nominally optional, but mandatory)

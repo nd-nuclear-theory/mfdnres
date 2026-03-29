@@ -8,6 +8,7 @@
 
     - 10/18/23 (mac): Created, extracting code from 10be-shape_obs.py.
     - 07/21/24 (mac): Add extraction of mixing angle from fragmentation.
+    - 03/28/26 (mac): Convert axis_label_text from instance property to class data.
 
 """
 
@@ -181,14 +182,15 @@ class MixingAngle(MixingObservable):
         label = r"\theta_{{{}}}~[\mathrm{{from}}~{}_{}]".format(qn_text, self._operator_family, self._operator_flavor)
         return label
 
-    @property
-    def axis_label_text(self):
-        """ Formatted LaTeX text representing axis label.
-        """
-        observable_text = r"\theta"
-        units_text = r"\mathrm{deg}"
-        return observable_text, units_text
+    ## @property
+    ## def axis_label_text(self):
+    ##     """ Formatted LaTeX text representing axis label.
+    ##     """
+    ##     observable_text = r"\theta"
+    ##     units_text = r"\mathrm{deg}"
+    ##     return observable_text, units_text
 
+    axis_label_text = r"\theta", r"\mathrm{deg}"
     
 class MixingAdmixture(MixingObservable):
     """Observable extractor for admixture norm (sin^2 theta).
@@ -222,13 +224,15 @@ class MixingAdmixture(MixingObservable):
         label = r"\sin^2\theta_{{{}}}~[\mathrm{{from}}~{}_{}]".format(qn_text, self._operator_family, self._operator_flavor)        
         return label
 
-    @property
-    def axis_label_text(self):
-        """ Formatted LaTeX text representing axis label.
-        """
-        observable_text = r"\sin^2\theta"
-        units_text = None
-        return observable_text, units_text
+    ## @property
+    ## def axis_label_text(self):
+    ##     """ Formatted LaTeX text representing axis label.
+    ##     """
+    ##     observable_text = r"\sin^2\theta"
+    ##     units_text = None
+    ##     return observable_text, units_text
+
+    axis_label_text = r"\sin^2\theta", None
 
     
 class MixingMatrixElement(MixingObservable):
@@ -268,14 +272,15 @@ class MixingMatrixElement(MixingObservable):
         label = r"V_{{{}}}~[\mathrm{{from}}~{}_{}]".format(qn_text, self._operator_family, self._operator_flavor)
         return label
 
-    @property
-    def axis_label_text(self):
-        """ Formatted LaTeX text representing axis label.
-        """
-        observable_text = r"\langle V \rangle"
-        units_text = r"\mathrm{MeV}"
-        return observable_text, units_text
+    ## @property
+    ## def axis_label_text(self):
+    ##     """ Formatted LaTeX text representing axis label.
+    ##     """
+    ##     observable_text = r"\langle V \rangle"
+    ##     units_text = r"\mathrm{MeV}"
+    ##     return observable_text, units_text
     
+    axis_label_text = r"\langle V \rangle", r"\mathrm{MeV}"
 
 class MixingEnergyDifference(mfdnres.observable.ExcitationEnergy):
     """Observable extractor for mixing energy difference.
