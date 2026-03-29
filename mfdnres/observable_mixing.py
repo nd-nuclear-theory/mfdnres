@@ -9,7 +9,7 @@
     - 10/18/23 (mac): Created, extracting code from 10be-shape_obs.py.
     - 07/21/24 (mac): Add extraction of mixing angle from fragmentation.
     - 03/28/26 (mac): Convert axis_label_text from instance property to class data.
-
+    - 03/29/26 (mac): Add observable MixingM12.
 """
 
 import numpy as np
@@ -115,7 +115,6 @@ def mixing_angle(results_data, operator, qn_pair, qn_i):
 # mixing observables
 ################################################################
 
-
 class MixingObservable(mfdnres.observable.Observable):
 
     """Observable extractor interface class.
@@ -125,13 +124,16 @@ class MixingObservable(mfdnres.observable.Observable):
     """
 
     def __init__(self, nuclide, operator, subspace, qn_i=None):
-        """ Initialize with given parameters.
+        """Initialize with given parameters.
+
+        Assumes that the relevant levels in the subspace are the first and
+        second.  In the future this could be extended.
 
         Arguments:
 
             nuclide (tuple): (Z, N)
 
-            operator (str): operator type ("E0p", "E0n", "E00")
+            operator (str): operator type ("E0p", "E0n", "E00", "E2p", ...)
 
             subspace (tuple): (J,g) quantum numbers
 
@@ -191,6 +193,7 @@ class MixingAngle(MixingObservable):
     ##     return observable_text, units_text
 
     axis_label_text = r"\theta", r"\mathrm{deg}"
+
     
 class MixingAdmixture(MixingObservable):
     """Observable extractor for admixture norm (sin^2 theta).
@@ -282,11 +285,18 @@ class MixingMatrixElement(MixingObservable):
     
     axis_label_text = r"\langle V \rangle", r"\mathrm{MeV}"
 
+    
 class MixingEnergyDifference(mfdnres.observable.ExcitationEnergy):
     """Observable extractor for mixing energy difference.
 
     """
 
+    # Implementation note: Would be more consistent to make this a descendant of
+    # MixingObservable, and either calculate the energy difference directly (as
+    # a value method) or create and store an instance of
+    # mfdnres.observable.ExcitationEnergy and pass through its data and labeling
+    # methods.
+    
     def __init__(self, nuclide, subspace):
         """ Initialize with given parameters.
 
@@ -314,10 +324,11 @@ class MixingEnergyDifference(mfdnres.observable.ExcitationEnergy):
             "mixing-energy-difference",
             "J{:1.0f}".format(self._J),
         ])
+
+
+# Future observables: See 11li-shape_obs for initial implementation of
+# MixingM12.
     
-
-
-
 ################################################################
 # main
 ################################################################
