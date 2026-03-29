@@ -953,6 +953,17 @@ def make_hw_scan_data(
 
         Nmax hw value
 
+    Troubleshooting: If the resulting data mesh comes out "empty" (all NaN
+    values), there are at least two possibilities.  It *may* be because of
+    missing data, i.e., your mesh_data does not contain calculations of the
+    relevant levels or the relevant observable.  But it may also be due to a bug
+    in the calculation of the observable.  Beware that the types of programming
+    errors (such typoes resulting in your referencing a undefined variable)
+    which are normally immediately apparent, since they normally result in
+    Python throwing an exception and terminating, are more insidious here, since
+    these exceptions are all being trapped (and replaced with a NaN return
+    value).  To see these exceptions, set verbose=True.
+
     Arguments:
 
         mesh_data (list of ResultsData): data set to include
