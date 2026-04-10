@@ -26,7 +26,7 @@
     - 10/14/21 (mac): Add nuclide and qn tuple manipulation tools (from emratio_obs.py).
     - 10/25/21 (mac/zz): Add "rme" observable and "fix-sign-to" compound observable.
     - 02/13/22 (mac): Extend isotope label formatting and add isotope_str.
-    - 02/24/22 (zz): Add E1p,E1n,E1 support in rme and rtp funtions.
+    - 02/24/22 (zz): Add E1p, E1n, E1 support in rme and rtp funtions.
     - 03/14/22 (mac): Add break_label_at_symbol.
     - 04/08/22 (mac):
          + Add LevelSelector and associated machinery.
@@ -70,6 +70,7 @@
         optional if observable_axis_label_text provided.
     - 05/18/25 (mac): Remove nuclide_str() and qn_str() in favor of implementation in tools.
     - 07/10/25 (mac): Permit specification of label displacement by Nmax in add_hw_scan_plot_Nmax_labels.
+    - 03/28/26 (mac): Provide plot styling kwargs based on hw via hw_plot_style().
 """
 
 import collections
@@ -809,7 +810,7 @@ def Nmax_plot_style(
         Nmax_symbol_scale=Nmax_symbol_scale,
         Nmax_marker_face_color=None,
         Nmax_dashing=Nmax_dashing_emratio,
-        Nmax_color=Nmax_color
+        Nmax_color=Nmax_color,
 ):
     """Provide plot styling kwargs based on relative Nmax.
 
@@ -843,13 +844,13 @@ def Nmax_plot_style(
 
 def hw_plot_style(
         hw,
-        ## marker_size=6,
-        ## Nmax_symbol_scale=Nmax_symbol_scale,
-        ## Nmax_marker_face_color=None,
-        ## Nmax_dashing=Nmax_dashing,
-        ## Nmax_color=Nmax_color
+        marker_size=6,
+        hw_symbol_scale=(lambda hw: 1.0),
+        hw_marker_face_color=None,
+        hw_dashing=(lambda hw: (None, None)),
+        hw_color=(lambda hw: None),
 ):
-    """Provide plot styling kwargs based on hw.  (WIP)
+    """Provide plot styling kwargs based on hw.
 
     Styling is meant for curve of fixed hw in Nmax scan plot.
 
@@ -857,12 +858,12 @@ def hw_plot_style(
 
     Arguments:
 
-        Nmax_relative (int): Nmax-Nmax_max
+        hw (float): hw
 
-        marker_size (float,optional): base marker size for maximal Nmax
+        marker_size (float, optional): base marker size
 
-        Nmax_symbol_scale, ... (callable, optional): functions to provide
-            specific styling parameters as function of relative Nmax
+        hw_symbol_scale, ... (callable, optional): functions to provide
+            specific styling parameters as function of hw
 
     Returns:
 
@@ -871,13 +872,12 @@ def hw_plot_style(
     """
 
     return dict(
-        ##markersize=marker_size,
-        ##markersize=marker_size*Nmax_symbol_scale(Nmax_relative),
-        ##markerfacecolor=(None if Nmax_marker_face_color is None else Nmax_marker_face_color(Nmax_relative)),
+        markersize=marker_size*hw_symbol_scale(hw),
+        markerfacecolor=(None if hw_marker_face_color is None else hw_marker_face_color(hw)),
         ## linewidth=1,
-        ##dashes=Nmax_dashing(Nmax_relative),
-        ##color=Nmax_color(Nmax_relative),
-        )
+        dashes=hw_dashing(hw),
+        color=hw_color(hw),
+    )
 
 
 ################################################################
@@ -952,6 +952,17 @@ def make_hw_scan_data(
     Tabulation format (for default key descriptor):
 
         Nmax hw value
+
+    Troubleshooting: If the resulting data mesh comes out "empty" (all NaN
+    values), there are at least two possibilities.  It *may* be because of
+    missing data, i.e., your mesh_data does not contain calculations of the
+    relevant levels or the relevant observable.  But it may also be due to a bug
+    in the calculation of the observable.  Beware that the types of programming
+    errors (such typoes resulting in your referencing a undefined variable)
+    which are normally immediately apparent, since they normally result in
+    Python throwing an exception and terminating, are more insidious here, since
+    these exceptions are all being trapped (and replaced with a NaN return
+    value).  To see these exceptions, set verbose=True.
 
     Arguments:
 
@@ -1057,8 +1068,9 @@ def set_up_hw_scan_axes(
 
         ax (mpl.axes.Axes): axes object
 
-        observable_object (observable.Observable, optional): observable object (may be
-        given as None, if observable_axis_label_text is specified)
+        observable_object (observable.Observable, optional): Observable object
+        or observable class, used to deduce axis label text.  May be omitted, if
+        observable_axis_label_text is specified.
 
         hw_range (tuple of float, optional): x range, before extension
         (nominally optional, but mandatory)
@@ -1220,8 +1232,9 @@ def set_up_Nmax_scan_axes(
 
         ax (mpl.axes.Axes): axes object
 
-        observable_object (observable.Observable, optional): observable object (may be
-        given as None, if observable_axis_label_text is specified)
+        observable_object (observable.Observable, optional): Observable object
+        or observable class, used to deduce axis label text.  May be omitted, if
+        observable_axis_label_text is specified.
 
         Nmax_range (tuple of int, optional): x range, before extension
         (nominally optional, but mandatory)

@@ -223,7 +223,7 @@ class MFDnResultsData(results_data.ResultsData):
 
                 occupations (np.array): [n_0, n_1, ...]
 
-        postprocessor_spamps (dict): Spectroscopic amplitudes, putatively to be
+        postprocessor_spectroscopic_amplitudes (dict): Spectroscopic amplitudes, putatively to be
         calculated by mfdn-transitions, and currently by rhodium, after being
         digested by the run scripting.
 
@@ -282,7 +282,7 @@ class MFDnResultsData(results_data.ResultsData):
     postprocessor_ob_rmes:dict[str,results_data.RMEData]
     postprocessor_tb_rmes:dict[str,results_data.RMEData]
     mfdn_level_lanczos_decomposition_data:dict[str,dict[tuple[float,int,int],tuple]]
-    postprocessor_spamps:dict[tuple[int,int],dict[tuple[tuple[float,int,int],tuple[float,int,int]],dict[tuple[int,int,float],float]]]
+    postprocessor_spectroscopic_amplitudes:dict[tuple[int,int],dict[tuple[tuple[float,int,int],tuple[float,int,int]],dict[tuple[int,int,float],float]]]
 
     
     ########################################

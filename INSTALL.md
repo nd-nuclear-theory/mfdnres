@@ -1,6 +1,6 @@
 # mfdnres installation guide #
 
-Mark A. Caprio, Patrick J. Fasano  
+Mark A. Caprio, Patrick J. Fasano
 Department of Physics, University of Notre Dame
 
 + 05/24/19 (mac): Created.
@@ -123,12 +123,12 @@ Department of Physics, University of Notre Dame
 # 3. Basic tests
 
   Basic test scripts to read and parse results files may be found in
-  `docs/examples/read_res_test`.
+  `doc/examples/read_res_test`.
 
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   % cd mfdnres
-  % cd docs/examples/read_res_test
+  % cd doc/examples/read_res_test
   % python3 read_res_mfdn.py
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  See also the tutorial in `docs/examples/tutorial`.
+  See also the tutorial in `doc/examples/tutorial`.

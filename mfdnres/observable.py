@@ -137,7 +137,9 @@ class Observable(object):
         observable_label_text (str): Formatted LaTeX text representing
             observable, to be interpreted in math mode
 
-        axis_label_text (str, str): Formatted LaTeX text representing axis label
+        axis_label_text (str, str): Formatted LaTeX text representing axis
+        label.  Recommended to be class data, but may also be defined as class
+        instance property (if it must depend upon the class instance data).
 
             observable (str): observable label string, to be interpreted in math mode
             units (str): units string, to be interpreted in math mode, or None
@@ -240,13 +242,17 @@ class Observable(object):
         """
         return ""
 
-    @property
-    def axis_label_text(self):
-        """ Formatted LaTeX text representing axis label.
-        """
-        observable_str = r""
-        units_str = None
-        return observable_str, units_str
+    axis_label_text = r"", None
+    
+    # Alternatively, as a property:
+    #
+    # @property
+    # def axis_label_text(self):
+    #     """ Formatted LaTeX text representing axis label.
+    #     """
+    #     observable_str = r""
+    #     units_str = None
+    #     return observable_str, units_str
 
 
 ################################################################
