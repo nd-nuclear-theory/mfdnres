@@ -33,6 +33,7 @@
     07/03/25 (mac):
         - Parse occupation probabilities.
         - Parse spectroscopic amplitudes.
+    04/10/26 (zz): Allow parsing occupation probabilities with multiple lines for each orbital.
 """
 
 from __future__ import annotations
@@ -561,21 +562,29 @@ def parse_occupations(self:MFDnResultsData, tokenized_lines):
 
     for tokenized_line in tokenized_lines:
 
-        # extract orbital info
-        species_name = tokenized_line[1]
-        species_index = {"pro": 0, "neu": 1}[species_name]
-        ## species_code = species_name[0]  # "pro" -> "p", "neu" -> "n"
-        n = int(tokenized_line[2])
-        l = int(tokenized_line[3])
-        j = int(tokenized_line[4])/2
-        orbital_qn = (n, l, j)
-        orbitals_by_species[species_index].append(orbital_qn)
-        
-        # extract occupations (for that orbital)
-        occupation_data = tokenized_line[5:]
-        for state_index, qn in enumerate(self.levels):
-            occupation = float(occupation_data[state_index])
-            occupations_by_species_by_level[species_index][qn].append(occupation)
+        if tokenized_line[1] in {"pro","neu"}:  # if it's the first line of a new orbital
+            starting_state_index = 0
+            # extract orbital info
+            species_name = tokenized_line[1]
+            species_index = {"pro": 0, "neu": 1}[species_name]
+            ## species_code = species_name[0]  # "pro" -> "p", "neu" -> "n"
+            n = int(tokenized_line[2])
+            l = int(tokenized_line[3])
+            j = int(tokenized_line[4])/2
+            orbital_qn = (n, l, j)
+            orbitals_by_species[species_index].append(orbital_qn)
+            
+            # extract occupations (for that orbital)
+            occupation_data = tokenized_line[5:]
+        else:  # if the line is continuing the last orbital
+            occupation_data = tokenized_line
+
+        for state_index in range(starting_state_index, starting_state_index+len(occupation_data), 1):
+            if state_index < len(self.levels):
+                qn = self.levels[state_index]
+                occupation = float(occupation_data[state_index-starting_state_index])
+                occupations_by_species_by_level[species_index][qn].append(occupation)
+        starting_state_index += len(occupation_data)
             
     # store to data structure
     for species_index in range(2):
