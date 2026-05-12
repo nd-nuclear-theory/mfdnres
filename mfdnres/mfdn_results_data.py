@@ -696,6 +696,14 @@ class MFDnResultsData(results_data.ResultsData):
 
            - MFDn two-body expectation value
 
+        Special handling is applied to (one-body) E0 matrix elements where the
+        initial and final states are the same, where the matrix element of the
+        naive one-body E0 operator is subject to CM contamination.  These are
+        deduced from the radius, calculated from the intrinsic r^2 operator in
+        the MFDn diagonalization run, if the option allow_e0_from_radius has its
+        default value True, or else are suppressed to protect the user from
+        accidentally using a CM contaminated value.
+
         Important: To retrieve the matrix element of a two-body operator, you
         must specify rank="tb".
 
