@@ -9,7 +9,7 @@
     - 10/18/23 (mac): Created, extracting code from 10be-shape_obs.py.
     - 07/21/24 (mac): Add extraction of mixing angle from fragmentation.
     - 03/28/26 (mac): Convert axis_label_text from instance property to class data.
-    - 03/29/26 (mac): Add observable MixingM12.
+    - 03/29/26 (mac): Add cross reference to observable MixingM12.
 """
 
 import numpy as np
@@ -90,6 +90,8 @@ def mixing_angle(results_data, operator, qn_pair, qn_i):
     Returns mixing angle either from transition between states or from
     fragmentation of transition to states, according to value of argument qn_i.
 
+    DEPRECATED in favor of using method MixingObservable.mixing_angle.
+
     Arguments:
 
         results_data (MFDnResultsData): results data
@@ -102,7 +104,7 @@ def mixing_angle(results_data, operator, qn_pair, qn_i):
 
     Returns:
 
-        theta (float): magnitue of mixing angle in degree
+        theta (float): magnitue of mixing angle in radians
 
     """
     if qn_i is None:
@@ -111,8 +113,9 @@ def mixing_angle(results_data, operator, qn_pair, qn_i):
         theta = mixing_angle_from_fragmentation(results_data, operator, qn_pair, qn_i)
     return theta
 
+
 ################################################################
-# mixing observables
+# mixing observable interface class
 ################################################################
 
 class MixingObservable(mfdnres.observable.Observable):
@@ -153,7 +156,73 @@ class MixingObservable(mfdnres.observable.Observable):
         self._qn_pair = ((*subspace, 1), (*subspace, 2))
         self._qn_i = qn_i
        
+    def mixing_angle(self, results_data):
+        """Mixing angle.
+
+        Returns mixing angle either from transition between states or from
+        fragmentation of transition to states, according to value of argument
+        qn_i.
+
+        Only the magnitude of the mixing angle is determined by the available
+        information.
+
+        This is a "helper" method, that derived observable classes can rely upon
+        in evaluating other mixing observables.
+
+        Arguments:
         
+            results_data (MFDnResultsData): Results data object.
+
+        Return:
+           
+            (float): Mixing angle (in radians).
+
+        """
+
+        operator = self._operator
+        qn_pair = self._qn_pair
+        qn_i = self._qn_i 
+        
+        if qn_i is None:
+            theta = mixing_angle_from_trans(results_data, operator, qn_pair)
+        else:
+            theta = mixing_angle_from_fragmentation(results_data, operator, qn_pair, qn_i)
+        return theta
+
+    def mixing_energy_results(self, results_data):
+        """Mixing energy results.
+
+        This is a "helper" method, that derived observable classes can rely upon
+        in evaluating other mixing observables.
+
+        Arguments:
+        
+            results_data (MFDnResultsData): Results data object.
+
+        Return:
+           
+            E_bar, Delta_0, Delta (float): Energy mean and difference parameters (unmixed and mixed).
+
+            E_10, E_20 (float): Unmixed energies (deduced).
+
+            E_1, E_2 (float): Mixed energies (raw calculated).
+
+        """
+
+        qn_1, qn_2 = self._qn_pair
+        E_1, E_2 = results_data.get_energy(qn_1), results_data.get_energy(qn_2)
+        Delta = 1/2*(E_2 - E_1)
+        E_bar = 1/2*(E_2 + E_1)
+        theta = self.mixing_angle(results_data)
+        Delta_0 = Delta * np.cos(2*theta)
+        E_10, E_20 = E_bar - Delta_0, E_bar + Delta_0
+        return E_bar, Delta_0, Delta, E_10, E_20, E_1, E_2
+    
+    
+################################################################
+# mixing observables -- amount of mixing
+################################################################
+    
 class MixingAngle(MixingObservable):
     """Observable extractor for magnitude of mixing angle (converted to deg).
 
@@ -162,7 +231,8 @@ class MixingAngle(MixingObservable):
     def value(self, results_data):
         """ Extract observable.
         """
-        theta = mixing_angle(results_data, self._operator, self._qn_pair, self._qn_i)
+        ## theta = mixing_angle(results_data, self._operator, self._qn_pair, self._qn_i)
+        theta = self.mixing_angle(results_data)
         theta_deg = theta*180/np.pi
         return theta_deg
 
@@ -196,14 +266,15 @@ class MixingAngle(MixingObservable):
 
     
 class MixingAdmixture(MixingObservable):
-    """Observable extractor for admixture norm (sin^2 theta).
+    """Observable extractor for mixing norm admixture (sin^2 theta).
 
     """
 
     def value(self, results_data):
         """ Extract observable.
         """
-        theta = mixing_angle(results_data, self._operator, self._qn_pair, self._qn_i)
+        ## theta = mixing_angle(results_data, self._operator, self._qn_pair, self._qn_i)
+        theta = self.mixing_angle(results_data)
         admixture = np.sin(theta)**2
         return admixture
 
@@ -237,6 +308,10 @@ class MixingAdmixture(MixingObservable):
 
     axis_label_text = r"\sin^2\theta", None
 
+
+################################################################
+# mixing observables -- deduced mixing matrix element
+################################################################
     
 class MixingMatrixElement(MixingObservable):
     """ Observable extractor for magnitude of mixing matrix element.
@@ -246,7 +321,8 @@ class MixingMatrixElement(MixingObservable):
     def value(self, results_data):
         """ Extract observable.
         """
-        theta = mixing_angle(results_data, self._operator, self._qn_pair, self._qn_i)
+        ## theta = mixing_angle(results_data, self._operator, self._qn_pair, self._qn_i)
+        theta = self.mixing_angle(results_data)
         r = 1/2*np.tan(2*theta)
         qn_1, qn_2 = self._qn_pair
         energy_difference = results_data.get_energy(qn_2) - results_data.get_energy(qn_1)
@@ -285,9 +361,13 @@ class MixingMatrixElement(MixingObservable):
     
     axis_label_text = r"\langle V \rangle", r"\mathrm{MeV}"
 
+
+################################################################
+# mixing observables -- energies
+################################################################
     
 class MixingEnergyDifference(mfdnres.observable.ExcitationEnergy):
-    """Observable extractor for mixing energy difference.
+    """Observable extractor for mixed (raw calculated) energy difference.
 
     """
 
@@ -326,6 +406,10 @@ class MixingEnergyDifference(mfdnres.observable.ExcitationEnergy):
         ])
 
 
+################################################################
+# mixing observables -- transitions
+################################################################
+    
 # Future observables: See 11li-shape_obs for initial implementation of
 # MixingM12.
     
