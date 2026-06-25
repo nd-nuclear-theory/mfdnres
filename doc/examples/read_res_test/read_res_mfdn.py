@@ -74,14 +74,24 @@ def explore_point(results_data):
     # parameters
     print("Params")
     print(mfdnres.analysis.dict_items(results_data.params))
+    print()
 
     # examine data attributes
     print("Data attributes...")
+    print("(These are the underlying data, which we examine here for illustration,")
+    print("but normally you would access data using accessors instead, as shown later below.)")
+    print()
+    print("results_data.energies {}".format(results_data.energies))
     print("results_data.postprocessor_ob_rmes {}".format(results_data.postprocessor_ob_rmes))
     print("results_data.postprocessor_tb_rmes {}".format(results_data.postprocessor_tb_rmes))
     print("results_data.mfdn_level_occupations {}".format(results_data.mfdn_level_occupations))
     print()
 
+    # access levels
+    print("Test accessors (basic)...")
+    print("results_data.levels {}".format(results_data.levels))
+    print()
+    
     # access ob moments
     print("Test accessors (one-body)...")
     print("M1 moment (native physical) {}".format(results_data.get_moment("M1-native", (1.0,0,1))))
