@@ -22,6 +22,7 @@
     12/06/20 (pjf): Add additional decomposition descriptor parsing support.
     10/12/23 (mac): Update decomposition descriptor parsing to support task_descriptor_decomposition_2.
     01/16/23 (zz): Add isoscalar coulomb support in parser.
+    06/23/26 (mac): Support optional decomposition_Nmax.
 
 """
 
@@ -68,9 +69,19 @@ def parser(filename):
         # decomposition group (optional)
         r"("  # begin decomposition group
           r"\-J(?P<decomposition_J>[\d\.]+)\-g(?P<decomposition_g>[01])\-n(?P<decomposition_n>[\d]+)"
+        
           # task_descriptor_decomposition_1 has "op" prefix before "decomposition_operator_name"
+        
           # task_descriptor_decomposition_2 has no prefix before "decomposition_type"
-          r"\-(op)?(?P<decomposition_type>.+)\-dlan(?P<decomposition_lanczos>\d+)"
+ 
+          # 01/23/26 (mac):
+          # "r"\-(op)?(?P<decomposition_type>.+)(\-dNmax(?P<decomposition_Nmax>\d+))?"
+          # wronly absorbs the optional "-dNmax<nn>" into decomposition_type,
+          # since the first expression is posessive, and the second expression
+          # is greedy, and apparently the first pattern wins.  So explicitly
+          # exclude a dash from decomposition_type.
+        
+          r"\-(op)?(?P<decomposition_type>[^-]+)(\-dNmax(?P<decomposition_Nmax>\d+))?\-dlan(?P<decomposition_lanczos>\d+)"
           r"(?P<decomposition_flag>\-decomp)?"
         r")?"  # end decomposition group
         # subset index (optional)
@@ -103,6 +114,7 @@ def parser(filename):
         # decomposition group (optional)
         "decomposition_type": str,
         "decomposition_J": float, "decomposition_g": int, "decomposition_n": int,
+        "decomposition_Nmax": int,
         "decomposition_lanczos": int,
         # subset index (optional)
         "subset_index": int,
