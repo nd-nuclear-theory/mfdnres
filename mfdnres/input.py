@@ -88,6 +88,10 @@ def res_file_directory(
                 directory; e.g., os.path.join("results","res"); usually you will
                 want to use the results_type option instead
 
+        TODO 05/28/26 (mac): Using GROUP_HOME is probably not sensible when on a
+        cluster.  Analysis files will normally be under user's home, not the
+        shared results directory, which will at best contain just tarred archives.
+
         Environment:
             GROUP_HOME: directory name for group top-level results directory
               (e.g., "/afs/crc.nd.edu/group/nuclthy" for shared group results directory,
@@ -520,7 +524,7 @@ def read_data_with_caching(read_function, pickle_filename="mesh_data.pickle", **
         print("Done.", flush=True)
         return mesh_data
     except:
-        print("Failed.", flush=True)
+        print("Not found.", flush=True)
     
     # fall back on fresh read
     print("Reading mesh_data afresh...", flush=True)
