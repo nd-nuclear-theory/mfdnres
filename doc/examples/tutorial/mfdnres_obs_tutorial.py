@@ -176,6 +176,18 @@ def read_data():
     # TUTORIAL: Here we build a list of directories from which to "slurp" up
     # data files.  In this example, we read all data files ("*.res"), but we can
     # be more selective using glob patterns on the filenames.
+
+    # If the files are found correctly, the initial lines of terminal output
+    # from running this tutorial should look something like the following (in
+    # this example, GROUP_HOME was set to "/home/mcaprio"):
+    #     
+    #     % python3 mfdnres_obs_tutorial.py 
+    #       slurp_res_files: directory list ['/home/mcaprio/results/mcaprio/mfdn/runmac0455/results/res', '/home/mcaprio/results/mcaprio/mfdn/runmac0468/results/res', '/home/mcaprio/results/mcaprio/mfdn/runmac0543/results/res']
+    #       slurp_res_files: searching for files /home/mcaprio/results/mcaprio/mfdn/runmac0455/results/res/*.res...
+    #       slurp_res_files: searching for files /home/mcaprio/results/mcaprio/mfdn/runmac0468/results/res/*.res...
+    #       slurp_res_files: searching for files /home/mcaprio/results/mcaprio/mfdn/runmac0543/results/res/*.res...
+    #       slurp_res_files: extracted mesh points 240
+    
     
     run_list = [
 
