@@ -40,6 +40,7 @@ University of Notre Dame
       + Provide option Nex to Nex_filter().
       + Fix labeling for Sp3R.
       + Fix filter_decomposition algorithm and return key type.
+    - 07/01/26 (mac): Cast labels to int or float as specified by value_types.
 """
 
 import collections
@@ -379,7 +380,11 @@ def decomposition_eigenvalue_filename(
 def read_eigenvalues(filename, swap_sp_sn=False, verbose=False):
     """Read table mapping irrep labels to Casimir eigenvalues.
 
-    Eigenvalue degeneracies are allowed.
+    Eigenvalue degeneracies are allowed.  Each eigenvalue maps to a list of
+    degenerate labels.
+
+    Labels are stored as tuples of float, even if some of them might properly be
+    restricted to integer values.
 
     File format:
 
@@ -629,25 +634,39 @@ def label_transformation_baby_spncci_to_sp3rs(labels):
 
 # non-U(3) labels
 NexLabels = collections.namedtuple("NexLabels", ["N_omega"])
+NexLabels.value_types = (int,)
 SLabels = collections.namedtuple("SLabels", ["S"])
+SLabels.value_types = (float,)
 LLabels = collections.namedtuple("LLabels", ["L"])
-LSLabels = collections.namedtuple("LLabels", ["S", "L"])
+LLabels.value_types = (int,)
+LSLabels = collections.namedtuple("LSLabels", ["S", "L"])
+LSLabels.value_types = (float, int,)
 
 # U(3) but non-Sp(3,R) labels
 U3Labels = collections.namedtuple("U3Labels", ["N_omega", "lambda_omega", "mu_omega"])
+U3Labels.value_types = (int, int, int,)
 U3SLabels = collections.namedtuple("U3SLabels", ["N_omega", "lambda_omega", "mu_omega", "S"])
+U3SLabels.value_types = (int, int, int, float,)
 U3SpSnSLabels = collections.namedtuple("U3SpSnSLabels", ["N_omega", "lambda_omega", "mu_omega", "Sp", "Sn", "S"])
+U3SpSnSLabels.value_types = (int, int, int, float, float, float,)
 U3LSLabels = collections.namedtuple("U3LSLabels", ["N_omega", "lambda_omega", "mu_omega", "S", "L"])
+U3LSLabels.value_types = (int, int, int, float, int,)
 U3LSpSnSLabels = collections.namedtuple("U3LSpSnSLabels", ["N_omega", "lambda_omega", "mu_omega", "Sp", "Sn", "S", "L"])
+U3LSpSnSLabels.value_types = (int, int, int, float, float, float, int,)
 
 # Sp(3,R) labels
 Sp3RLabels = collections.namedtuple("Sp3RLabels", ["N_sigma", "lambda_sigma", "mu_sigma"])
+Sp3RLabels.value_types = U3Labels.value_types
 Sp3RSLabels = collections.namedtuple("Sp3RSLabels", ["N_sigma", "lambda_sigma", "mu_sigma", "S"])
+Sp3RSLabels.value_types = U3SLabels.value_types
 Sp3RSpSnSLabels = collections.namedtuple("Sp3RSLabels", ["N_sigma", "lambda_sigma", "mu_sigma", "Sp", "Sn", "S"])
+Sp3RSpSnSLabels.value_types = U3SpSnSLabels.value_types
 BabySpNCCILabels = collections.namedtuple("BabySpNCCILabels", ["N_sigma", "lambda_sigma", "mu_sigma", "N_omega", "lambda_omega", "mu_omega", "Sp", "Sn", "S"])
+BabySpNCCILabels.value_types = (int, int, int, int, int, int, float, float, float,)
 
 # special labels
 SU3Labels = collections.namedtuple("SU3Labels", ["lambda_omega", "mu_omega"])
+SU3Labels.value_types = (int, int,)
 
 # lookup table for decomosition label classes
 LABEL_CLASS_BY_DECOMPOSITION_TYPE = {
@@ -811,6 +830,10 @@ def labels_subsetting_function(target_labels_type, *, source_labels_type=None):
         else:
             cast_labels_type = source_labels_type
         if type(source_labels)==tuple:
+            source_labels = tuple(
+                value_type(qn)
+                for value_type, qn in zip(cast_labels_type.value_types, source_labels)
+            )
             source_labels = cast_labels_type(*source_labels)
 
         # subset the key-value pairs from source_labels to those supported by short_labels_type
