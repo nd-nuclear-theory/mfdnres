@@ -46,27 +46,28 @@ Setup
 
     To do so:
 
-    1) Set up your local results directory.  Although you can set directory
-    names as you wish, our default tree, assumed below, mirrors the structure
-    shown above for m2032:
+    1) Set up your local results directory (see INSTALL.md).  Although you can set directory
+    names as you wish, our default tree follows the structure:
     
-       ${GROUP_HOME}/results/<user>/<code>
+       ${MFDNRES_RESULTS_DIR}/<user>/<code>/<runname>
     
     So, under your personal account, I recommend setting the environment variable
     
-       setenv GROUP_HOME $HOME
-       mkdir -p ${GROUP_HOME}/results/mcaprio/mfdn
+       mkdir -p ${HOME}/results/mcaprio/mfdn
+       setenv MFDNRES_RESULTS_DIR ${HOME}/results
     
-    2) Download the results file archives into your local
-    ${GROUP_HOME}/results/mcaprio/mfdn.  These can be found as
+    2) Find the archived data at NERSC:
     
        /global/cfs/cdirs/m2032/results/mcaprio/mfdn/run<run>-archive-<date>-res.tgz
     
-    or, for older runs,
+    3) Download the results file archives into your local subdirectory
+    ${MFDNRES_RESULTS_DIR}/mcaprio/mfdn, that you created in step (1) above.
+    E.g.,
     
-       /global/cfs/cdirs/m2032/results/mcaprio/mfdn/run<run>-archive-<date>.tgz
-    
-    3) Untar them!  E.g.,
+      cd ${HOME}/results/mcaprio/mfdn
+      scp /global/cfs/cdirs/m2032/results/mcaprio/mfdn/runmac0455-archive-210214-res.tgz .
+
+    4) Untar them!  E.g.,
     
        tar xvf runmac0455-archive-210214-res.tgz
 
@@ -84,6 +85,7 @@ Setup
     - 03/19/23 (mac):
       + Provide separate "canned" and "manual" examples for basic hw scan plot.
       + Demonstrate Nmax labels.
+    - 07/02/26 (mac): Update environment variable and downloading instructions.
 
 """
 
@@ -179,7 +181,7 @@ def read_data():
 
     # If the files are found correctly, the initial lines of terminal output
     # from running this tutorial should look something like the following (in
-    # this example, GROUP_HOME was set to "/home/mcaprio"):
+    # this example, MFDNRES_RESULTS_DIR was set to "/home/mcaprio/results"):
     #     
     #     % python3 mfdnres_obs_tutorial.py 
     #       slurp_res_files: directory list ['/home/mcaprio/results/mcaprio/mfdn/runmac0455/results/res', '/home/mcaprio/results/mcaprio/mfdn/runmac0468/results/res', '/home/mcaprio/results/mcaprio/mfdn/runmac0543/results/res']

@@ -5,7 +5,7 @@ Department of Physics, University of Notre Dame
 
 + 05/24/19 (mac): Created.
 + 05/18/22 (mac): Update basic examples.
-
++ 07/02/26 (mac): Add environment variable MFDNRES_RESULTS_DIR.
 ----------------------------------------------------------------
 
 # 1. Retrieving and installing source
@@ -68,56 +68,44 @@ Department of Physics, University of Notre Dame
 # 2. Environment variables
 
   For most purposes, you do not need to set any environment variables.  However,
-  if you wish to use the function mfdnres.res_file_directory() to construct path
-  names to your data files, you will need to set the GROUP_HOME environment
+  if you wish to use the function `mfdnres.res_file_directory` to construct path
+  names to your data files, you will need to set the `MFDNRES_RESULTS_DIR` environment
   variable, to point to the parent directory where various users' results files
   are stored.  This assumes a directory structure such as the following:
-
-    /afs/crc.nd.edu/group/nuclthy/
 
       results/
 
         alice/
-          runalice0001/
-          runalice0002/
+          mfdn/
+            runalice0001/
+            runalice0002/
+          spncci/
+            runalice0003/
+            runalice0004/
 
         bob/
-          runbob0001/
-          runbob0002/
+          mfdn/
+            runbob0001/
+            runbob0002/
 
-  Then you should set GROUP_HOME to point to the directory which contains the
-  results/ directory, e.g., here /afs/crc.nd.edu/group/nuclthy.  Or, you have
-  downloaded all the results to to a directory named results under your home
-  directory, you would just set GROUP_HOME to point to ${HOME}.
+  Then you should set `MFDNRES_RESULTS_DIR` to point to the `results/`
+  directory.  E.g., if you have downloaded all the results to to a directory
+  named `results` under your home directory, you would just set
+  `MFDNRES_RESULTS_DIR` to point to `${HOME}/results`.
 
-  In your csh initialization file, define initialization as follows
-  (adjusting directory names to match your own choices as
-  appropriate):
-
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # mfdnres
-  setenv GROUP_HOME /afs/crc.nd.edu/group/nuclthy
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-  or
+  If your default shell is csh, define initialization as follows (adjusting
+  directory names to match your own choices as appropriate):
 
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # mfdnres
-  setenv GROUP_HOME ${HOME}
+  setenv MFDNRES_RESULTS_DIR ${HOME}/results
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   Alternatively, if your default shell is bash:
   
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # mfdnres
-  export GROUP_HOME=/afs/crc.nd.edu/group/nuclthy
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-  or
-
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # mfdnres
-  export GROUP_HOME=${HOME}
+  export MFDNRES_RESULTS_DIR=${HOME}/results
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # 3. Basic tests

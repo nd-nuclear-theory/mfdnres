@@ -41,6 +41,7 @@
         - Add read_runs().
     02/22/24 (mac): Add results_postprocessors option to read_runs().
     07/20/25 (mac): Change default value of slurp_res_files option glob_pattern to None.
+    07/02/26 (mac): Change res_file_directory() to use MFDNRES_RESULTS_DIR instead of GROUP_HOME.
 
 """
 
@@ -56,7 +57,7 @@ import numpy as np
 
 def res_file_directory(
         username, code, run_number, *,
-        run_stem="run", results_dir="results",
+        run_stem="run", results_dir=None,
         results_subdir="results", results_type="res",
         res_file_subdir=None,
 ):
@@ -67,60 +68,59 @@ def res_file_directory(
 
         Arguments:
 
-            username (str): User name (e.g., "mcaprio")
+            username (str): User name (e.g., "mcaprio").
 
-            code (str): Code name (e.g., "spncci")
+            code (str): Code name (e.g., "spncci").
 
-            run_number (str): Run name "tail" (e.g., "mac0424")
+            run_number (str): Run name "tail" (e.g., "mac0424").
 
-            results_dir (str,optional): Name of top-level results directory within GROUP_HOME
+            results_dir (str,optional): Full path to top-level results
+            directory.  If None, defaults to value provided by environment
+            variable MFDNRES_RESULTS_DIR.
 
-            run_stem (str, optional): Run name "stem" (normally, "run")
+            run_stem (str, optional): Run name "stem" (normally, "run").
 
             results_subdir (str, optional): Name of results subdirectory within
-                run (normally, "results")
+                run (normally, "results").
 
             results_type (str, optional): Name of sub-subdirectory for given
             type of results file (e.g., "res", "lanczos", ...), within results
-            subdirectory
+            subdirectory.
 
             res_file_subdir (str, optional): Name of subdirectory within results
                 directory; e.g., os.path.join("results","res"); usually you will
-                want to use the results_type option instead
+                want to use the results_type option instead.
 
-        TODO 05/28/26 (mac): Using GROUP_HOME is probably not sensible when on a
-        cluster.  Analysis files will normally be under user's home, not the
-        shared results directory, which will at best contain just tarred archives.
 
         Environment:
-            GROUP_HOME: directory name for group top-level results directory
-              (e.g., "/afs/crc.nd.edu/group/nuclthy" for shared group results directory,
-               or, for local work in your home directory, you may set equal to HOME)
+            MFDNRES_RESULTS_DIR: Directory name for group top-level results directory,
+              e.g., ${HOME}/results.
 
         >>> mfdnres.input.res_file_directory("mcaprio", "mfdn", "mac0563")
 
-            /afs/crc.nd.edu/group/nuclthy/results/mcaprio/mfdn/runmac0563/results/res
+            /home/mcaprio/results/mcaprio/mfdn/runmac0563/results/res
 
         >>> mfdnres.input.res_file_directory("mcaprio", "mfdn", "mac0563", results_type="lanczos")
 
-            /afs/crc.nd.edu/group/nuclthy/results/mcaprio/mfdn/runmac0563/results/lanczos
+            /home/mcaprio/results/mcaprio/mfdn/runmac0563/results/lanczos
 
         >>> mfdnres.input.res_file_directory("amccoy", "spncci", "aem0097", res_file_subdir="results")
 
-            /afs/crc.nd.edu/group/nuclthy/results/amccoy/spncci/runaem0097/results
+            /home/mcaprio/results/amccoy/spncci/runaem0097/results
 
     """
 
-    group_home = os.environ.get("GROUP_HOME")
-    if type(group_home) is not str:
-        raise(ValueError("Need to set environment variable GROUP_HOME"))
+    if results_dir is None:
+        results_dir = os.environ.get("MFDNRES_RESULTS_DIR")
+        
+    if type(results_dir) is not str:
+        raise(ValueError("Need to set environment variable MFDNRES_RESULTS_DIR (or provide results_dir as explicit argument to res_file_directory)."))
 
     if res_file_subdir is None:  # allow for legacy res_file_subdir option
         res_file_subdir = os.path.join(results_subdir, results_type)
     run_full_name = run_stem + run_number
     res_directory = os.path.join(
-        group_home, results_dir, username, code, run_full_name,
-        res_file_subdir
+        results_dir, username, code, run_full_name, res_file_subdir,
     )
 
     return res_directory
