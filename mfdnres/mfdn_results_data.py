@@ -1201,6 +1201,9 @@ class MFDnResultsData(results_data.ResultsData):
         try:
             lanczos_decomposition_data = self.mfdn_level_lanczos_decomposition_data[decomposition_type][qn]
         except:
+            if verbose:
+                print("Lanczos decomposition of type {} not found for qn {}.".format(decomposition_type, qn))
+                print("Mesh point parameters: {}".format(self.params))
             return None
 
         filename, alpha, beta = lanczos_decomposition_data
