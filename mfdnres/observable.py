@@ -15,6 +15,7 @@
     - 05/09/24 (mac/zz): Return np.nan for observable value if level is missing (instead of crashing).
     - 08/23/24 (mac): Add wrapper observable OverrideLabels.
     - 09/27/24 (mac): Extend Nmax_shifted() to work with generic index sets.
+    - 07/05/26 (mac): Provide option undo_Nmax_shift for ExcitationEnergy.
 """
 
 
@@ -926,7 +927,11 @@ class ExcitationEnergy(Observable):
 
     """
 
-    def __init__(self, nuclide, level, reference_level, *, Nmax_shift=0, label_as_difference=False):
+    def __init__(
+            self, nuclide, level, reference_level, *,
+            Nmax_shift=0, undo_Nmax_shift=False,
+            label_as_difference=False,
+    ):
         """Initialize with given parameters.
 
         Arguments:
@@ -939,9 +944,14 @@ class ExcitationEnergy(Observable):
             for energy difference.
 
             Nmax_shift (int, optional): Shift in Nmax to apply to excited level,
-            for cross-parity excitation energies (e.g., Nmax_shift=1 to
-            calculated "Nmax+1" excited level energy relative to "Nmax"
-            reference level energy, reported at "Nmax").
+            for cross-parity excitation energies.  (E.g., with Nmax_shift=1,
+            calculate "Nmax+1" excited level energy relative to "Nmax" reference
+            level energy.  These are then reported at "Nmax", if
+            undo_Nmax_shift=False, or "Nmax+1" again if undo_Nmax_shift=True.)
+
+            undo_Nmax_shift (bool, optional): Whether or not to "undo" the Nmax
+            shift defined by Nmax_shift for dross-parity excitation energies
+            when reporting the result.  (See example under Nmax_shift.)
 
             label_as_difference (bool, optional): Whether or not to show
             reference level in observable label.
@@ -953,6 +963,7 @@ class ExcitationEnergy(Observable):
         self._level = level
         self._reference_level = reference_level
         self._Nmax_shift = Nmax_shift
+        self._undo_Nmax_shift = undo_Nmax_shift
         self._label_as_difference = label_as_difference
 
     ## def value(self, results_data):
@@ -971,7 +982,10 @@ class ExcitationEnergy(Observable):
         print("E shifted {}".format(level_energy_value_mesh))
         reference_level_energy_value_mesh = Energy(self._nuclide, self._reference_level).data(mesh_data, key_descriptor, verbose=verbose)
         print("Eref {}".format(reference_level_energy_value_mesh))
-        return level_energy_value_mesh - reference_level_energy_value_mesh
+        relative_energy_mesh = level_energy_value_mesh - reference_level_energy_value_mesh
+        if self._undo_Nmax_shift:
+            relative_energy_mesh = Nmax_shifted(relative_energy_mesh, -self._Nmax_shift)
+        return relative_energy_mesh
     
     @property
     def descriptor_str(self):
