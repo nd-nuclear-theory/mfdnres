@@ -9,6 +9,7 @@
     - 02/20/24 (mac): Created, from code in c_su3.py (src).
     - 04/29/25 (mac): Add option share_probability to add_decomposition_wedge_plot.
     - 07/01/26 (mac): Absorb into mfdnres.
+    - 07/16/26 (mac): Add option label_offset for add_irrep_labels.
 """
 
 import itertools
@@ -511,6 +512,7 @@ def add_irrep_labels(
         irrep_list=None,
         label_displacement=None,
         label_padding=2,
+        label_offset=(1,0),
         verbose=False,
         **kwargs,
 ):
@@ -528,13 +530,19 @@ def add_irrep_labels(
         they are integers, to successfully match those in the underlying
         xyr_by_irrep database.
 
-        label_displacement (tuple or dict, optional): Displacement of label (in
-        point) from symbol center, or dict of such displacements by nuclide.
-        Default (or a value of None) placed label to right of irrep at position
-        given by radius of symbol.
+        label_displacement (tuple[float] or dict, optional): Displacement (x,y) of
+        label (in point) from symbol center, or dict (Z,N)->(x,y) of such
+        displacements by nuclide.  Default to placeing label to right of irrep
+        at position given by radius of symbol.
 
-        label_padding (float, optional): Padding of label (in point) from nominal
-        position, when calculated automatically.
+        label_padding (float, optional): Padding of label (in point) from
+        nominal position, when displacement calculated automatically (i.e., no
+        label_displacement specified).
+
+        label_offset (tuple[float], optional): Displacement (xo,yo) of label, as
+        scale factor on symbol radius (plus padding given by label_padding),
+        when displacement calculated automatically (i.e., no label_displacement
+        specified).  Default (1,0) places label at right of symbol.
 
         kwargs (Line2D properties, optional): kwargs are used to specify line
         properties not otherwise fixed by the prior arguments.  The following
@@ -566,7 +574,8 @@ def add_irrep_labels(
         else:
             raise(ValueError("unrecognized label_displacement {}".format(label_displacement)))
         if the_label_displacement is None:
-            the_label_displacement = (r+label_padding, 0)
+            r_padded = r+label_padding
+            the_label_displacement = (r_padded*label_offset[0], r_padded*label_offset[1])
         label_text = str(cast_to_su3(irrep))
         ax.annotate(
             r"${:s}$".format(label_text),
