@@ -668,7 +668,7 @@ BabySpNCCILabels.value_types = (int, int, int, int, int, int, float, float, floa
 SU3Labels = collections.namedtuple("SU3Labels", ["lambda_omega", "mu_omega"])
 SU3Labels.value_types = (int, int,)
 
-# lookup table for decomosition label classes
+# lookup table for decomposition label classes
 LABEL_CLASS_BY_DECOMPOSITION_TYPE = {
     "Nex": NexLabels,
     "S": SLabels,
@@ -693,6 +693,19 @@ SOURCE_LABEL_CLASS_BY_DECOMPOSITION_TYPE = {
     "U3LSpSnS": U3LSpSnSLabels,
     "Sp3RSpSnS": Sp3RSpSnSLabels,
 }
+
+# lookup table for decomposition type names for plot labeling
+DECOMPOSITION_NAME_BY_DECOMPOSITION_TYPE = {
+    "U3": r"\mathrm{U}(3)",
+    "U3S": r"\mathrm{U}(3) S",
+    "U3SpSnS": r"\mathrm{U}(3) S_p S_n S",
+    # TODO complete
+}
+        
+            
+
+
+
 
 # string formatting
 
