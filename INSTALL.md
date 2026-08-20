@@ -6,6 +6,7 @@ Department of Physics, University of Notre Dame
 + 05/24/19 (mac): Created.
 + 05/18/22 (mac): Update basic examples.
 + 07/02/26 (mac): Add environment variable MFDNRES_RESULTS_DIR.
++ 09/20/26 (mac): Remove pip install --editable flag.
 ----------------------------------------------------------------
 
 # 1. Retrieving and installing source
@@ -43,7 +44,9 @@ Department of Physics, University of Notre Dame
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   Note that the `.` here means to install the Python package defined by the code
-  in the current directory.
+  in the current directory.  If you are actively developing `mfdnres` itself,
+  you may want to pass the `--editable` flag to `pip`, so that your edits take
+  effect immediately, without your needing to run `pip install` again.
 
   This basic installation does not check that you have certain dependencies
   (matplotlib or Pandas) installed.  These are only needed if you are using the
