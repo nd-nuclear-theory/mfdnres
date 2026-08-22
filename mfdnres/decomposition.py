@@ -643,6 +643,8 @@ LSLabels = collections.namedtuple("LSLabels", ["S", "L"])
 LSLabels.value_types = (float, int,)
 
 # U(3) but non-Sp(3,R) labels
+SU3Labels = collections.namedtuple("SU3Labels", ["lambda_omega", "mu_omega"])
+SU3Labels.value_types = (int, int, )
 U3Labels = collections.namedtuple("U3Labels", ["N_omega", "lambda_omega", "mu_omega"])
 U3Labels.value_types = (int, int, int,)
 U3SLabels = collections.namedtuple("U3SLabels", ["N_omega", "lambda_omega", "mu_omega", "S"])
@@ -674,6 +676,7 @@ LABEL_CLASS_BY_DECOMPOSITION_TYPE = {
     "S": SLabels,
     "L": LLabels,
     "LS": LSLabels,
+    "SU3": SU3Labels,
     "U3": U3Labels,
     "U3S": U3SLabels,
     "U3SpSnS": U3SpSnSLabels,
@@ -687,11 +690,39 @@ LABEL_CLASS_BY_DECOMPOSITION_TYPE = {
 SOURCE_LABEL_CLASS_BY_DECOMPOSITION_TYPE = {
     # Eigenvalue files contain full irrep labels (N, lambda, mu, Sp, Sn, S,
     # [L]), even if degeneracies are not resolved for given decomposition type.
+    #
+    # However, this list should not be reied upon.  E.g., 210210-amccoy contains
+    # U3S eigenvalues with labels including L.  Use
+    # SOURCE_LABEL_CLASS_BY_DECOMPOSITION_TYPE_SANS_L or
+    # SOURCE_LABEL_CLASS_BY_DECOMPOSITION_TYPE_WITH_L instead.
+    "SU3": U3SpSnSLabels,
+    "U3": U3SpSnSLabels,
     "U3S": U3SpSnSLabels,
     "U3SpSnS": U3SpSnSLabels,
+    "LS": U3LSpSnSLabels,
     "U3LS": U3LSpSnSLabels,
     "U3LSpSnS": U3LSpSnSLabels,
+    "Sp3R": Sp3RSpSnSLabels,
+    "Sp3RS": Sp3RSpSnSLabels,
     "Sp3RSpSnS": Sp3RSpSnSLabels,
+}
+SOURCE_LABEL_CLASS_BY_DECOMPOSITION_TYPE_SANS_L = {
+    "SU3": U3SpSnSLabels,
+    "U3": U3SpSnSLabels,
+    "U3S": U3SpSnSLabels,
+    "U3SpSnS": U3SpSnSLabels,
+    "Sp3R": Sp3RSpSnSLabels,
+    "Sp3RS": Sp3RSpSnSLabels,
+    "Sp3RSpSnS": Sp3RSpSnSLabels,
+}
+SOURCE_LABEL_CLASS_BY_DECOMPOSITION_TYPE_WITH_L = {
+    "SU3": U3LSpSnSLabels,
+    "U3": U3LSpSnSLabels,
+    "U3S": U3LSpSnSLabels,
+    "U3SpSnS": U3LSpSnSLabels,
+    "LS": U3LSpSnSLabels,
+    "U3LS": U3LSpSnSLabels,
+    "U3LSpSnS": U3LSpSnSLabels,
 }
 
 # lookup table for decomposition type names for plot labeling
@@ -701,11 +732,6 @@ DECOMPOSITION_NAME_BY_DECOMPOSITION_TYPE = {
     "U3SpSnS": r"\mathrm{U}(3) S_p S_n S",
     # TODO complete
 }
-        
-            
-
-
-
 
 # string formatting
 
@@ -730,6 +756,13 @@ def format_ls_label(self):
     return label_text
 
 LSLabels.__str__ = format_ls_label
+
+def format_su3_label(self):
+    lam, mu = self
+    label_text = "({:d},{:d})".format(int(lam), int(mu))
+    return label_text
+
+SU3Labels.__str__ = format_su3_label
 
 def format_u3_label(self):
     N, lam, mu = self
