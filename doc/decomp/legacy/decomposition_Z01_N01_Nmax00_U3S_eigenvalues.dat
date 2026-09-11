@@ -1,0 +1,6 @@
+# Z=1 N=1
+# decomposition type: U3S
+# coefficients: [6.52978799e+01 2.38942345e+00 1.00029689e-02]
+# iterations: 1000, goodness: 0.9999999950014838, message: ['Maximum number of iteration reached']
+    0    0    0  0.5  0.5  0.0  +0.000000e+00
+    0    0    0  0.5  0.5  1.0  +2.000594e-02
