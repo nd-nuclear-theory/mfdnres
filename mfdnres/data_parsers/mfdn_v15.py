@@ -689,11 +689,11 @@ def parser(in_file, verbose):
     """
 
     # perform high-level parsing into sections
-    res_file_lines = [row for row in in_file]
+    res_file_lines = [line for line in in_file]
     tokenized_lines = tools.split_and_prune_lines(res_file_lines)
     sections = tools.extracted_sections(tokenized_lines)
 
-    # handle empty files
+    # handle empty file
     if len(res_file_lines)==0:
         print("WARNING: file {} is empty!".format(in_file.name))
         return []
