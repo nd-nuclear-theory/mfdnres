@@ -1,12 +1,8 @@
-# Proposed decomposition file format
+# Decomposition file format
 #
-# Based on data files from data/u3-subspaces/decomposition/201112-mcaprio:
-#
-#     decomposition_Z01_N01_Nmax00_U3S_coefs.dat
-#     decomposition_Z01_N01_Nmax00_U3S_eigenvalues.dat
-# 
 # 08/19/26 (mac): Manually generated from coefs and eigenvalues files.
 # 09/06/26 (mac): Revise to reflect actual division of Labels and Eigenvalues and add Lanczos.
+# 09/12/26 (mac): Update to reflect actual output from new decomposition I/O code.
 
 ################################################################
 # Initial comments
@@ -24,17 +20,16 @@
 # Coefficients
 ################################################################
 
-# For existing operators, follow naming scheme in mcscript/ncci/decomposition.py.
+# Operators are defined in mcscript/ncci/decomposition.py:
 #
-# E.g., for U3S, here is the relevant code:
+#     - Identity: "identity"
+#     - Spatial: "Nex", "CSU3", "CSp3R" 
+#     - Angular momentum: "L2", "Sp2", "Sn2", "S2"
+#     - Isospin: "T2"
 #
-#    def U3S_operator(nuclide,Nmax,hw,coefs,swap):
-#        return mcscript.utils.dot(
-#                [operators.tb.Nex(nuclide, hw), CSU3_operator(nuclide,Nmax,hw), operators.tb.S2()],
-#                coefs
-#                )
+# New operators may be added by registering them in ncci.decomposition_basis_operator_registry.
 #
-# Naming conventions will have to be established for the operators entering into
+# Naming conventions will have to be established for, e.g., operators entering into
 # shell model j-shell configuration decompositions.  These include the j-shell
 # occupation opeartors from shell/programs/obutils/number-op-gen.cpp and j-shell
 # seniority operators from shell/programs/tbutils/quasispin-gen.cpp.  E.g.,
@@ -46,18 +41,19 @@
 #     J2-<species>-<n>-<l>-<2*j>
 
 [Coefficients]
-Nex=6.529787991265456526e+01
-CSU3=2.389423454890835075e+00
-S2=1.000296887033979253e-02
+Nex = +6.529788e+01
+CSU3 = +2.389423e+00
+S2 = +1.000297e-02
+
 
 ################################################################
 # Info
 ################################################################
 
-# It could be heplful to the user to add summary statistics, even though thse
-#could in principle be derived from the table of eigenvalues.  In particular,
-#the number of numerically *distinct* eigenvalues informs the largest useful
-#number of Lanczos iterations.
+# It is heplful to the user to add summary statistics, even though these
+# could in principle be derived from the table of eigenvalues.  In particular,
+# the number of numerically *distinct* eigenvalues informs the largest useful
+# number of Lanczos iterations.
 #
 #   num_entries (int): Number of entries in the table, which is equalt to the number
 #   of irrep (or symmetry subspace) tuple labels. 
@@ -68,8 +64,8 @@ S2=1.000296887033979253e-02
 #   tolerance could be introduced when deducing this count.
 
 [Statistics]
-num_entries=2
-num_eigenvalues=2
+num_entries = 2
+num_eigenvalues = 2
 
 
 ################################################################
@@ -79,8 +75,9 @@ num_eigenvalues=2
 # This is where the label names are first given.  These are serve as the "column
 # headers" for the eigenvalue table in the following section.
 #
-# For existing irrep labels, follow naming scheme in
-# mfdnres/decomposition.py.  E.g., for U3S, the label names are found is the following code:
+# For existing decomposition types, follow naming scheme in
+# mfdnres/decomposition.py.  E.g., for U3S, the label names are found is the
+# following code:
 #
 #     U3SLabels = collections.namedtuple("U3SLabels", ["N_omega", "lambda_omega", "mu_omega", "S"])
 #
@@ -93,9 +90,11 @@ num_eigenvalues=2
 #
 #     J-<species>-<n>-<l>-<2*j>
 
+[Labels]
 N_omega
 lambda_omega
-mu_omega S
+mu_omega
+S
 
 
 ################################################################
@@ -109,18 +108,19 @@ mu_omega S
 # cast all *numerically* integer label values back to true integers on input.
 
 [Eigenvalues]
-    0    0    0  0.0  +0.000000e+00
-    0    0    0  1.0  +2.000594e-02
+     0      0      0      0    +0.000000e+00
+     0      0      0      1    +2.000594e-02
 
 
 ################################################################
 # Lanczos
 ################################################################
 
-# *After* a decomposition run, the run scripting will append a table of the
-# Lanczos alpha and beta coefficients, as output by MFDn.
+# *After* a decomposition run, the run scripting appends a table of the Lanczos
+# alpha and beta coefficients, as output by MFDn.
 
 [Lanczos]
-0.31302375208374056       0.96704283267983293     
- 4.1626892111874865        2.0350787447495655     
++2.348112e+01 +7.762340e+00
++4.620439e+01 +1.740142e+01
++2.717671e+01 +1.625244e+01
 ...
