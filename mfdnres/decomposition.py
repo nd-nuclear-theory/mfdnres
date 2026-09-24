@@ -138,7 +138,7 @@ def slurp_lanczos_files(
             info_from_filename = input.parse_filename(filename, filename_format)
             results.params.update(info_from_filename)
 
-            # save lanczos filename
+            # save lanczos data
             decomposition_type = results.params["decomposition_type"]
             qn = results.params["decomposition_state"]
             alpha, beta = read_lanczos(filename)

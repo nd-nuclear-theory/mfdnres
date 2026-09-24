@@ -23,6 +23,7 @@
     10/12/23 (mac): Update decomposition descriptor parsing to support task_descriptor_decomposition_2.
     01/16/23 (zz): Add isoscalar coulomb support in parser.
     06/23/26 (mac): Support optional decomposition_Nmax.
+    09/24/26 (mac): Support code name "decomp".
 
 """
 
@@ -46,7 +47,7 @@ def parser(filename):
     regex = re.compile(
         # prolog
         r"run(?P<run>\w+)"
-        r"\-(?P<code_name>((mfdn)|(obscalc-ob)|(transitions-ob)|(transitions-tb)|(transitions-spamp))[^\-]*)"
+        r"\-(?P<code_name>((mfdn)|(decomp)|(obscalc-ob)|(transitions-ob)|(transitions-tb)|(transitions-spamp))[^\-]*)"
         r"\-(?P<descriptor>"
         # descriptor contents
         r"Z(?P<Z>\d+)\-N(?P<N>\d+)"

@@ -201,7 +201,13 @@ class MFDnResultsData(results_data.ResultsData):
 
             Mapping: observable_name -> (qnf,qni) -> value
 
-        mfdn_level_lanczos_decomposition_data (dict): Lanczos decomposition alpha-beta data
+        mfdn_level_lanczos_decomposition_data (dict): Legacy Lanczos decomposition alpha-beta data
+
+            LEGACY VERSION
+
+            As populated by decomposition.slurp_lanczos_files, before
+            introduction of "decomp" files and the "decomposition" res file
+            format.
 
             The filename is retained for debugging ("provenance") purposes.
 
@@ -212,6 +218,17 @@ class MFDnResultsData(results_data.ResultsData):
                 qn (tuple): (J,g,n)
 
                 decomposition_data (tuple): (filename, alpha, beta)
+
+        mfdn_level_lanczos_decomposition_data (dict): Lanczos decomposition data
+
+            Mapping: decomposition_type -> qn -> decomposition_data
+
+                decomposition_type (str): decomposition type ("U3SpSnS", etc.)
+
+                qn (tuple): (J,g,n)
+
+                decomposition_data (dict): Decompostion data dictionary as
+                defined in decomposition_io.
 
         mfdn_level_occupations (dict): MFDn-native occupations
 
@@ -1232,6 +1249,28 @@ class MFDnResultsData(results_data.ResultsData):
 
         return iterations
 
+    def get_lanczos_decomposition_data(self,decomposition_type,qn:LevelQNType,verbose=False):
+        """ Retrieve decomposition data dictionary.
+
+        Arguments:
+
+            decomposition_type (str): Decomposition type ("U3SpSnS", etc.).
+
+            qn (tuple): Quantum numbers for state.
+
+        Returns:
+
+            (dict): Decomposition data.
+        """
+
+        # retrieve decomposition
+        try:
+            lanczos_decomposition_data = self.mfdn_level_lanczos_decomposition_data[decomposition_type][qn]
+        except:
+            return None
+
+        return lanczos_decomposition_data
+    
 
     def get_spectroscopic_amplitudes(
             self, delta_nuclide:tuple[int,int], qn_pair:LevelQNPairType,

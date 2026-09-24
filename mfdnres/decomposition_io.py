@@ -5,7 +5,10 @@ Mark A. Caprio
 University of Notre Dame
 
     - 08/24/26 (mac): Created, refactoring from parse_decomp.py and eigenvalues2decomp.py.
+    - 09/24/26 (mac): Provide support for stream as source for parse_decomp_file().
 """
+
+import os
 
 import numpy as np
 
@@ -151,12 +154,12 @@ def parse_lanczos(decomp_data, tokenized_lines):
     decomp_data["lanczos"] = alpha_beta_table
     
     
-def parse_decomp_file(decomp_filename):
-    """Write decomposition file lines to output stream.
+def parse_decomp_file(source):
+    """Parse decomposition file.
 
     Arguments:
 
-        decomp_filename (str): Filename.
+        source (str|file): Filename (or stream).
 
      Returns:
 
@@ -169,7 +172,7 @@ def parse_decomp_file(decomp_filename):
 
             "labels" (list[str]): Identifiers for label "quantum numbers".
 
-            "eigenvalues" (dict[tuple, float]): Eigenvalue by symmetry label tuple to eigenvalue.
+            "eigenvalues" (dict[tuple, float]): Eigenvalue by symmetry label tuple.
 
             "lanczos" (ndarray): Array (two-column) of Lanczos alpha and beta coefficients.
 
@@ -177,12 +180,20 @@ def parse_decomp_file(decomp_filename):
 
     decomp_data = {}
 
+    # extract lines
+    if isinstance(source, (str, bytes, os.PathLike)):
+        decomp_file = open(source, "r")
+        lines = [line for line in decomp_file]
+        decomp_file.close()
+    elif hasattr(source, "read"):
+        decomp_file = source
+        lines = [line for line in decomp_file]
+    else:
+        raise TypeError("Source must be filename or readable stream")
+
     # perform high-level parsing into sections
-    decomp_file = open(decomp_filename, "r")
-    lines = [line for line in decomp_file]
     tokenized_lines = mfdnres.tools.split_and_prune_lines(lines)
     sections = mfdnres.tools.extracted_sections(tokenized_lines)
-    decomp_file.close()
 
     # warn of empty file
     if len(lines)==0:
