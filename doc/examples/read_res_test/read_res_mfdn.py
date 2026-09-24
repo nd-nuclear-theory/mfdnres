@@ -85,6 +85,7 @@ def explore_point(results_data):
     print("results_data.postprocessor_ob_rmes {}".format(results_data.postprocessor_ob_rmes))
     print("results_data.postprocessor_tb_rmes {}".format(results_data.postprocessor_tb_rmes))
     print("results_data.mfdn_level_occupations {}".format(results_data.mfdn_level_occupations))
+    print("results_data.mfdn_tb_expectations {}".format(results_data.mfdn_tb_expectations))
     print()
 
     # access levels

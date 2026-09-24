@@ -381,15 +381,26 @@ def extract_key_value_pairs(tokenized_lines, conversions):
 
        [<key>,"="]
 
-
     Values are only retained if a conversion is specified
     for that key string.
 
-    >>> test_lines = ["a = 1","b = 1 2 3","c = 42"]
+    >>> test_lines = ["a = 1", "b = 1 2 3", "c = 42"]
     >>> tokenized_lines = split_and_prune_lines(test_lines)
-    >>> conversions = {"a" : singleton_of(int), "b" : list_of(int)}
-    >>> extract_key_value_pairs(tokenized_lines,conversions)
+    >>> conversions = {"a": singleton_of(int), "b": list_of(int)}
+    >>> extract_key_value_pairs(tokenized_lines, conversions)
     {'b': [1, 2, 3], 'a': 1}
+
+    For a Fortran subscripted (array-like) key, that is, one with a subscript in
+    parentheses, successive values are collected into a list.  The order in
+    which they are stored simply follows the order the entries appear in the
+    file, without regard to the values for the subscripts:
+
+    >>> from mfdnres.tools import *
+    >>> test_lines = ["a(2) = 2", "a(1) = 1", "a(*) = 3"]
+    >>> tokenized_lines = split_and_prune_lines(test_lines)
+    >>> conversions = {"a": singleton_of(int)}
+    >>> extract_key_value_pairs(tokenized_lines, conversions)
+    {'a': [2, 1, 3]}
 
     Arguments:
 
@@ -403,7 +414,7 @@ def extract_key_value_pairs(tokenized_lines, conversions):
 
     """
 
-    # regexp for Fortran array-like output
+    # regexp for Fortran subscripted (array-like) output
     array_regexp = re.compile(r'([a-zA-Z0-9]+)\([0-9\*]\)')
 
     results = dict()
@@ -427,7 +438,7 @@ def extract_key_value_pairs(tokenized_lines, conversions):
         if (key in conversions):
             results[key] = conversions[key](value_strings)
         else:
-            # try to handle array types
+            # try to handle subscripted (array) types
             match = array_regexp.match(key)
             if match and (match.group(1) in conversions):
                 key = match.group(1)

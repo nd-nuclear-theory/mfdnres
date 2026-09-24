@@ -34,6 +34,7 @@
         - Parse occupation probabilities.
         - Parse spectroscopic amplitudes.
     04/10/26 (zz): Allow parsing occupation probabilities with multiple lines for each orbital.
+    09/24/26 (mac): Handle mis-ordered TBO names from MFDn GPU variant output in parse_other_tbo().
 """
 
 from __future__ import annotations
@@ -420,17 +421,85 @@ def parse_radii(self:MFDnResultsData, tokenized_lines):
 def parse_other_tbo(self:MFDnResultsData, tokenized_lines):
     """Parse other two-body observables.
 
-    Requires "tbo_names" to have been parsed from TBMEfile entries in MFDn
-    output (as for MFDn h2).  Otherwise quietly skips parsing "other TBOs" (as
-    for MFDn menj variant).
+    The TBO names are deduced from the TBME file names listed in the TBMEfile
+    entries in the "Observables" section (as for MFDn's h2 variant).  Thus,
+    parsing the TBO results here requires params["tbo_names"] to have first been
+    populated, from parsing the "Observables" section.  If no TBO names are
+    available (as for MFDn's menj variant), we quietly skip parsing "other TBOs".
+
+    Note that the "first" TBME file name given to MFDn is presumed to provide
+    the matrix elements for the intrinsic square radius operator (and is, e.g,
+    named "tbme-rrel2.bin" under the mcscript-ncci scripting).  These TBMEs are
+    used to generate the "Relative radii" observables, and there is no
+    corresponding output for these TBMEs in the "Other 2-body observables".
+
+    So the natural solution in parsing the TBOs would be to simply skip this
+    first entry, and take
+
+        tbo_names = self.params["tbo_names"][1:]
+
+    However, there are anomalies with the output of TBME file names by MFDn's GPU
+    variant.  Compare example MFDn CPU output (v15b01-92-g099fafe)
+
+        [Observables]
+        numTBops   =       15
+        # TBME file for relative R2 operator
+        TBMEfile(1) = tbme-rrel2.bin
+        
+        # TBME files for additional operators
+        TBMEfile(2) = tbme-H.bin
+        TBMEfile(3) = tbme-Ncm.bin
+        TBMEfile(4) = tbme-Tintr.bin
+        TBMEfile(5) = tbme-Tcm.bin
+        TBMEfile(6) = tbme-VNN.bin
+        TBMEfile(7) = tbme-VC.bin
+        TBMEfile(8) = tbme-L2.bin
+        TBMEfile(9) = tbme-Sp2.bin
+        TBMEfile(*) = tbme-Sn2.bin
+        TBMEfile(*) = tbme-S2.bin
+        TBMEfile(*) = tbme-J2.bin
+        TBMEfile(*) = tbme-T2.bin
+        TBMEfile(*) = tbme-CSU3.bin
+        TBMEfile(*) = tbme-CSp3R.bin
+
+    with the corresponding GPU output (v15b01-205-gdb2400a) for an identical run
+
+        [Observables]
+        numTBops   =       15
+        # TBME files for additional operators
+        TBMEfile(2) = tbme-H.bin
+        TBMEfile(3) = tbme-Ncm.bin
+        TBMEfile(4) = tbme-Tintr.bin
+        TBMEfile(5) = tbme-Tcm.bin
+        TBMEfile(6) = tbme-VNN.bin
+        TBMEfile(7) = tbme-VC.bin
+        TBMEfile(8) = tbme-L2.bin
+        TBMEfile(9) = tbme-Sp2.bin
+        # TBME file for relative R2 operator
+        TBMEfile(1) = tbme-rrel2.bin
+
+    Note that the "first" entry "TBMEfile(1)" is actually printed last here.
+    However, tools.extract_key_value_pairs() stores the entries in the order the
+    appear in the file, without regard for the subscript values (which, in many
+    instances, are just '*').  So, this would result in this example, with
+    nothing being stored for "H", <H> being stored for "Ncm", etc.
+
+    Thus, the solution is to remove "rrel2" from the list of TBOs *wherever* it
+    might appear in that list, first *or* last.
+
+    Moreover, note that the listing of TBME files (as well as the calculated TBO
+    values themselves) have been silently cut off at 9, even though numTBops is
+    recognized as 15.
 
     """
 
     if "tbo_names" in self.params:
-        property_names = self.params["tbo_names"][1:]
+        ## tbo_names = self.params["tbo_names"][1:]  # works only if radius observable shows up properly as first in list
+        tbo_names = self.params["tbo_names"]
+        tbo_names.remove("rrel2")
     else:
-        property_names = []
-    parse_generic_static_properties(self, tokenized_lines, self.mfdn_tb_expectations, property_names)
+        tbo_names = []
+    parse_generic_static_properties(self, tokenized_lines, self.mfdn_tb_expectations, tbo_names)
 
     
 def parse_mfdn_ob_rmes(self:MFDnResultsData, tokenized_lines):
