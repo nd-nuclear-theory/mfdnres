@@ -87,7 +87,7 @@ def read_occupations(self,fin):
 
     # TODO: continue
 
-def parser(fin,verbose):
+def parser(in_file, *, info_from_filename=None, verbose=False, **kwargs):
     """ Read result file data into MFDnResultsData objects.
 
     Args:

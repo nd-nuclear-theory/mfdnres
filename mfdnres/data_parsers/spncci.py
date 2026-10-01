@@ -256,12 +256,17 @@ def parse_mesh_point(self,sections,section_handlers):
         if section_name in section_handlers:
             section_handlers[section_name](self,tokenized_lines)
 
-def parser(in_file,verbose):
+def parser(in_file, *, info_from_filename=None, verbose=False, **kwargs):
     """ Parse full spncci results file, into list of one or more results objects.
 
     Arguments:
-        in_file (stream): input file stream (already opened by caller)
-        verbose (bool,optional): enable verbose output
+
+        in_file (stream): Input file stream (already opened by caller).
+
+        info_from_filename (dict): Parameters parsed from filename.
+
+        verbose (bool, optional): Enable verbose output.
+
     """
 
     # perform high-level parsing into sections

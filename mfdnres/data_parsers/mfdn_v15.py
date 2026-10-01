@@ -495,7 +495,7 @@ def parse_other_tbo(self:MFDnResultsData, tokenized_lines):
 
     if "tbo_names" in self.params:
         ## tbo_names = self.params["tbo_names"][1:]  # works only if radius observable shows up properly as first in list
-        tbo_names = self.params["tbo_names"]
+        tbo_names = self.params["tbo_names"].copy()
         tbo_names.remove("rrel2")
     else:
         tbo_names = []
@@ -749,12 +749,17 @@ def parse_mesh_point(self:MFDnResultsData, sections, section_handlers):
                 print("ERROR: Unexpected content in results file section '{}'".format(section_name))
                 raise err
             
-def parser(in_file, verbose):
+def parser(in_file, *, info_from_filename=None, verbose=False, **kwargs):
     """ Parse full results file.
 
     Arguments:
-        in_file (stream): input file stream (already opened by caller)
-        verbose (bool,optional): enable verbose output
+
+        in_file (stream): Input file stream (already opened by caller).
+
+        info_from_filename (dict): Parameters parsed from filename.
+
+        verbose (bool, optional): Enable verbose output.
+
     """
 
     # perform high-level parsing into sections

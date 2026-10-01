@@ -42,6 +42,7 @@
     02/22/24 (mac): Add results_postprocessors option to read_runs().
     07/20/25 (mac): Change default value of slurp_res_files option glob_pattern to None.
     07/02/26 (mac): Change res_file_directory() to use MFDNRES_RESULTS_DIR instead of GROUP_HOME.
+    09/30/26 (mac): Provide info parsed from filename to results data parser.
 
 """
 
@@ -328,7 +329,7 @@ def read_file(filename, *, res_format=None, filename_format=None, params=None, v
         print("  read_file: filename {}".format(filename))
     with open(filename,'rt') as fin:
         try:
-            results_list = data_format_parser[res_format](fin, verbose=verbose)
+            results_list = data_format_parser[res_format](fin, info_from_filename=info_from_filename, verbose=verbose)
         except Exception as e:
             print("filename {} filename_format {} res_format {}".format(filename, filename_format, res_format))
             raise e
@@ -433,6 +434,8 @@ ND_DIRECTORY_BY_USER = {
     "src": "scarmichael",
     "zz": "zzhou",
     "seb": "sbaker",
+    "adk": "akuntz",
+    "psz": "pzhiss",
 }
 
 def read_runs(
