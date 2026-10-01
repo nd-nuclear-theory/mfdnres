@@ -4,6 +4,7 @@
     University of Notre Dame
 
     - 07/06/25 (mac): Created.
+    - 09/30/26 (mac): Remove angular momentum hat factor from calculation of SpectroscopicFactor.
 
 """
 
@@ -117,7 +118,9 @@ class SpectroscopicFactor(mfdnres.observable.Observable):
     Calculations follow equations (1)-(4) of Sargsyan et al., PRC 108, 054303
     (2023), defined for a creation operator from the mass A-1 system to the mass
     A system.  Under our convention of storing a transition with the initial
-    nuclide, this means A-1=sum(nuclide).
+    nuclide, this means A-1=sum(nuclide).  Note that the "Pi" factor in (1) is
+    already absorbed into the definition of the spectroscopic amplitude, as
+    output by rhodium.
 
     """
 
@@ -168,7 +171,6 @@ class SpectroscopicFactor(mfdnres.observable.Observable):
         # accumulate spectroscopic factor sum
         mass_ratio = sum(self._nuclide_pair[0])/sum(self._nuclide_pair[1])
         Jf, _, _ = qn_pair[0]
-        am_factor = 1/(2*Jf+1)
         S = 0
         channel = self._channel
         for orbital, amplitude in amplitudes.items():
@@ -181,19 +183,20 @@ class SpectroscopicFactor(mfdnres.observable.Observable):
                 ):
                     continue
             N = 2*n+l
-            S += mass_ratio**N * am_factor * amplitude**2
+            S += mass_ratio**N * amplitude**2
         return S
 
     @property
     def descriptor_str(self):
         """ Text string describing observable.
         """
+        channel = self._channel
         if channel is None:
             channel_str = "total"
         elif len(channel)==1:
-            channel_str = "{:d}".format(*self._channel),
+            channel_str = "{:d}".format(*self._channel)
         elif len(channel)==2:
-            channel_str = "{:d}-{:.1f}".format(*self._channel
+            channel_str = "{:d}-{:.1f}".format(*self._channel)
         return "-".join([
             mfdnres.tools.nuclide_str(self._nuclide_pair[0]),
             mfdnres.tools.nuclide_str(self._nuclide_pair[1]),
@@ -225,6 +228,7 @@ class SpectroscopicFactor(mfdnres.observable.Observable):
     def observable_label_text(self):
         """ Formatted LaTeX text representing observable.
         """
+        channel = self._channel
         l, j = self._channel
         ## level_pair_text = self._level_pair[0].label_text, self._level_pair[1].label_text
         level_pair_text = mfdnres.data.qn_text(self._level_pair[0]), self._level_pair[1].label_text  # INTERIM
