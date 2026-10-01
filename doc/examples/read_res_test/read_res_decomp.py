@@ -18,7 +18,9 @@
 import os
 
 import mfdnres
+import mfdnres.decomposition
 import mfdnres.ncci
+
 
 ################################################################
 # reading data
@@ -79,11 +81,18 @@ def explore_point(results_data):
     print()
 
     # access decomposition data
+    decomposition_type = "S"
+    qn = (1.0,0,1)
     print("Test accessors (decomposition data)...")
-    ##decomposition = results_data.get_lanczos_decomposition_data("S", (1.0,0,1))
-    ##print("S decomposition {}".format(decomposition))
+    decomposition_data = results_data.get_lanczos_decomposition_data(decomposition_type, qn)
+    print("Decomposition data object\n{}".format(decomposition_data))
+    alpha_beta = results_data.get_lanczos_decomposition_alpha_beta(decomposition_type, qn)
+    print("Lanczos decomposition alpha & beta\n{}".format(alpha_beta))
     print()
-
+    num_eigenvalues = decomposition["statistics"]["num_eigenvalues"]
+    raw_decomposition = mfdnres.decomposition.generate_raw_decomposition(alpha_beta, lanczos_iterations=num_eigenvalues)
+    print("Raw decomposition\n{}".format(raw_decomposition))
+    
     
 ################################################################
 # main

@@ -26,12 +26,20 @@ from ..mfdn_results_data import (
 # parser
 ################################################################
 
-def parser(in_file, verbose):
-    """ Parse full results file.
+def parser(in_file, *, info_from_filename=None, verbose=False, **kwargs):
+    """Parse decomposition results file.
+
+    Requires info_from_filename to provide "decomposition_type" and
+    "decomposition_state".
 
     Arguments:
-        in_file (stream): input file stream (already opened by caller)
-        verbose (bool,optional): enable verbose output
+
+        in_file (stream): Input file stream (already opened by caller).
+
+        info_from_filename (dict): Parameters parsed from filename.
+
+        verbose (bool, optional): Enable verbose output.
+
     """
 
     # read decomposition data
@@ -39,8 +47,8 @@ def parser(in_file, verbose):
 
     # construct results data object
     results = mfdn_results_data.MFDnResultsData()
-    decomposition_type = results.params["decomposition_type"]
-    qn = results.params["decomposition_state"]
+    decomposition_type = info_from_filename["decomposition_type"]
+    qn = info_from_filename["decomposition_state"]
     results.mfdn_level_lanczos_decomposition_data = {
         decomposition_type: {
             qn: decomp_data

@@ -44,6 +44,7 @@
     10/12/23 (mac): Provide support for Lanczos decomposition filename storage in
         mfdn_level_lanczos_decomposition_filenames.
     10/26/23 (mac): Provide support for Lanczos decomposition alpha_beta storage.
+    09/30/26 (mac): Provide support for Lanczos decomposition data dictionary storage.
 """
 
 from __future__ import annotations
@@ -201,24 +202,6 @@ class MFDnResultsData(results_data.ResultsData):
 
             Mapping: observable_name -> (qnf,qni) -> value
 
-        mfdn_level_lanczos_decomposition_data (dict): Legacy Lanczos decomposition alpha-beta data
-
-            LEGACY VERSION
-
-            As populated by decomposition.slurp_lanczos_files, before
-            introduction of "decomp" files and the "decomposition" res file
-            format.
-
-            The filename is retained for debugging ("provenance") purposes.
-
-            Mapping: decomposition_type -> qn -> decomposition_data
-
-                decomposition_type (str): decomposition type ("U3SpSnS", etc.)
-
-                qn (tuple): (J,g,n)
-
-                decomposition_data (tuple): (filename, alpha, beta)
-
         mfdn_level_lanczos_decomposition_data (dict): Lanczos decomposition data
 
             Mapping: decomposition_type -> qn -> decomposition_data
@@ -228,7 +211,8 @@ class MFDnResultsData(results_data.ResultsData):
                 qn (tuple): (J,g,n)
 
                 decomposition_data (dict): Decompostion data dictionary as
-                defined in decomposition_io.
+                defined in decomposition_io.parse_decomp_file.  Should contain
+                entries for "labels", "eigenvalues", and "lanczos".
 
         mfdn_level_occupations (dict): MFDn-native occupations
 
@@ -1181,74 +1165,6 @@ class MFDnResultsData(results_data.ResultsData):
 
         return expectation_value
 
-    def get_lanczos_decomposition_filename(self,decomposition_type,qn:LevelQNType,verbose=False):
-        """ Retrieve Lanczos decomposition filename (for debugging purposes).
-
-        Arguments:
-            decomposition_type (str): decomposition type ("U3SpSnS", etc.)
-            qn (tuple): quantum numbers for state
-
-        Returns:
-            filename (str): filename for alpha-beta file
-        """
-
-        # retrieve decomposition
-        try:
-            lanczos_decomposition_data = self.mfdn_level_lanczos_decomposition_data[decomposition_type][qn]
-        except:
-            return None
-
-        filename, alpha, beta = lanczos_decomposition_data
-
-        return filename
-    
-    def get_lanczos_decomposition_alpha_beta(self,decomposition_type,qn:LevelQNType,verbose=False):
-        """ Retrieve Lanczos decomposition data.
-
-        Arguments:
-            decomposition_type (str): decomposition type ("U3SpSnS", etc.)
-            qn (tuple): quantum numbers for state
-
-        Returns:
-            alpha (np.array): vectors of diagonal matrix elements
-            beta (np.array): vectors of off-diagonal matrix elements
-        """
-
-        # retrieve decomposition
-        try:
-            lanczos_decomposition_data = self.mfdn_level_lanczos_decomposition_data[decomposition_type][qn]
-        except:
-            if verbose:
-                print("Lanczos decomposition of type {} not found for qn {}.".format(decomposition_type, qn))
-                print("Mesh point parameters: {}".format(self.params))
-            return None
-
-        filename, alpha, beta = lanczos_decomposition_data
-
-        return alpha, beta
-
-    def get_lanczos_decomposition_num_iterations(self,decomposition_type,qn:LevelQNType,verbose=False):
-        """ Retrieve number of iterations in Lanczos decomposition data.
-
-        Arguments:
-            decomposition_type (str): decomposition type ("U3SpSnS", etc.)
-            qn (tuple): quantum numbers for state
-
-        Returns:
-            (int): number of Lanczos iterations
-        """
-
-        # retrieve decomposition
-        try:
-            lanczos_decomposition_data = self.mfdn_level_lanczos_decomposition_data[decomposition_type][qn]
-        except:
-            return None
-
-        filename, alpha, beta = lanczos_decomposition_data
-        iterations = len(alpha)
-
-        return iterations
-
     def get_lanczos_decomposition_data(self,decomposition_type,qn:LevelQNType,verbose=False):
         """ Retrieve decomposition data dictionary.
 
@@ -1270,7 +1186,46 @@ class MFDnResultsData(results_data.ResultsData):
             return None
 
         return lanczos_decomposition_data
-    
+
+    def get_lanczos_decomposition_alpha_beta(self,decomposition_type,qn:LevelQNType,verbose=False):
+        """ Retrieve Lanczos decomposition data.
+
+        Arguments:
+            decomposition_type (str): decomposition type ("U3SpSnS", etc.)
+            qn (tuple): quantum numbers for state
+
+        Returns:
+            alpha_beta (np.array): two-dimensional array of alpha and beta coefficients
+        """
+
+        # retrieve decomposition
+        lanczos_decomposition_data = self.get_lanczos_decomposition_data(decomposition_type, qn, verbose)
+        if lanczos_decomposition_data is None:
+            return None
+
+        alpha_beta = lanczos_decomposition_data["lanczos"]
+        return alpha_beta
+
+    def get_lanczos_decomposition_num_iterations(self,decomposition_type,qn:LevelQNType,verbose=False):
+        """ Retrieve number of iterations in Lanczos decomposition data.
+
+        Arguments:
+            decomposition_type (str): decomposition type ("U3SpSnS", etc.)
+            qn (tuple): quantum numbers for state
+
+        Returns:
+            (int): number of Lanczos iterations
+        """
+
+        # retrieve decomposition
+        lanczos_decomposition_data = self.get_lanczos_decomposition_data(decomposition_type, qn, verbose)
+        if lanczos_decomposition_data is None:
+            return None
+
+        alpha_beta = lanczos_decomposition_data["lanczos"]
+        iterations = len(alpha_beta)
+
+        return iterations
 
     def get_spectroscopic_amplitudes(
             self, delta_nuclide:tuple[int,int], qn_pair:LevelQNPairType,

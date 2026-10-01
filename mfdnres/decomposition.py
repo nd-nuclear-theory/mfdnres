@@ -41,6 +41,7 @@ University of Notre Dame
       + Fix labeling for Sp3R.
       + Fix filter_decomposition algorithm and return key type.
     - 07/01/26 (mac): Cast labels to int or float as specified by value_types.
+    - 09/30/26 (mac): Change legacy Lanczos input to use decomposition data dictionary storage.
 """
 
 import collections
@@ -60,28 +61,6 @@ import mcscript.utils  # for value_range
 # lanczos data input
 ################################################################
 
-def read_lanczos(filename="mfdn_alphabeta.dat"):
-    """Read and parse mfdn_alphabeta file into d and e arrays for eigh_tridiagonal.
-
-    Result of calculation with n Lanczos iterations is an alpha vector of length n and
-    beta vector of length n-1.
-
-    Arguments:
-        filename (str, default "mfdn_alphabeta.dat"): input filename
-
-    Returns:
-        alpha (np.array): vectors of diagonal matrix elements
-        beta (np.array): vectors of off-diagonal matrix elements
-
-    """
-
-    # extract raw vectors
-    alpha_beta_array = np.loadtxt(filename, usecols=(1, 2))
-    alpha, beta = (alpha_beta_array[:, 0], alpha_beta_array[:-1, 1])
-
-    return alpha, beta
-
-
 def slurp_lanczos_files(
         directory_list,
         filename_format,
@@ -94,6 +73,9 @@ def slurp_lanczos_files(
     each lanczos data set.
 
     Inspired by mfdnres.input.slurp_res_files().
+
+    This is the legacy approach, of direct input of .lanczos files, supplanted
+    for new runs by input of "decomp"-format results files.
 
     Arguments:
 
@@ -141,10 +123,16 @@ def slurp_lanczos_files(
             # save lanczos data
             decomposition_type = results.params["decomposition_type"]
             qn = results.params["decomposition_state"]
-            alpha, beta = read_lanczos(filename)
+            ## alpha, beta = read_lanczos(filename)
+            ## results.mfdn_level_lanczos_decomposition_data = {
+            ##     decomposition_type: {
+            ##         qn: (filename, alpha, beta)
+            ##     }
+            ## }
+            alpha_beta = np.loadtxt(filename, usecols=(1, 2))
             results.mfdn_level_lanczos_decomposition_data = {
                 decomposition_type: {
-                    qn: (filename, alpha, beta)
+                    qn: dict(lanczos=alpha_beta),
                 }
             }
 
@@ -166,17 +154,16 @@ def generate_raw_decomposition(alpha_beta, lanczos_iterations=None):
     This does not perform any binning on eigenvalues.
 
     Arguments:
-        alpha_beta (tuple): (alpha,beta)
-            alpha (np.array of float): alpha matrix elements
-            beta (np.array of float): beta matrix elements
+        alpha_beta (np.array): alpha and beta cofficients
         lanczos_iterations (int, optional): number of effective Lanczos iterations to which to truncate
 
     Returns:
         raw_decomposition (list of tuple): (eigenvalue,probability) pairs from Lanczos alphabeta diagonalization
     """
     # extract matrix elements
-    alpha, beta = alpha_beta
-
+    ## alpha, beta = alpha_beta
+    alpha, beta = (alpha_beta[:, 0], alpha_beta[:-1, 1])
+    
     # trim vectors
     if (lanczos_iterations is not None):
         (alpha, beta) = (alpha[:lanczos_iterations], beta[:lanczos_iterations-1])

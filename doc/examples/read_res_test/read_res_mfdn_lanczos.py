@@ -2,6 +2,8 @@
 
     Provides simple example of reading MFDn Lanczos decomposition data files.
 
+    This is the legacy storage scheme, supplanted by reading of a decomp res file.
+
     Required test data:
 
         data/mfdn/v15-lanczos/*.lanczos
@@ -87,17 +89,16 @@ def explore_point(results_data):
 
     # access data
     print("Test accessor...")
-    print("Lanczos decomposition filename {}".format(results_data.get_lanczos_decomposition_filename("Nex", (1.0,0,1))))
-    alpha, beta = results_data.get_lanczos_decomposition_alpha_beta("Nex", (1.0,0,1))
-    print("Lanczos decomposition alpha & beta\n    {}\n    {}".format(alpha, beta))
+    alpha_beta = results_data.get_lanczos_decomposition_alpha_beta("S", (1.0,0,1))
+    print("Lanczos decomposition alpha & beta\n{}".format(alpha_beta))
     print()
 
-    # do decomposition
-    alpha_beta = results_data.get_lanczos_decomposition_alpha_beta("Nex", (1.0,0,1))
-    eigenvalue_label_dict = mfdnres.decomposition.eigenvalue_label_dict_Nex(Nmax=2)
-    decomposition = mfdnres.decomposition.generate_decomposition(alpha_beta, eigenvalue_label_dict)
-    print("Nex decomposition by Lanczos")
-    mfdnres.decomposition.print_decomposition(decomposition)
+    # do decomposition -- DEPRECATED syntax
+    ## alpha_beta = results_data.get_lanczos_decomposition_alpha_beta("Nex", (1.0,0,1))
+    ## eigenvalue_label_dict = mfdnres.decomposition.eigenvalue_label_dict_Nex(Nmax=2)
+    ## decomposition = mfdnres.decomposition.generate_decomposition(alpha_beta, eigenvalue_label_dict)
+    ## print("Nex decomposition by Lanczos")
+    ## mfdnres.decomposition.print_decomposition(decomposition)
 
     
 ################################################################
