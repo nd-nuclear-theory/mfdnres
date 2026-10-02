@@ -22,6 +22,7 @@
     - 11/26/23 (mac): Add Nex decomposition.
     - 03/13/24 (mac): Illustrate selection of mesh point by parameters.
     - 07/03/23 (mac): Add occupations.
+    - 10/02/26 (mac): Read single results file instead of slurping mesh.
 
 """
 
@@ -34,30 +35,24 @@ import mfdnres.ncci
 # reading data
 ################################################################
 
-def read_data():
-    """Read results.
+def read_results():
+    """Read results from single results file.
     """
 
+    data_dir = os.path.join("data", "mfdn", "v15-h2")
+    filename = "runmfdn13-mfdn15-Z3-N3-Daejeon16-coul1-hw15.000-a_cm50-Nmax02-Mj1.0-lan600-tol1.0e-06.res" 
+
     print("Reading input file...")
-    data_dir = os.path.join("data","mfdn","v15-h2")
-    mesh_data = mfdnres.input.slurp_res_files(
-        data_dir,
-        res_format="mfdn_v15",
-        filename_format="mfdn_format_7_ho",
-        glob_pattern="runmfdn13-mfdn15-*.res",
-        ## glob_pattern="runmfdn13gpu-mfdn15-*-Mj1.0-*.res",  # inspect gpu runs
-        verbose=True
+    mesh_data = mfdnres.input.read_file(
+        filename=os.path.join(data_dir, filename),
+        ## res_format="mfdn_v15",
+        ## filename_format="mfdn_format_7_ho",
+        filename_format="ALL",
+        verbose=True,
     )
-    print()
+    results_data = mesh_data[0]
     
-    # summarize mesh (diagnostic output)
-    print("Raw mesh (params)")
-    for results_data in mesh_data:
-        print(mfdnres.analysis.dict_items(results_data.params))
-        print()
-    print()
-    
-    return mesh_data
+    return results_data
 
 ################################################################
 # explore single mesh point
@@ -119,21 +114,13 @@ def explore_point(results_data):
             n, l, j = orbital
             print("  {:1s}   {:2d} {:2d} {:4.1f}    {:.6f}".format(species_code, n, l, j, occupation))
     print()
-    
+
+
 ################################################################
 # main
 ################################################################
 
-# read data
-mesh_data = read_data()
+if (__name__ == "__main__"):
 
-# select single mesh point to explore
-#
-# Note that some of these parameters are superfluous for the present data but
-# are included for illustration (e.g., the example data only contain results for
-# 6Li, so "nuclide" is superfluous).
-results_data = mfdnres.analysis.selected_mesh_point(
-    mesh_data,
-    {"nuclide": (3,3), "interaction": "Daejeon16", "Nmax": 2, "hw": 15.0, "M": 1.0},
-)
-explore_point(results_data)
+    results_data = read_results()
+    explore_point(results_data)

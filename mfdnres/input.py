@@ -318,6 +318,9 @@ def read_file(filename, *, res_format=None, filename_format=None, params=None, v
     # parse results filename for any supplementary run parameters
     info_from_filename = parse_filename(filename, filename_format)
 
+    if (verbose):
+        print("  read_file: filename {}, code_name {}".format(filename, info_from_filename.get("code_name")))
+
     if res_format is None:
         if info_from_filename.get("code_name") is not None:
             res_format = code_name_map[info_from_filename["code_name"]]
@@ -325,8 +328,6 @@ def read_file(filename, *, res_format=None, filename_format=None, params=None, v
             raise ValueError("unable to deduce res_format")
 
     # parse results file contents for run parameters and data
-    if (verbose):
-        print("  read_file: filename {}".format(filename))
     with open(filename,'rt') as fin:
         try:
             results_list = data_format_parser[res_format](fin, info_from_filename=info_from_filename, verbose=verbose)

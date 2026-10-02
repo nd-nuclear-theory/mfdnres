@@ -25,6 +25,7 @@ import os
 import mfdnres
 import mfdnres.ncci
 
+
 ################################################################
 # reading data
 ################################################################
@@ -34,11 +35,12 @@ def read_data():
     """
 
     print("Reading input file...")
-    data_dir = os.path.join("data","mfdn-transitions-spamp")
+    data_dir = os.path.join("data", "mfdn-transitions-spamp")
     mesh_data = mfdnres.input.slurp_res_files(
         data_dir,
-        res_format="mfdn_v15",
-        filename_format="mfdn_format_7_ho",
+        ## res_format="mfdn_v15",
+        ## filename_format="mfdn_format_7_ho",
+        filename_format="ALL",
         verbose=True
     )
     print()
@@ -66,6 +68,7 @@ def read_data():
     print()
 
     return mesh_data
+
 
 ################################################################
 # explore single mesh point
@@ -96,6 +99,7 @@ def explore_point(results_data):
 # main
 ################################################################
 
-# read data
-mesh_data = read_data()
-explore_point(mesh_data[0])
+if (__name__ == "__main__"):
+
+    mesh_data = read_data()
+    explore_point(mesh_data[0])

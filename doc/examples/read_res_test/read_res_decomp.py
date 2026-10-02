@@ -11,11 +11,14 @@
 
     Language: Python 3
 
-    - 09/24/25 (mac): Created.
+    - 09/24/26 (mac): Created.
+    - 10/02/26 (mac): Read single results file instead of slurping mesh.
 
 """
 
 import os
+
+import numpy as np
 
 import mfdnres
 import mfdnres.decomposition
@@ -26,43 +29,25 @@ import mfdnres.ncci
 # reading data
 ################################################################
 
-def read_data():
-    """Read results.
+def read_results():
+    """Read results from single results file.
     """
 
-    print("Reading input file...")
     data_dir = os.path.join("data", "mfdn-decomp")
-    mesh_data = mfdnres.input.slurp_res_files(
-        data_dir,
-        res_format="decomp",
-        filename_format="mfdn_format_7_ho",
-        verbose=True
-    )
-    print()
-    
-    # diagnostic output -- FOR ILLUSTRATION ONLY
-    print("Raw mesh (params)")
-    for results_data in mesh_data:
-        print(mfdnres.analysis.dict_items(results_data.params))
-    print()
-    
-    # merge results data
-    print("Merging mesh points...")
-    mesh_data = mfdnres.analysis.merged_mesh(
-        mesh_data,
-        ("nuclide","interaction","coulomb","hw","Nmax"),
-        postprocessor=mfdnres.ncci.augment_params_with_parity,
-        verbose=False
-    )
-    print()
+    filename = "runmfdndecomp02-decomp-Z3-N3-Daejeon16-coul1-hw15.000-Nmax02-J01.0-g0-n01-S-dNmax02-dlan0100.res" 
 
-    # diagnostic output -- FOR ILLUSTRATION ONLY
-    print("Merged mesh (params)")
-    for results_data in mesh_data:
-        print(mfdnres.analysis.dict_items(results_data.params))
-    print()
+    print("Reading input file...")
+    mesh_data = mfdnres.input.read_file(
+        filename=os.path.join(data_dir, filename),
+        ## res_format="decomp",
+        ## filename_format="mfdn_format_7_ho",
+        filename_format="ALL",
+        verbose=True,
+    )
+    results_data = mesh_data[0]
+    
+    return results_data
 
-    return mesh_data
 
 ################################################################
 # explore single mesh point
@@ -71,9 +56,6 @@ def read_data():
 def explore_point(results_data):
     """Examine mfdn_results_data members and results of accessors, for MFDn postprocessor results.
     """
-
-    # pick out mesh point manually
-    results_data = mesh_data[0]
 
     # examine data attributes
     print("Data attributes...")
@@ -87,9 +69,9 @@ def explore_point(results_data):
     decomposition_data = results_data.get_lanczos_decomposition_data(decomposition_type, qn)
     print("Decomposition data object\n{}".format(decomposition_data))
     alpha_beta = results_data.get_lanczos_decomposition_alpha_beta(decomposition_type, qn)
-    print("Lanczos decomposition alpha & beta\n{}".format(alpha_beta))
+    print("Lanczos alpha-beta coefficients\n{}".format(alpha_beta))
     print()
-    num_eigenvalues = decomposition["statistics"]["num_eigenvalues"]
+    num_eigenvalues = decomposition_data["statistics"]["num_eigenvalues"]
     raw_decomposition = mfdnres.decomposition.generate_raw_decomposition(alpha_beta, lanczos_iterations=num_eigenvalues)
     print("Raw decomposition\n{}".format(raw_decomposition))
     
@@ -98,6 +80,8 @@ def explore_point(results_data):
 # main
 ################################################################
 
-# read data
-mesh_data = read_data()
-explore_point(mesh_data[0])
+if (__name__ == "__main__"):
+
+    results_data = read_results()
+    with np.printoptions(edgeitems=4, threshold=10):
+        explore_point(results_data)

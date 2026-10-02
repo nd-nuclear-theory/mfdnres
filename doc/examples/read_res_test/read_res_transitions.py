@@ -18,6 +18,7 @@
     - 09/17/20 (mac): Created.
     - 05/18/22 (mac): Update example file.
     - 07/12/22 (mac): Provide example use of two-body RME accessor.
+    - 10/02/26 (mac): Read single results file instead of slurping mesh.
 
 """
 
@@ -26,20 +27,22 @@ import os
 import mfdnres
 import mfdnres.ncci
 
+
 ################################################################
 # reading data
 ################################################################
 
-def read_data():
-    """Read results.
+def read_results():
+    """Read results from one-body and two-body results files and merge.
     """
-
+    
     print("Reading input file...")
-    data_dir = os.path.join("data","mfdn-transitions")
+    data_dir = os.path.join("data", "mfdn-transitions")
     mesh_data = mfdnres.input.slurp_res_files(
         data_dir,
-        res_format="mfdn_v15",
-        filename_format="mfdn_format_7_ho",
+        ## res_format="mfdn_v15",
+        ## filename_format="mfdn_format_7_ho",
+        filename_format="ALL",
         verbose=True
     )
     print()
@@ -66,7 +69,8 @@ def read_data():
         print(mfdnres.analysis.dict_items(results_data.params))
     print()
 
-    return mesh_data
+    results_data = mesh_data[0]
+    return results_data
 
 ################################################################
 # explore single mesh point
@@ -75,9 +79,6 @@ def read_data():
 def explore_point(results_data):
     """Examine mfdn_results_data members and results of accessors, for MFDn postprocessor results.
     """
-
-    # pick out mesh point manually
-    results_data = mesh_data[0]
 
     # examine data attributes
     print("Data attributes...")
@@ -100,13 +101,16 @@ def explore_point(results_data):
 
     print("Test get_rme verbose mode...")
     print("E2 rme {}".format(results_data.get_rme("E2p",((1.0,0,1),(1.0,0,1)),verbose=True)))
+    print("Example of failure for invalid pair of initial and final states...")
     print("E2 rme {}".format(results_data.get_rme("E2p",((1.0,0,1),(1.0,1,1)),verbose=True)))  # invalid state pair
     print()
+
     
 ################################################################
 # main
 ################################################################
 
-# read data
-mesh_data = read_data()
-explore_point(mesh_data[0])
+if (__name__ == "__main__"):
+
+    results_data = read_results()
+    explore_point(results_data)

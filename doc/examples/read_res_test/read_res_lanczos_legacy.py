@@ -1,4 +1,4 @@
-"""read_res_mfdn_lanczos.py
+"""read_res_lanczos_legacy.py
 
     Provides simple example of reading MFDn Lanczos decomposition data files.
 
@@ -16,7 +16,8 @@
     Language: Python 3
 
     - 10/12/23 (mac): Created.
-
+    - 10/02/26 (mac): Read single Lanczos file instead of slurping mesh.
+        Rename from read_res_mfdn_lanczos.py to read_res_lanczos_legacy.py. 
 """
 
 import os
@@ -31,44 +32,23 @@ import mfdnres.decomposition
 # reading data
 ################################################################
 
-def read_data():
-    """Read results.
+def read_results():
+    """Read results from single Lanczos file.
     """
 
-    print("Reading lanczos files...")
+    print("Reading lanczos file...")
     data_dir = os.path.join("data","mfdn","v15-lanczos")
+    filename = "runmfdndecomp02-decomp-Z3-N3-Daejeon16-coul1-hw15.000-Nmax02-J01.0-g0-n01-S-dNmax02-dlan0100.lanczos" 
+    
     mesh_data = mfdnres.decomposition.slurp_lanczos_files(
         data_dir,
         filename_format="mfdn_format_7_ho",
-        glob_pattern="*.lanczos",
+        glob_pattern=filename,
         verbose=True
     )
-    print()
-    
-    # diagnostic output -- FOR ILLUSTRATION ONLY
-    print("Raw mesh (params)")
-    for results_data in mesh_data:
-        print(mfdnres.analysis.dict_items(results_data.params))
-    print()
 
-    # merge results objects giving decompositions from same mesh point
-    mesh_data = mfdnres.analysis.merged_mesh(
-        mesh_data,
-        ("nuclide","interaction","coulomb","hw","Nmax"),
-        postprocessor=mfdnres.ncci.augment_params_with_parity,
-        verbose=False
-    )
-
-    # diagnostic output -- FOR ILLUSTRATION ONLY
-    print("Merged mesh (keys)")
-    mfdnres.analysis.mesh_key_listing(
-        mesh_data,
-        ("nuclide","interaction","coulomb","hw","Nmax","parity"),
-        verbose=True
-    )
-    print()
-    
-    return mesh_data
+    results_data = mesh_data[0]
+    return results_data
 
 ################################################################
 # explore single mesh point
@@ -79,9 +59,6 @@ def explore_point(results_data):
 
     """
 
-    # set numpy formatting to abbreviate array output
-    np.set_printoptions(threshold=0, edgeitems=2)
-    
     # examine data attributes
     print("Data attributes...")
     print("results_data.mfdn_level_lanczos_decomposition_data {}".format(results_data.mfdn_level_lanczos_decomposition_data))
@@ -107,6 +84,6 @@ def explore_point(results_data):
 
 if (__name__ == "__main__"):
 
-    # read data
-    mesh_data = read_data()
-    explore_point(mesh_data[0])
+    results_data = read_results()
+    with np.printoptions(edgeitems=4, threshold=10):
+        explore_point(results_data)
