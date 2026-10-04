@@ -250,47 +250,52 @@ def generate_decomp_file(decomp_data, header_comment_lines=[]):
     lines.append("")
 
     # generate coefficient section
-    lines.append("[Coefficients]")
-    for operator, coef in decomp_data["coefficients"].items():
-        line = "{} = {:+e}".format(operator, coef)
-        lines.append(line)
-    lines.append("")
+    if "coefficients" in decomp_data:
+        lines.append("[Coefficients]")
+        for operator, coef in decomp_data["coefficients"].items():
+            line = "{} = {:+e}".format(operator, coef)
+            lines.append(line)
+        lines.append("")
 
-    # generate statistics section
-    lines.append("[Statistics]")
-    unique_labels = set()
-    unique_eigenvalues = set()
-    statistics = decomp_data.get("statistics")
-    if statistics is None:
+    # auto populate statistics from eigenvalues
+    if ("statistics" not in decomp_data) and ("eigenvalues" in decomp_data):
+        unique_labels = set()
+        unique_eigenvalues = set()
         for labels, eigenvalue in decomp_data["eigenvalues"].items():
             unique_labels.add(labels)
             unique_eigenvalues.add(eigenvalue)
-        statistics = {
+        decomp_data["statistics"] = {
             "num_entries": len(unique_labels),
             "num_eigenvalues": len(unique_eigenvalues),
         }
-    lines += generate_key_value_list(statistics)
-    lines.append("")
+    
+    # generate statistics section
+    if "statistics" in decomp_data:
+        lines.append("[Statistics]")
+        lines += generate_key_value_list(decomp_data["statistics"])
+        lines.append("")
 
     # generate labels section
-    lines.append("[Labels]")
-    lines += decomp_data["labels"]
-    lines.append("")
+    if "labels" in decomp_data:
+        lines.append("[Labels]")
+        lines += decomp_data["labels"]
+        lines.append("")
 
     # generate eigenvalues section
-    lines.append("[Eigenvalues]")
-    ## lines.append(" ".join(label_identifiers))
-    label_format_str_by_type = {
-        int: "{:6d} ",
-        float: "{:8.1f} ",
-    }
-    for labels, eigenvalue in decomp_data["eigenvalues"].items():
-        line = ""
-        for label in labels:
-            line += label_format_str_by_type[type(label)].format(label)
-        line += "   {:+e}".format(eigenvalue)
-        lines.append(line)
-    lines.append("")
+    if "eigenvalues" in decomp_data:
+        lines.append("[Eigenvalues]")
+        ## lines.append(" ".join(label_identifiers))
+        label_format_str_by_type = {
+            int: "{:6d} ",
+            float: "{:8.1f} ",
+        }
+        for labels, eigenvalue in decomp_data["eigenvalues"].items():
+            line = ""
+            for label in labels:
+                line += label_format_str_by_type[type(label)].format(label)
+            line += "   {:+e}".format(eigenvalue)
+            lines.append(line)
+        lines.append("")
 
     # generate lanczos section (optional)
     if "lanczos" in decomp_data:
