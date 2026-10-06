@@ -8,6 +8,12 @@ setup(
     description=("A scripting library for universal results postprocessing"),
     license="MIT",
     packages=find_packages(include='mfdnres*'),
+    entry_points={
+        "console_scripts": [
+            "eigenvalues2decomp = mfdnres.decomposition_tools.eigenvalues2decomp:main",
+            "lanczos2res = mfdnres.decomposition_tools.lanczos2res:main",
+        ],
+    },
     python_requires='>=3.8',
     install_requires=[
         "numpy>=1.0.0",

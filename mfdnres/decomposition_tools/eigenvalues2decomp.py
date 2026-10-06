@@ -1,6 +1,6 @@
 """eigenvalues2decomp.py
 
-    Generate decomposition data file from legacy eigenvalues and coefs files.
+    Generate decomposition data files from legacy eigenvalues and coefs files.
 
     Processes all eigenvalues files in current working directory.
 
@@ -9,10 +9,13 @@
 
     + 08/21/26 (mac): Created.
     + 08/24/26 (mac): Refactor output routines to mfdnres.decomposition_io.
+    + 10/05/26 (mac): Take directory names as arguments.
 """
 
+import argparse
 import glob
 import re
+import os.path
 
 import numpy as np
 
@@ -20,6 +23,32 @@ import mfdnres.decomposition
 import mfdnres.decomposition_io
    
     
+################################################################
+# parse arguments
+################################################################
+
+def parse_args():
+    """Parse arguments.
+
+    Returns:
+        (argparse.Namespace) parsed arguments
+    """
+    parser = argparse.ArgumentParser(
+        description="Generate decomposition data files from legacy eigenvalues and coefs files.",
+        usage="%(prog)s eigenvalues_dir decomp_dir\n",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        )
+
+    # positional arguments
+    parser.add_argument("eigenvalues_dir", help="Legacy eigenvalue and coef file directory")
+    parser.add_argument("decomp_dir", help="Decomposition data file directory")
+
+    # options
+    parser.add_argument("-q", "--quiet", action="store_true", help="Suppress output text")
+    
+    return parser.parse_args()
+
+
 ################################################################
 # process coefficients
 ################################################################
@@ -150,24 +179,32 @@ def generate_decomp_file_test():
 # main
 ################################################################
 
-if (__name__ == "__main__"):
-    
-    ## generate_decomp_file_test()
+def main():
 
-    eigenvalue_filenames = glob.glob("*_eigenvalues.dat")
+    args = parse_args()
+    eigenvalues_dir = args.eigenvalues_dir
+    decomp_dir = args.decomp_dir
 
-    for eigenvalue_filename in eigenvalue_filenames:
+    # create target directory for decomp files
+    os.makedirs(decomp_dir, exist_ok=True)
+
+    # process eigenvalues (and coefs) files
+    eigenvalues_filenames = glob.glob(os.path.join(eigenvalues_dir, "*_eigenvalues.dat"))
+    for eigenvalues_filename in eigenvalues_filenames:
 
         # parse eigenvalue filename
+        eigenvalues_basename = os.path.basename(eigenvalues_filename)
+
         regex = re.compile(
             r"(?P<base>(decomposition_Z(?P<Z>\d+)_N(?P<N>\d+)_Nmax(?P<Nmax>\d+)_(?P<decomposition_type>.+)))_eigenvalues.dat"
         )
-        match = regex.match(eigenvalue_filename)
+        match = regex.match(eigenvalues_basename)
         if (match == None):
-            raise ValueError("bad form for eigenvalue filename: {}".format(eigenvalue_filename))
+            raise ValueError("bad form for eigenvalue filename: {}".format(eigenvalues_basename))
         info = match.groupdict()
         base = info["base"]
-        print(base)
+        if not args.quiet:
+            print(base)
 
         # determine decomposition type
         decomposition_type_overrides = {
@@ -181,12 +218,16 @@ if (__name__ == "__main__"):
             decomposition_type = decomposition_type_overrides[decomposition_type]
 
         # generate derived filenames
-        coefs_filename = "{}_coefs.dat".format(base)
-        decomp_filename = "Z{Z:s}-N{N:s}-Nmax{Nmax:s}-{decomposition_type:s}.decomp".format(
-            Z=info["Z"],
-            N=info["N"],
-            Nmax=info["Nmax"],
-            decomposition_type=decomposition_type,  # override decomposition_type from input filename
+        coefs_filename = os.path.join(eigenvalues_dir, "{}_coefs.dat".format(base))
+        decomp_filename_template = "Z{Z:s}-N{N:s}-Nmax{Nmax:s}-{decomposition_type:s}.decomp"
+        decomp_filename = os.path.join(
+            decomp_dir,
+            decomp_filename_template.format(
+                Z=info["Z"],
+                N=info["N"],
+                Nmax=info["Nmax"],
+                decomposition_type=decomposition_type,  # override decomposition_type from input filename
+            ),
         )
 
         # generate header
@@ -200,16 +241,22 @@ if (__name__ == "__main__"):
         coef_by_operator = obtain_coefs(decomposition_type, coefs_filename)
 
         # obtain eigenvalues
-        label_identifiers, eigenvalue_by_labels = obtain_eigenvalues(decomposition_type, eigenvalue_filename)
+        label_identifiers, eigenvalue_by_labels = obtain_eigenvalues(decomposition_type, eigenvalues_filename)
 
         # write decomp file
-        decomp_data = {
+        decomposition_data = {
             "coefficients": coef_by_operator,
             "labels": label_identifiers,
             "eigenvalues": eigenvalue_by_labels,
             }
-        lines = mfdnres.decomposition_io.generate_decomp_file(decomp_data, header_comment_lines)
+        lines = mfdnres.decomposition_io.generate_decomp_file(decomposition_data, header_comment_lines)
         output_str = "\n".join(lines) + "\n"
         data_file = open(decomp_filename, "w")
         data_file.write(output_str)
         data_file.close()
+
+
+if (__name__ == "__main__"):
+    
+    main()
+        

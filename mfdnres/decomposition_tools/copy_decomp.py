@@ -23,11 +23,11 @@ if (__name__ == "__main__"):
 
     # read decomp file
     print("Reading {}...".format(in_filename))
-    decomp_data = mfdnres.decomposition_io.parse_decomp_file(in_filename)
+    decomposition_data = mfdnres.decomposition_io.parse_decomp_file(in_filename)
     
     # write decomp file
     print("Writing {}...".format(out_filename))
-    lines = mfdnres.decomposition_io.generate_decomp_file(decomp_data, header_comment_lines=["copy_decomp"])
+    lines = mfdnres.decomposition_io.generate_decomp_file(decomposition_data, header_comment_lines=["copy_decomp"])
     output_str = "\n".join(lines) + "\n"
     data_file = open(out_filename, "w")
     data_file.write(output_str)
