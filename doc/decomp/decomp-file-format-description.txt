@@ -3,6 +3,8 @@
 # 08/19/26 (mac): Manually generated from coefs and eigenvalues files.
 # 09/06/26 (mac): Revise to reflect actual division of Labels and Eigenvalues and add Lanczos.
 # 09/12/26 (mac): Update to reflect actual output from new decomposition I/O code.
+# 10/10/26 (mac): Add support for pivot norm.
+
 
 ################################################################
 # Initial comments
@@ -66,6 +68,19 @@ S2 = +1.000297e-02
 [Statistics]
 num_entries = 2
 num_eigenvalues = 2
+
+
+################################################################
+# Pivot norm
+################################################################
+
+# Provided to support strength function calculations.  Not used for symmetry
+# decompositions.  Contains a single floating-point value, which is the norm of
+# the pivot vector obtained by acting with the transition operator on the
+# initial state.
+
+[Pivot norm]
+1.000
 
 
 ################################################################

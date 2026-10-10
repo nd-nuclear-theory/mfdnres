@@ -6,6 +6,7 @@ University of Notre Dame
 
     - 08/24/26 (mac): Created, refactoring from parse_decomp.py and eigenvalues2decomp.py.
     - 09/24/26 (mac): Provide support for stream as source for parse_decomp_file().
+    - 10/10/26 (mac): Add support for pivot norm section.
 """
 
 import os
@@ -113,6 +114,18 @@ def parse_statistics(decomp_data, tokenized_lines):
     decomp_data["statistics"] = statistics
 
 
+def parse_pivot_norm(decomp_data, tokenized_lines):
+    """ Parse pivot norm value.
+    """
+
+    # validate line format
+    if not (len(tokenized_lines)==1 and len(tokenized_lines[0])==1):
+        raise ValueError("unexpected entries in pivot norm section")
+    
+    pivot_norm = float(tokenized_lines[0][0])
+    decomp_data["pivot_norm"] = pivot_norm
+
+
 def parse_labels(decomp_data, tokenized_lines):
     """ Parse label identifiers.
     """
@@ -152,7 +165,16 @@ def parse_lanczos(decomp_data, tokenized_lines):
     alpha_beta_table = np.loadtxt(rejoined_lines, ndmin=2)
     
     decomp_data["lanczos"] = alpha_beta_table
+
     
+section_handlers = {
+    "Coefficients": parse_coefs,
+    "Statistics": parse_statistics,
+    "Pivot norm": parse_pivot_norm,
+    "Labels": parse_labels,
+    "Eigenvalues": parse_eigenvalues,
+    "Lanczos": parse_lanczos,
+}
     
 def parse_decomp_file(source):
     """Parse decomposition file.
@@ -200,13 +222,6 @@ def parse_decomp_file(source):
         print("WARNING: file {} is empty!".format(decomp_file.name))
 
     # parse sections
-    section_handlers = {
-        "Coefficients": parse_coefs,
-        "Statistics": parse_statistics,
-        "Labels": parse_labels,
-        "Eigenvalues": parse_eigenvalues,
-        "Lanczos": parse_lanczos,
-    }
     for section_name, tokenized_lines in sections:
         if section_name in section_handlers:
             try:
@@ -273,6 +288,12 @@ def generate_decomp_file(decomp_data, header_comment_lines=[]):
     if "statistics" in decomp_data:
         lines.append("[Statistics]")
         lines += generate_key_value_list(decomp_data["statistics"])
+        lines.append("")
+
+    # generate pivot norm section section (for strength functions)
+    if "pivot_norm" in decomp_data:
+        lines.append("[Pivot norm]")
+        lines.append("{:e}".format(decomp_data["pivot_norm"]))
         lines.append("")
 
     # generate labels section
