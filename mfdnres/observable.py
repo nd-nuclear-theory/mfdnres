@@ -977,11 +977,14 @@ class ExcitationEnergy(Observable):
         """ Extract data frame of observable values over mesh.
         """
         level_energy_value_mesh = Energy(self._nuclide, self._level).data(mesh_data, key_descriptor, verbose=verbose)
-        print("E unshifted {}".format(level_energy_value_mesh))
+        if verbose:
+            print("E unshifted {}".format(level_energy_value_mesh))
         level_energy_value_mesh = Nmax_shifted(level_energy_value_mesh, self._Nmax_shift)
-        print("E shifted {}".format(level_energy_value_mesh))
+        if verbose:
+            print("E shifted {}".format(level_energy_value_mesh))
         reference_level_energy_value_mesh = Energy(self._nuclide, self._reference_level).data(mesh_data, key_descriptor, verbose=verbose)
-        print("Eref {}".format(reference_level_energy_value_mesh))
+        if verbose:
+            print("Eref {}".format(reference_level_energy_value_mesh))
         relative_energy_mesh = level_energy_value_mesh - reference_level_energy_value_mesh
         if self._undo_Nmax_shift:
             relative_energy_mesh = Nmax_shifted(relative_energy_mesh, -self._Nmax_shift)
