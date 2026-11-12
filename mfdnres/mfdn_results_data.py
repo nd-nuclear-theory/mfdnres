@@ -45,6 +45,7 @@
         mfdn_level_lanczos_decomposition_filenames.
     10/26/23 (mac): Provide support for Lanczos decomposition alpha_beta storage.
     09/30/26 (mac): Provide support for Lanczos decomposition data dictionary storage.
+    11/12/26 (zz/mac): Correct factor in get_me().
 """
 
 from __future__ import annotations
@@ -1081,7 +1082,7 @@ class MFDnResultsData(results_data.ResultsData):
 
         # derive final value from rme
         assert(np.isnan(rme) or J_bra==J_ket)
-        me = 1/am.hat(2*J_ket+1)*rme
+        me = 1/am.hat(J_ket)*rme
 
         return me
 
