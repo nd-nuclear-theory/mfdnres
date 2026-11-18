@@ -11,6 +11,7 @@
     04/27/18 (mac): Rename parameter Mj to M.
     09/06/18 (pjf): Allow negative M.
     09/06/18 (pjf): Allow hyphens in interaction name.
+    11/18/26 (seb): Add support for num_segments and Nmax_orb parameters.
 
 """
 
@@ -39,6 +40,10 @@ def parser(filename):
         r"\-Nmax(?P<Nmax>\d+)"
         r"(?P<mixed_parity_flag>x)?(?P<fci_flag>\-fci)?"
         r"\-Mj(?P<M>-?[\d\.]+)"
+        # Nmax_orb (optional)
+        r"(?:\-Nmax_orb(?P<Nmax_orb>\d+))?"
+        # num_segments (optional)
+        r"(?:\-n(?P<num_segments>\d+))?"
         # epilog
         r").res"
     )
@@ -50,6 +55,8 @@ def parser(filename):
         "mixed_parity_flag" : (lambda s  :  (s=="x")),
         "fci_flag" : (lambda s  :  (s=="-fci")),
         "M" : float,
+        "Nmax_orb": int,
+        "num_segments": int,
         }
 
     match = regex.match(filename)
@@ -60,17 +67,21 @@ def parser(filename):
     # convert fields
     for key in conversions:
         conversion = conversions[key]
-        info[key] = conversion(info[key])
+        info[key] = conversion(info[key]) if (info[key] is not None) else None
 
     return info
 
 
 if (__name__ == "__main__"):
 
-    filename = r"runpjf0040-mfdn15-Z06-N08-Nmax00-Mj0.0.res"
-    info = parser(filename)
-    print(filename)
-    print(info)
+    files = [
+            r"runpjf0040-mfdn15-Z06-N08-Nmax00-Mj0.0.res",
+            r"runmfdncounting02-mfdn15-Z03-N03-Nmax04-Mj1.0-Nmax_orb05-n001.res",
+            ]
+    for filename in files: 
+        info = parser(filename)
+        print(filename)
+        print(info)
 else:
     # intra-package references
     from .. import input
